@@ -1,6 +1,6 @@
 @echo off
 echo ==============================================
-echo        Push changes to GitHub
+echo Push changes to GitHub
 echo ==============================================
 echo.
 
@@ -11,10 +11,10 @@ git push origin main
 
 if %errorlevel% equ 0 (
     echo.
-    echo ✅ Push successful!
+    echo Push successful!
 ) else (
     echo.
-    echo ❌ Push failed! Check error message.
+    echo Push failed! Check error message.
 )
 
 echo.
