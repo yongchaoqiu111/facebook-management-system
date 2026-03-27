@@ -1,0 +1,20 @@
+Your API key is: 05a90af01d3040b793f74d6e41c5ea72
+
+入门指南：https://newsapi.org/docs/get-started
+
+https://newsapi.org/
+
+===============================================
+
+
+Your API key is:ef01dbeea077f62ff84ad01421baf4af
+
+https://gnews.io/api/v4/search?q=AI&lang=zh&max=5&apikey=ef01dbeea077f62ff84ad01421baf4af
+https://gnews.io
+=================================================
+pub_611b2b64288f473cb890f18bb5d7f10d
+
+https://newsdata.io/
+
+===============================================
+

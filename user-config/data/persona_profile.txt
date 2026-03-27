@@ -1,0 +1,7 @@
+# 人设文本配置（客户可直接改）
+# 支持 key: value；逗号分隔列表
+role: 程序员
+focus: 专注AI与MCP服务工程化落地
+audience: 关注AI自动化与工程实践的开发者
+tone: 专业
+workflows: MCP技能编排与任务调度, 微博自动化工作流, AI文案生成与缓存优化

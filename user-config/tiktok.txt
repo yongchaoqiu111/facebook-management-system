@@ -1,0 +1,37 @@
+_ttp	2xXqaQGdLRTeOUiOVmqV7VH2I5B	.tiktok.com	/	2026-09-07T00:51:13.575Z	31		✓	None			Medium
+_waftokenid	eyJ2Ijp7ImEiOiIvckREcDk2VkdJakF2cVYzUDEzZmJ2UkNrYnF6eXRITGFib0d0WDNNUWk4PSIsImIiOjE3NzQ0NjI3MDgsImMiOiJVNU9QdEd0K3pKQTdhK3ZDYkYwZzkzYnp4MjRRWU8xb0JnVkZFaG9Xayt3PSJ9LCJzIjoiajRYbVBrcVh2R1NKYzExbXN2MTBNaU53Y1VDUFJZZVZJZ081ZTJLcVZ6dz0ifQ	www.tiktok.com	/	2026-03-25T18:23:28.247Z	245						Medium
+cmpl_token	AgQYAPOH_hfkTtK5i3WwQHZdKfPUAgaGl3-DDGCg3B8	.tiktok.com	/	2026-05-24T18:19:06.707Z	53	✓	✓				Medium
+delay_guest_mode_vid	5	.www.tiktok.com	/	2027-01-08T17:31:09.000Z	21		✓				Medium
+g_state	{"i_l":0,"i_ll":1774462719884,"i_e":{"enable_itp_optimization":0}}	www.tiktok.com	/	2026-09-21T18:18:48.000Z	73						Medium
+last_login_method	google	www.tiktok.com	/	2026-06-23T18:19:06.000Z	23						Medium
+msToken	YPO6WUrTKiH0DYfMJDQNMqjrzOmEvcNQUMx2kPcXifVtnzsmLkvz0K4DHmOcor82hH7tMOYEZWsHRXvMlqyGlYqbXoh0_iFrD_rjP2RnHrhxdYcFgNmSOdf-HETx7M1uHzup3ErtOCYwGQ==	www.tiktok.com	/	2026-06-23T18:19:23.000Z	151						Medium
+msToken	6Ybe3IQjzLGxpttVWn0ra8uF-9WHKswXef5JM4A9pWqlW75OwA03FLRmOOE3P_Pooay9K0LVNJPpzLQsc21yg93aN4s3RFE3hkrqhCuKiDhDvgZ-yxxk5oo16jzDGT2-Pv-XeQJQ4PeA7Q==	.tiktok.com	/	2026-04-04T18:19:49.075Z	151		✓	None			Medium
+multi_sids	7617164871213548560%3A8bd11e9b89ce8117acd9fd61edebc15d	.tiktok.com	/	2026-05-24T18:19:06.707Z	64	✓	✓				Medium
+odin_tt	db81482c36bfa8120b69aaea121fcbcfc5a68fe60685d42595ccf25bf82923a59738e20f012ecb05f49bc49bea814a71cb0c5991c16012ba82e4f64f030422dd4248c21d8ffc63e6f9b8c71cbe738865	.tiktok.com	/	2027-03-25T18:19:30.145Z	167	✓					Medium
+passport_auth_status	2054ad8dca08271ee7e32c6292d2cf6f%2C	.tiktok.com	/	2026-04-24T18:19:06.708Z	55	✓					Medium
+passport_auth_status_ss	2054ad8dca08271ee7e32c6292d2cf6f%2C	.tiktok.com	/	2026-04-24T18:19:06.708Z	58	✓	✓	None			Medium
+passport_fe_beating_status	true	.www.tiktok.com	/	Session	30						Medium
+perf_feed_cache	{%22expireTimestamp%22:1774634400000%2C%22itemIds%22:[%227592208221708897549%22%2C%227605164794785680641%22%2C%227599146005166099730%22]}	.www.tiktok.com	/	2026-04-01T18:19:23.000Z	152		✓				Medium
+s_v_web_id	verify_mn6dalg1_GOY12sO1_QEPw_4nVe_9Yde_jSCk3AIfiRp7	.tiktok.com	/	Session	62		✓	None			Medium
+sessionid	8bd11e9b89ce8117acd9fd61edebc15d	.tiktok.com	/	2026-09-21T18:19:06.708Z	41	✓	✓				Medium
+sessionid_ss	8bd11e9b89ce8117acd9fd61edebc15d	.tiktok.com	/	2026-09-21T18:19:06.708Z	44	✓	✓	None			Medium
+sid_guard	8bd11e9b89ce8117acd9fd61edebc15d%7C1774462746%7C15552000%7CMon%2C+21-Sep-2026+18%3A19%3A06+GMT	.tiktok.com	/	2027-03-20T18:19:06.708Z	103	✓	✓				Medium
+sid_tt	8bd11e9b89ce8117acd9fd61edebc15d	.tiktok.com	/	2026-09-21T18:19:06.708Z	38	✓	✓				Medium
+sid_ucp_v1	1.0.1-KDIzNTc0ZjBiYjg3YjJlZDNkMjNiYzkzNTdjNWExYjE4Nzg3ZGQwZWQKIQiQiJLC_OLm2mkQms6QzgYYswsgDDC8ttbNBjgIQBJIBBADGgJteSIgOGJkMTFlOWI4OWNlODExN2FjZDlmZDYxZWRlYmMxNWQyTgogwBmBNG0NF2wKGT91w0cLynNd95vn48By2P9a7Cf6VdoSIBQkOAD5SrVxZ0Rtz5c8VMa_2LY565TrO0d5gDCe4zPZGAIiBnRpa3Rvaw	.tiktok.com	/	2026-09-21T18:19:06.708Z	278	✓	✓				Medium
+ssid_ucp_v1	1.0.1-KDIzNTc0ZjBiYjg3YjJlZDNkMjNiYzkzNTdjNWExYjE4Nzg3ZGQwZWQKIQiQiJLC_OLm2mkQms6QzgYYswsgDDC8ttbNBjgIQBJIBBADGgJteSIgOGJkMTFlOWI4OWNlODExN2FjZDlmZDYxZWRlYmMxNWQyTgogwBmBNG0NF2wKGT91w0cLynNd95vn48By2P9a7Cf6VdoSIBQkOAD5SrVxZ0Rtz5c8VMa_2LY565TrO0d5gDCe4zPZGAIiBnRpa3Rvaw	.tiktok.com	/	2026-09-21T18:19:06.708Z	279	✓	✓	None			Medium
+store-country-code	tw	.tiktok.com	/	2026-09-21T18:19:05.939Z	20	✓					Medium
+store-country-code-src	uid	.tiktok.com	/	2026-09-21T18:19:05.939Z	25	✓					Medium
+store-country-sign	MEIEDN-VGwFjLKeZq4CncwQgxGVD3GqFn4jCDg9cIxKn8fojm9J24UhBOOnPfgd3OVIEECvWxblYkR0akrn_AOpNZt4	.tiktok.com	/	2026-09-21T18:19:05.939Z	109	✓					Medium
+store-idc	alisg	.tiktok.com	/	2026-09-21T18:19:05.939Z	14	✓					Medium
+tiktok_webapp_lang	en	.tiktok.com	/	2027-03-14T17:22:59.710Z	20	✓	✓				Medium
+tiktok_webapp_theme	dark	.www.tiktok.com	/	2027-01-19T18:19:17.000Z	23		✓				Medium
+tiktok_webapp_theme_source	auto	.www.tiktok.com	/	2027-01-19T18:19:17.000Z	30		✓				Medium
+tt_chain_token	neDFBDBc1BzMEc9FvmLAdw==	.tiktok.com	/	2026-09-21T18:19:15.964Z	38	✓	✓				Medium
+tt_csrf_token	y6Q4LpxG-hhrz7XctF8iUEqRu10uiGM7swgo	.tiktok.com	/	Session	49	✓	✓	Lax			Medium
+tt_session_tlb_tag	sttt%7C4%7Ci9Eem4nOgRes2f1h7evBXf_________qiF7NthHm3dDMxKUGwNsy_R34qbIVlkKnQgCSUiTyF8M%3D	.tiktok.com	/	2026-09-21T18:19:06.708Z	107	✓	✓	None			Medium
+tt_ticket_guard_has_set_public_key	1	www.tiktok.com	/	2026-03-26T18:19:21.407Z	35						Medium
+tt-target-idc	alisg	.tiktok.com	/	2026-09-21T18:19:05.939Z	18	✓					Medium
+tt-target-idc-sign	Vi9K3GlLDuWMS8wFKPB4VcXcQkFXhlSeHl7PdcEMyvOPG_UXLoCIlZch_LClN83w-51qSp4ESgmam03eBf9txZv0V0dJbWlKOnglgFsIUQ7ffRqEKVoJqFhB3P28JGuq54tffuFjNL7Y2-1u31bYI_T51JqWOybfAA1RQfL0euV5Jy-HmtI7AWeKW7_-tK0BAkosKNl9U5tAwCK0dbkMAQnEaDiz_-DCUfdkRJgIZZc2tWJzlZ1nEtJ6an052RaAcYMptK85IR6wbgd9xcKp_zO-K8v2RO0yDJY2l5QEAXrJkW8et8aubYmzz5IVaK_i4a8CgU_Ju76y0UCeSk4xacA4h4IOtMQBradKtiuNavdFNsBjknldH1o3D-LUxur5_W3rIwi_3KeG-aCGOwK1DfyU3-hQZWVnvS71PJZ3E1fJTA5Z4di8pp5xGoHBZ6YsPl_Vv6goN9q72M9z9o4UOHDojlzqj_XYwKHL5b5vqaNHsQvUsvK6wyxwNWK-Nyxh	.tiktok.com	/	2027-03-25T18:19:21.592Z	530	✓					Medium
+ttwid	1%7CoBVnQVMryGrkqGvArjw30SJP6FNKAmM_HU4EOJMIGfo%7C1774462761%7C36709dcce1fe7c52c03cee6bc8c77366aae6c400d26988ac350acf2e977828d7	.tiktok.com	/	2027-03-25T18:19:21.656Z	132	✓	✓	None			Medium
+uid_tt	24a6a1a9c0cbb4baf3f69d76e77e2580a1c1cbae2e56b8b644bf43c2322d17a8	.tiktok.com	/	2026-09-21T18:19:06.708Z	70	✓	✓				Medium
+uid_tt_ss	24a6a1a9c0cbb4baf3f69d76e77e2580a1c1cbae2e56b8b644bf43c2322d17a8	.tiktok.com	/	2026-09-21T18:19:06.708Z	73	✓	✓	None			Medium

@@ -1,0 +1,220 @@
+{
+  "task-1773856689324": {
+    "status": "success",
+    "endTime": "2026-03-18T17:59:44.867Z",
+    "updatedAt": "2026-03-18T17:59:44.867Z"
+  },
+  "task-1773856710430": {
+    "status": "success",
+    "endTime": "2026-03-18T18:00:17.722Z",
+    "updatedAt": "2026-03-18T18:00:17.722Z"
+  },
+  "task-1773856841905": {
+    "status": "success",
+    "endTime": "2026-03-18T18:01:13.076Z",
+    "updatedAt": "2026-03-18T18:01:13.076Z"
+  },
+  "task-1773858189451": {
+    "status": "success",
+    "endTime": "2026-03-19T03:35:23.340Z",
+    "updatedAt": "2026-03-19T03:35:23.341Z"
+  },
+  "task-1773858203941": {
+    "status": "failed",
+    "endTime": "2026-03-19T03:40:00.368Z",
+    "error": "FACEBOOK_TOKEN_EXPIRED: token expired",
+    "updatedAt": "2026-03-19T03:40:00.368Z"
+  },
+  "task-1773858218502": {
+    "status": "success",
+    "endTime": "2026-03-19T03:55:38.175Z",
+    "updatedAt": "2026-03-19T03:55:38.175Z"
+  },
+  "task-1773858227750": {
+    "status": "running",
+    "startTime": "2026-03-19T03:50:00.015Z",
+    "updatedAt": "2026-03-19T03:50:00.016Z"
+  },
+  "task-1773858243776": {
+    "status": "failed",
+    "endTime": "2026-03-19T03:55:00.476Z",
+    "error": "FACEBOOK_TOKEN_EXPIRED: token expired",
+    "updatedAt": "2026-03-19T03:55:00.476Z"
+  },
+  "task-1773858250000": {
+    "status": "success",
+    "endTime": "2026-03-19T04:00:47.186Z",
+    "updatedAt": "2026-03-19T04:00:47.186Z"
+  },
+  "task-1773858260000": {
+    "status": "success",
+    "endTime": "2026-03-19T04:05:44.954Z",
+    "updatedAt": "2026-03-19T04:05:44.954Z"
+  },
+  "task-1773995875762": {
+    "status": "success",
+    "endTime": "2026-03-20T08:39:34.550Z",
+    "updatedAt": "2026-03-20T08:39:34.550Z"
+  },
+  "task-1773998895532": {
+    "status": "running",
+    "startTime": "2026-03-20T09:29:00.021Z",
+    "updatedAt": "2026-03-20T09:29:00.021Z"
+  },
+  "task-1774007784812": {
+    "status": "success",
+    "endTime": "2026-03-20T11:57:19.796Z",
+    "updatedAt": "2026-03-20T11:57:19.796Z"
+  },
+  "task-1774008096301": {
+    "status": "success",
+    "endTime": "2026-03-20T12:02:25.212Z",
+    "updatedAt": "2026-03-20T12:02:25.212Z"
+  },
+  "task-1774008257101": {
+    "status": "success",
+    "endTime": "2026-03-20T12:05:23.599Z",
+    "updatedAt": "2026-03-20T12:05:23.599Z"
+  },
+  "task-1774008492982": {
+    "status": "success",
+    "endTime": "2026-03-20T12:09:00.011Z",
+    "updatedAt": "2026-03-20T12:09:00.011Z"
+  },
+  "task-1774066737132": {
+    "status": "success",
+    "endTime": "2026-03-21T04:20:05.260Z",
+    "updatedAt": "2026-03-21T04:20:05.260Z"
+  },
+  "task-1774066984882": {
+    "status": "failed",
+    "endTime": "2026-03-21T04:24:00.028Z",
+    "error": "joinGroupsExecute is not a function",
+    "updatedAt": "2026-03-21T04:24:00.028Z"
+  },
+  "task-1774067174664": {
+    "status": "running",
+    "startTime": "2026-03-21T04:27:00.016Z",
+    "updatedAt": "2026-03-21T04:27:00.017Z"
+  },
+  "task-1774073015145": {
+    "status": "success",
+    "endTime": "2026-03-21T06:04:00.023Z",
+    "updatedAt": "2026-03-21T06:04:00.023Z"
+  },
+  "task-1774073264994": {
+    "status": "success",
+    "endTime": "2026-03-21T06:08:00.024Z",
+    "updatedAt": "2026-03-21T06:08:00.024Z"
+  },
+  "task-1774073656060": {
+    "status": "success",
+    "endTime": "2026-03-21T06:15:00.010Z",
+    "updatedAt": "2026-03-21T06:15:00.010Z"
+  },
+  "task-1774074198562": {
+    "status": "success",
+    "endTime": "2026-03-21T06:24:00.018Z",
+    "updatedAt": "2026-03-21T06:24:00.018Z"
+  },
+  "task-1774074463841": {
+    "status": "success",
+    "endTime": "2026-03-21T06:30:00.013Z",
+    "updatedAt": "2026-03-21T06:30:00.013Z"
+  },
+  "task-1774074701402": {
+    "status": "success",
+    "endTime": "2026-03-21T06:35:00.012Z",
+    "updatedAt": "2026-03-21T06:35:00.013Z"
+  },
+  "task-1774075055013": {
+    "status": "success",
+    "endTime": "2026-03-21T06:40:00.022Z",
+    "updatedAt": "2026-03-21T06:40:00.023Z"
+  },
+  "task-1774075282854": {
+    "status": "success",
+    "endTime": "2026-03-21T06:47:37.773Z",
+    "updatedAt": "2026-03-21T06:47:37.773Z"
+  },
+  "task-1774111641358": {
+    "status": "success",
+    "endTime": "2026-03-22T16:49:00.037Z",
+    "updatedAt": "2026-03-22T16:49:00.037Z"
+  },
+  "task-1774111652460": {
+    "status": "success",
+    "endTime": "2026-03-22T16:50:00.044Z",
+    "updatedAt": "2026-03-22T16:50:00.044Z"
+  },
+  "task-1774112088637": {
+    "status": "success",
+    "endTime": "2026-03-22T16:57:00.020Z",
+    "updatedAt": "2026-03-22T16:57:00.020Z"
+  },
+  "task-1774113129927": {
+    "status": "success",
+    "endTime": "2026-03-22T16:51:58.098Z",
+    "updatedAt": "2026-03-22T16:51:58.098Z"
+  },
+  "task-1774113786300": {
+    "status": "success",
+    "endTime": "2026-03-22T16:51:50.023Z",
+    "updatedAt": "2026-03-22T16:51:50.023Z"
+  },
+  "task-1774118917774": {
+    "status": "success",
+    "endTime": "2026-03-21T18:49:21.106Z",
+    "updatedAt": "2026-03-21T18:49:21.106Z"
+  },
+  "task-1774118936767": {
+    "status": "success",
+    "endTime": "2026-03-21T18:52:21.916Z",
+    "updatedAt": "2026-03-21T18:52:21.917Z"
+  },
+  "task-1774192992176": {
+    "status": "success",
+    "endTime": "2026-03-22T15:24:32.167Z",
+    "updatedAt": "2026-03-22T15:24:32.167Z"
+  },
+  "task-1774192996968": {
+    "status": "success",
+    "endTime": "2026-03-22T15:26:00.055Z",
+    "updatedAt": "2026-03-22T15:26:00.055Z"
+  },
+  "task-1774198695892": {
+    "status": "success",
+    "endTime": "2026-03-22T16:59:00.020Z",
+    "updatedAt": "2026-03-22T16:59:00.020Z"
+  },
+  "task-1774198706728": {
+    "status": "success",
+    "endTime": "2026-03-22T17:00:00.025Z",
+    "updatedAt": "2026-03-22T17:00:00.025Z"
+  },
+  "task-1774199116515": {
+    "status": "success",
+    "endTime": "2026-03-22T17:18:11.752Z",
+    "updatedAt": "2026-03-22T17:18:11.752Z"
+  },
+  "task-1774238056090": {
+    "status": "success",
+    "endTime": "2026-03-23T03:56:33.073Z",
+    "updatedAt": "2026-03-23T03:56:33.073Z"
+  },
+  "task-1774238060673": {
+    "status": "success",
+    "endTime": "2026-03-23T03:57:33.086Z",
+    "updatedAt": "2026-03-23T03:57:33.087Z"
+  },
+  "task-1774239986550": {
+    "status": "success",
+    "endTime": "2026-03-23T04:54:33.089Z",
+    "updatedAt": "2026-03-23T04:54:33.090Z"
+  },
+  "task-1774239993461": {
+    "status": "success",
+    "endTime": "2026-03-23T04:54:53.801Z",
+    "updatedAt": "2026-03-23T04:54:53.801Z"
+  }
+}
