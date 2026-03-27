@@ -1,45 +1,33 @@
+# node_modules
+node_modules/
+tiktok/node_modules/
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+
+# Build files
+dist/
+build/
+
+# Environment variables
 .env
 .env.local
-.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# secrets
-/data/llm_api_key.txt
-/data/weibo_password.txt
-/zhanghao/
-/cookie/
-/.chrome-user-data/
-/news/apikey.txt
+# Database files
+*.db
+*.sqlite
 
-# runtime artifacts
-/data/tmp/*.json
-/data/tmp/*.md
-.weibo-storage-state.json
-.weibo-cookies.json
-
-# customer data (should not be committed)
-/images/
-/tiezi/
-/pinglunci/
-
-# except .gitkeep files for directory structure
-!/zhanghao/.gitkeep
-!/cookie/.gitkeep
-!/\.chrome-user-data/.gitkeep
-!/news/.gitkeep
-!/images/.gitkeep
-!/tiezi/.gitkeep
-!/pinglunci/.gitkeep
-
-# new user config directory (should not be committed)
-/user-config/
-# except .gitkeep files for directory structure
-!/user-config/.gitkeep
-!/user-config/assets/.gitkeep
-!/user-config/assets/instgram/.gitkeep
-!/user-config/assets/instgram/download/.gitkeep
-!/user-config/accounts/.gitkeep
-!/user-config/credentials/.gitkeep
-!/user-config/assets/pinglunci/.gitkeep
-!/user-config/assets/news/.gitkeep
-!/user-config/assets/sou/.gitkeep
-!/user-config/assets/sixin/.gitkeep
+# Temporary files
+temp/
+tmp/
