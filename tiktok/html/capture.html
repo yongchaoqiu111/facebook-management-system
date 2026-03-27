@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TikTok 自动化工具 - 评论抓取</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 30px 0;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .primary {
+            background-color: #0066cc;
+            color: white;
+        }
+        .primary:hover {
+            background-color: #0052a3;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .nav {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .nav a {
+            text-decoration: none;
+            color: #0066cc;
+            font-weight: bold;
+            padding: 8px 16px;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        .nav a:hover {
+            background-color: #e3f2fd;
+        }
+        .instructions {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 4px;
+            margin: 20px 0;
+            border-left: 4px solid #0066cc;
+        }
+        .instructions h3 {
+            margin-top: 0;
+            color: #0066cc;
+        }
+        .instructions ol {
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>TikTok 自动化工具</h1>
+        
+        <div class="nav">
+            <a href="login.html">登录管理</a>
+            <a href="capture.html">评论抓取</a>
+            <a href="filter.html">评论过滤</a>
+        </div>
+        
+        <h2>评论抓取</h2>
+        
+        <div class="instructions">
+            <h3>操作说明：</h3>
+            <ol>
+                <li>点击下方按钮启动评论抓取工具</li>
+                <li>在新窗口中登录 TikTok</li>
+                <li>搜索关键词，浏览视频</li>
+                <li>点击进入想要抓取评论的视频</li>
+                <li>按回车键，自动抓取评论</li>
+                <li>抓取完成后手动点击后退，继续刷下一个视频</li>
+                <li>输入 "exit" 退出程序</li>
+            </ol>
+        </div>
+        
+        <div class="button-group">
+            <button class="primary" onclick="startCapture()">启动评论抓取工具</button>
+            <button class="danger" onclick="clearAllComments()">清空全部评论</button>
+        </div>
+        
+        <div id="status" class="status info">
+            点击上方按钮启动评论抓取工具
+        </div>
+    </div>
+
+    <script>
+        function updateStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+
+        async function startCapture() {
+            try {
+                updateStatus('正在启动评论抓取工具...', 'info');
+                const response = await fetch('/start-capture', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    updateStatus(data.message, 'success');
+                } else {
+                    updateStatus('错误: ' + data.error, 'error');
+                }
+            } catch (error) {
+                updateStatus('请求失败: ' + error.message, 'error');
+            }
+        }
+
+        async function clearAllComments() {
+            if (confirm('确定要清空全部评论吗？此操作不可恢复！')) {
+                try {
+                    updateStatus('正在清空全部评论...', 'info');
+                    const response = await fetch('/clear-all-comments', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        updateStatus(data.message, 'success');
+                    } else {
+                        updateStatus('错误: ' + data.error, 'error');
+                    }
+                } catch (error) {
+                    updateStatus('请求失败: ' + error.message, 'error');
+                }
+            }
+        }
+    </script>
+</body>
+</html>

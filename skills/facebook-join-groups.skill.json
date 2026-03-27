@@ -1,0 +1,55 @@
+{
+  "skillId": "mcp-weibo-facebook-join-groups",
+  "name": "facebook-join-groups",
+  "version": "1.0.0",
+  "description": "自动加入Facebook小组，支持关键词搜索和问答处理",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "email": {
+        "type": "string",
+        "description": "Facebook账号邮箱"
+      },
+      "password": {
+        "type": "string",
+        "description": "Facebook账号密码"
+      },
+      "maxGroups": {
+        "type": "number",
+        "default": 1,
+        "description": "最多加入的小组数量"
+      },
+      "traceId": {
+        "type": "string",
+        "description": "追踪ID"
+      },
+      "taskId": {
+        "type": "string",
+        "description": "任务ID"
+      },
+      "accountId": {
+        "type": "string",
+        "description": "账号ID"
+      }
+    }
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "joinedGroups": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "成功加入的小组列表"
+      }
+    }
+  },
+  "healthCheckUrl": "/health/facebook-join-groups",
+  "communicationMode": "local-function",
+  "timeout": 300000,
+  "dependencies": [
+    "playwright",
+    "random"
+  ]
+}

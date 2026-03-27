@@ -1,0 +1,31 @@
+{
+  "name": "mcp-weibo-orchestrator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MCP 技能集市 + 新浪微博自动化编排框架",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p .",
+    "start": "node dist/index.js",
+    "dev": "ts-node index.ts"
+  },
+  "dependencies": {
+    "axios": "^1.11.0",
+    "better-sqlite3": "^12.8.0",
+    "bullmq": "^5.58.0",
+    "chokidar": "^4.0.1",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "ioredis": "^5.6.1",
+    "node-cron": "^3.0.3",
+    "playwright": "^1.54.2"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/express": "^4.17.23",
+    "@types/node": "^22.15.30",
+    "@types/node-cron": "^3.0.11",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  }
+}

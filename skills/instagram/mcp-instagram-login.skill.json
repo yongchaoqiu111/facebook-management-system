@@ -1,0 +1,33 @@
+{
+  "skillId": "mcp-instagram-login",
+  "name": "Instagram 登录技能",
+  "version": "1.0.0",
+  "description": "Instagram 账号登录功能，支持账号密码登录和登录态管理",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "username": {
+        "type": "string",
+        "description": "Instagram 账号用户名"
+      },
+      "password": {
+        "type": "string",
+        "description": "Instagram 账号密码"
+      },
+      "timeoutSeconds": {
+        "type": "number",
+        "description": "登录超时时间（秒）"
+      }
+    }
+  },
+  "outputSchema": {
+    "code": "number",
+    "data": {
+      "status": "string",
+      "cookiePath": "string"
+    }
+  },
+  "healthCheckUrl": "/health",
+  "communicationMode": "local-function",
+  "timeout": 300000
+}

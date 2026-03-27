@@ -1,0 +1,23 @@
+[Bootstrap] [2026-03-16T05:24:34.526Z] init redis singleton
+[Bootstrap] [2026-03-16T05:24:34.533Z] init sqlite cache
+[LLMCache] [2026-03-16T05:24:34.536Z] llm_cache table ready
+[LLMCache] [2026-03-16T05:24:34.538Z] expired cache cleaned: 0
+[LLMCache] [2026-03-16T05:24:34.545Z] cron scheduled at 04:00 daily
+[Bootstrap] [2026-03-16T05:24:34.549Z] generate skill json files
+[Bootstrap] [2026-03-16T05:24:34.556Z] start skill watcher
+[SkillRegistry] add D:\weibo\skills\mcp-weibo-ai-news.skill.json - mcp-weibo-ai-news
+[SkillRegistry] add D:\weibo\skills\mcp-weibo-hot.skill.json - mcp-weibo-hot
+[SkillRegistry] add D:\weibo\skills\mcp-weibo-image.skill.json - mcp-weibo-image
+[SkillRegistry] add D:\weibo\skills\mcp-weibo-interact.skill.json - mcp-weibo-interact
+[SkillRegistry] add D:\weibo\skills\mcp-weibo-llm-generate.skill.json - mcp-weibo-llm-generate
+[SkillRegistry] add D:\weibo\skills\mcp-weibo-message.skill.json - mcp-weibo-message
+[SkillRegistry] add D:\weibo\skills\mcp-weibo-post.skill.json - mcp-weibo-post
+[SkillRegistry] [2026-03-16T05:24:34.582Z] watcher started
+[Bootstrap] [2026-03-16T05:24:34.582Z] start bullmq workers
+[Bootstrap] [2026-03-16T05:24:34.584Z] schedule daily weibo task
+[Bootstrap] [2026-03-16T05:24:34.585Z] daily task scheduled: weibo_daily_post_default at 08:00
+[Bootstrap] [2026-03-16T05:24:34.599Z] service started at http://localhost:3000
+[WeiboSkills] [2026-03-16T05:24:37.726Z] searchAiNews query=AI size=3 source=hn
+[WeiboSkills] [2026-03-16T05:24:38.020Z] generateWeiboContent topic=Race on to establish globally recognised 'AI-free' logo
+[WeiboSkills] [2026-03-16T05:24:39.159Z] searchAiNews query=AI size=3 source=hn
+[WeiboSkills] [2026-03-16T05:24:39.415Z] generateWeiboContent topic=Race on to establish globally recognised 'AI-free' logo

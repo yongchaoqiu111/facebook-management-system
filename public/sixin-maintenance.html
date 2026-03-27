@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>私信维护 - Facebook管理系统</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .sixin-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .sixin-section h3 {
+            margin-bottom: 15px;
+            color: #34495e;
+        }
+        
+        .status-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            margin-bottom: 20px;
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f1f3f5;
+        }
+        
+        .status-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .status-label {
+            font-weight: 500;
+            color: #6c757d;
+        }
+        
+        .status-value {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .status-value.success {
+            color: #28a745;
+        }
+        
+        .status-value.error {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 动态加载的头部 -->
+        <div id="app-header"></div>
+
+        <main>
+            <section class="sixin-manager">
+                <h2>私信维护</h2>
+                
+                <div class="sixin-section">
+                    <h3>维护状态</h3>
+                    <div class="status-card">
+                        <div class="status-item">
+                            <span class="status-label">待处理私信数:</span>
+                            <span class="status-value" id="pendingCount">--</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">今日已维护:</span>
+                            <span class="status-value" id="todayCount">--</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">总维护数:</span>
+                            <span class="status-value" id="totalCount">--</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">维护成功率:</span>
+                            <span class="status-value" id="successRate">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sixin-section">
+                    <h3>维护说明</h3>
+                    <div style="padding: 20px; background: white; border-radius: 8px; border: 1px solid #e9ecef;">
+                        <p style="margin-bottom: 10px;">私信维护功能已集成到定时任务系统中，请在 <a href="index.html" style="color: #007bff; text-decoration: none;">技能时间管理</a> 页面添加定时任务。</p>
+                        <p style="margin-bottom: 10px;">每次执行将维护10个私信，系统会自动选择合适的回复模板并通过大模型优化回复内容。</p>
+                        <p>话术模板配置：在 <strong>D:\weibo\sixin</strong> 目录下的 <strong>1.txt</strong>、<strong>2.txt</strong>、<strong>3.txt</strong> 文件中可以添加自定义话术模板。</p>
+                    </div>
+                </div>
+
+
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2026 Facebook管理系统</p>
+        </footer>
+    </div>
+
+    <script src="routes.js"></script>
+    <script src="script.js"></script>
+    <script>
+        // 私信维护功能
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStatus();
+        });
+
+        // 加载维护状态
+        async function loadStatus() {
+            try {
+                const response = await fetch('/api/sixin/status');
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('pendingCount').textContent = data.data.pendingCount || 0;
+                    document.getElementById('todayCount').textContent = data.data.todayCount || 0;
+                    document.getElementById('totalCount').textContent = data.data.totalCount || 0;
+                    document.getElementById('successRate').textContent = data.data.successRate || '0%';
+                } else {
+                    console.error('加载维护状态失败');
+                }
+            } catch (error) {
+                console.error('加载维护状态失败:', error);
+            }
+        }
+    </script>
+</body>
+</html>

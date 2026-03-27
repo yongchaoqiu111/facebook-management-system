@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大模型交互 - Facebook管理系统</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 动态加载的头部 -->
+        <div id="app-header"></div>
+
+        <main>
+            <section class="llm-chat">
+                <h2>大模型交互</h2>
+                
+                <!-- 交互结果区域 -->
+                <div class="image-section" style="margin-bottom: 20px;">
+                    <h3>交互结果</h3>
+                    <div id="chatResult" style="height: 400px; overflow-y: auto; padding: 15px; background: #f8f9fa; border-radius: 4px; border: 1px solid #e9ecef;">
+                        <div id="resultContent" style="white-space: pre-wrap; line-height: 1.6;">请点击发送按钮开始交互...</div>
+                    </div>
+                </div>
+
+                <!-- 输入区域 -->
+                <div class="image-section">
+                    <h3>输入问题</h3>
+                    <div style="display: flex; gap: 10px; align-items: stretch;">
+                        <textarea class="prompt-input" id="promptInput" placeholder="请输入您的问题..." style="flex: 1; height: 60px;"></textarea>
+                        <button class="btn-generate" id="sendBtn" onclick="sendMessage()" style="width: 120px;">发送</button>
+                    </div>
+                    
+                    <!-- 保存按钮 -->
+                    <div style="display: flex; gap: 10px; margin-top: 15px;">
+                        <button class="btn-generate" onclick="saveToFile(1)" style="flex: 1;">保存1</button>
+                        <button class="btn-generate" onclick="saveToFile(2)" style="flex: 1;">保存2</button>
+                        <button class="btn-generate" onclick="saveToFile(3)" style="flex: 1;">保存3</button>
+                        <button class="btn-generate" onclick="saveToFile(4)" style="flex: 1;">保存4</button>
+                        <button class="btn-generate" onclick="saveToFile(5)" style="flex: 1;">保存5</button>
+                        <button class="btn-generate" onclick="saveToFile(6)" style="flex: 1;">保存6</button>
+                        <button class="btn-generate" onclick="saveToFile(7)" style="flex: 1;">保存7</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2026 Facebook管理系统</p>
+        </footer>
+    </div>
+
+    <script src="routes.js"></script>
+    <script>
+        async function sendMessage() {
+            const prompt = document.getElementById('promptInput').value.trim();
+            if (!prompt) {
+                alert('请输入问题');
+                return;
+            }
+
+            const sendBtn = document.getElementById('sendBtn');
+            const resultContent = document.getElementById('resultContent');
+            
+            // 显示加载状态
+            sendBtn.disabled = true;
+            sendBtn.textContent = '发送中...';
+            resultContent.textContent = '正在处理，请稍候...';
+
+            try {
+                const response = await fetch('/api/llm/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ prompt })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultContent.textContent = data.data.response;
+                } else {
+                    resultContent.textContent = '错误: ' + (data.message || '交互失败');
+                }
+            } catch (error) {
+                resultContent.textContent = '网络错误，请稍后重试';
+                console.error('大模型交互失败:', error);
+            } finally {
+                // 恢复按钮状态
+                sendBtn.disabled = false;
+                sendBtn.textContent = '发送';
+            }
+        }
+
+        async function saveToFile(fileNumber) {
+            const resultContent = document.getElementById('resultContent').textContent.trim();
+            
+            if (!resultContent || resultContent === '请点击发送按钮开始交互...') {
+                alert('没有可保存的内容，请先发送问题获取回复');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/llm/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        content: resultContent,
+                        fileNumber: fileNumber
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(`保存成功！文件已保存到: D:\\weibo\\user-config\\assets\\tiezi\\${fileNumber}.txt`);
+                } else {
+                    alert('保存失败: ' + (data.message || '未知错误'));
+                }
+            } catch (error) {
+                alert('保存失败，请稍后重试');
+                console.error('保存文件失败:', error);
+            }
+        }
+    </script>
+</body>
+</html>

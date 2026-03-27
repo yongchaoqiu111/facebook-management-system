@@ -1,0 +1,116 @@
+[TikTokDownloadSkill] [2026-03-25T18:13:05.811Z] 开始执行TikTok媒体下载任务
+[TikTokDownloadSkill] [2026-03-25T18:13:05.812Z] 用户名: lebaby0v0
+[TikTokDownloadSkill] [2026-03-25T18:13:05.813Z] 下载限制: 50
+[TikTokDownloadSkill] [2026-03-25T18:13:05.814Z] 等待时间: 10 秒
+[TikTokDownloadSkill] [2026-03-25T18:13:05.815Z] 启动浏览器...
+[TikTokDownloadSkill] [2026-03-25T18:13:06.142Z] 浏览器启动成功
+[TikTokDownloadSkill] [2026-03-25T18:13:06.158Z] 浏览器上下文创建成功
+[TikTokDownloadSkill] [2026-03-25T18:13:06.327Z] 新页面创建成功
+[TikTokDownloadSkill] [2026-03-25T18:13:06.332Z] 成功加载Cookie，共10个
+[TikTokDownloadSkill] [2026-03-25T18:13:06.333Z] Cookie加载完成
+[TikTokDownloadSkill] [2026-03-25T18:13:06.333Z] 打开TikTok用户页面: https://www.tiktok.com/@lebaby0v0
+[TikTokDownloadSkill] [2026-03-25T18:13:07.607Z] 页面加载完成或已超时，继续执行...
+[TikTokDownloadSkill] [2026-03-25T18:13:19.678Z] Cookie已保存到: D:\weibo\user-config\accounts\tiktok.txt
+[TikTokDownloadSkill] [2026-03-25T18:13:19.679Z] Cookie已保存
+[TikTokDownloadSkill] [2026-03-25T18:13:19.680Z] 开始扫描和下载媒体内容...
+[TikTokDownloadSkill] [2026-03-25T18:13:19.681Z] 开始滚动页面加载更多内容...
+[TikTokDownloadSkill] [2026-03-25T18:13:49.695Z] 扫描完成，共发现 0 个媒体文件
+[TikTokDownloadSkill] [2026-03-25T18:13:49.922Z] 浏览器已关闭
+[TikTokDownloadSkill] [2026-03-25T18:21:05.657Z] 开始执行TikTok媒体下载任务
+[TikTokDownloadSkill] [2026-03-25T18:21:05.657Z] 用户名: 05yun
+[TikTokDownloadSkill] [2026-03-25T18:21:05.658Z] 下载限制: 50
+[TikTokDownloadSkill] [2026-03-25T18:21:05.659Z] 等待时间: 10 秒
+[TikTokDownloadSkill] [2026-03-25T18:21:05.660Z] 启动浏览器...
+[TikTokDownloadSkill] [2026-03-25T18:21:05.961Z] 浏览器启动成功
+[TikTokDownloadSkill] [2026-03-25T18:21:05.976Z] 浏览器上下文创建成功
+[TikTokDownloadSkill] [2026-03-25T18:21:06.146Z] 新页面创建成功
+[TikTokDownloadSkill] [2026-03-25T18:21:06.154Z] 成功加载Cookie，共37个
+[TikTokDownloadSkill] [2026-03-25T18:21:06.155Z] Cookie加载完成
+[TikTokDownloadSkill] [2026-03-25T18:21:06.156Z] 打开TikTok用户页面: https://www.tiktok.com/@05yun
+[TikTokDownloadSkill] [2026-03-25T18:21:07.514Z] 页面加载完成或已超时，继续执行...
+[TikTokDownloadSkill] [2026-03-25T18:21:19.589Z] Cookie已保存到: D:\weibo\user-config\accounts\tiktok.txt
+[TikTokDownloadSkill] [2026-03-25T18:21:19.590Z] Cookie已保存
+[TikTokDownloadSkill] [2026-03-25T18:21:19.591Z] 开始扫描和下载媒体内容...
+[TikTokDownloadSkill] [2026-03-25T18:21:19.592Z] 开始滚动页面加载更多内容...
+[TikTokDownloadSkill] [2026-03-25T18:21:24.614Z] 发现媒体 1: video - blob:https://www.tiktok.com/69980e60-2588-4fa4-b469-32a7e12d2d5b
+[TikTokDownloadSkill] [2026-03-25T18:21:24.615Z] 发现媒体 2: video - https://p16-sign-sg.tiktokcdn.com/tos-alisg-avt-0068/057bc614008a09a0f49910e0b6b0ea19~tplv-tiktokx-c
+[TikTokDownloadSkill] [2026-03-25T18:21:45.667Z] 发现媒体 3: video - blob:https://www.tiktok.com/e0b66ce0-0bc4-4f03-93ce-a450ab250044
+[TikTokDownloadSkill] [2026-03-25T18:21:48.706Z] 发现媒体 4: video - blob:https://www.tiktok.com/27984dd0-db3e-4079-a0d3-3bcea8d855f5
+[TikTokDownloadSkill] [2026-03-25T18:21:49.594Z] 扫描完成，共发现 4 个媒体文件
+[TikTokDownloadSkill] [2026-03-25T18:21:49.601Z] ⚠️ 跳过 (Unsupported protocol blob:): blob:https://www.tiktok.com/69980e60-2588-4fa4-b469-32a7e12d2d5b...
+[TikTokDownloadSkill] [2026-03-25T18:21:50.038Z] ✅ 下载成功: 05yun_1774462909969_1.jpg
+[TikTokDownloadSkill] [2026-03-25T18:21:50.040Z] ⚠️ 跳过 (Unsupported protocol blob:): blob:https://www.tiktok.com/e0b66ce0-0bc4-4f03-93ce-a450ab250044...
+[TikTokDownloadSkill] [2026-03-25T18:21:50.042Z] ⚠️ 跳过 (Unsupported protocol blob:): blob:https://www.tiktok.com/27984dd0-db3e-4079-a0d3-3bcea8d855f5...
+[TikTokDownloadSkill] [2026-03-25T18:21:50.295Z] 浏览器已关闭
+[TikTokDownloadSkill] [2026-03-25T18:27:12.628Z] 开始执行TikTok媒体下载任务
+[TikTokDownloadSkill] [2026-03-25T18:27:12.629Z] 用户名: 05yun
+[TikTokDownloadSkill] [2026-03-25T18:27:12.629Z] 下载限制: 50
+[TikTokDownloadSkill] [2026-03-25T18:27:12.630Z] 等待时间: 60 秒
+[TikTokDownloadSkill] [2026-03-25T18:27:12.631Z] 启动浏览器...
+[TikTokDownloadSkill] [2026-03-25T18:27:12.934Z] 浏览器启动成功
+[TikTokDownloadSkill] [2026-03-25T18:27:12.949Z] 浏览器上下文创建成功
+[TikTokDownloadSkill] [2026-03-25T18:27:13.123Z] 新页面创建成功
+[TikTokDownloadSkill] [2026-03-25T18:27:13.136Z] 成功加载Cookie，共37个
+[TikTokDownloadSkill] [2026-03-25T18:27:13.137Z] Cookie加载完成
+[TikTokDownloadSkill] [2026-03-25T18:27:13.138Z] 打开TikTok用户页面: https://www.tiktok.com/@05yun
+[TikTokDownloadSkill] [2026-03-25T18:27:14.675Z] 页面加载完成或已超时，继续执行...
+[TikTokDownloadSkill] [2026-03-25T18:28:17.201Z] Cookie已保存到: D:\weibo\user-config\accounts\tiktok.txt
+[TikTokDownloadSkill] [2026-03-25T18:28:17.202Z] Cookie已保存
+[TikTokDownloadSkill] [2026-03-25T18:28:17.203Z] 开始扫描和下载媒体内容...
+[TikTokDownloadSkill] [2026-03-25T18:28:17.204Z] 开始滚动页面加载更多内容...
+[TikTokDownloadSkill] [2026-03-25T18:28:32.235Z] 提取视频数据失败: 未找到 __UNIVERSAL_DATA__ 数据
+[TikTokDownloadSkill] [2026-03-25T18:28:35.237Z] 提取视频数据失败: 未找到 __UNIVERSAL_DATA__ 数据
+[TikTokDownloadSkill] [2026-03-25T18:28:38.235Z] 提取视频数据失败: 未找到 __UNIVERSAL_DATA__ 数据
+[TikTokDownloadSkill] [2026-03-25T18:28:41.251Z] 提取视频数据失败: 未找到 __UNIVERSAL_DATA__ 数据
+[TikTokDownloadSkill] [2026-03-25T18:28:44.262Z] 提取视频数据失败: 未找到 __UNIVERSAL_DATA__ 数据
+[TikTokDownloadSkill] [2026-03-25T18:28:47.204Z] 扫描完成，共发现 0 个媒体文件
+[TikTokDownloadSkill] [2026-03-25T18:28:47.228Z] 提取视频数据失败: 提取失败：page.evaluate: Target page, context or browser has been closed
+[TikTokDownloadSkill] [2026-03-25T18:28:47.229Z] 提取视频数据失败: 提取失败：page.evaluate: Target page, context or browser has been closed
+[TikTokDownloadSkill] [2026-03-25T18:28:47.230Z] 提取视频数据失败: 提取失败：page.evaluate: Target page, context or browser has been closed
+[TikTokDownloadSkill] [2026-03-25T18:28:47.231Z] 提取视频数据失败: 提取失败：page.evaluate: Target page, context or browser has been closed
+[TikTokDownloadSkill] [2026-03-25T18:28:47.416Z] 浏览器已关闭
+[TikTokDownloadSkill] [2026-03-25T19:02:41.824Z] 开始下载TikTok视频
+[TikTokDownloadSkill] [2026-03-25T19:02:41.825Z] 视频链接: https://www.tiktok.com/@lebaby0v0/video/7110422817136545051
+[TikTokDownloadSkill] [2026-03-25T19:02:41.825Z] 启动浏览器...
+[TikTokDownloadSkill] [2026-03-25T19:02:42.419Z] 打开视频页面: https://www.tiktok.com/@lebaby0v0/video/7110422817136545051
+[TikTokDownloadSkill] [2026-03-25T19:03:15.707Z] 正在提取视频信息: https://www.tiktok.com/@lebaby0v0/video/7110422817136545051
+[TikTokDownloadSkill] [2026-03-25T19:03:18.727Z] ✅ 从 video 标签提取成功
+[TikTokDownloadSkill] [2026-03-25T19:03:18.728Z] 视频标题: 高馬尾女孩的魅力示範 | TikTok
+[TikTokDownloadSkill] [2026-03-25T19:03:18.728Z] 视频地址: blob:https://www.tiktok.com/2f340d82-f41c-468e-8012-e47f134bdf25...
+[TikTokDownloadSkill] [2026-03-25T19:03:18.729Z] 开始下载视频...
+[TikTokDownloadSkill] [2026-03-25T19:03:18.736Z] 下载媒体文件失败: Unsupported protocol blob:
+[TikTokDownloadSkill] [2026-03-25T19:03:18.983Z] ❌ 下载失败
+[TikTokDownloadSkill] [2026-03-25T19:06:06.036Z] 开始下载TikTok视频
+[TikTokDownloadSkill] [2026-03-25T19:06:06.037Z] 视频链接: https://www.tiktok.com/@lebaby0v0/video/7110422817136545051
+[TikTokDownloadSkill] [2026-03-25T19:06:06.038Z] 启动浏览器...
+[TikTokDownloadSkill] [2026-03-25T19:06:06.570Z] 打开视频页面: https://www.tiktok.com/@lebaby0v0/video/7110422817136545051
+[TikTokDownloadSkill] [2026-03-25T19:06:39.882Z] 正在提取视频信息: https://www.tiktok.com/@lebaby0v0/video/7110422817136545051
+[TikTokDownloadSkill] [2026-03-25T19:08:34.834Z] 开始下载TikTok视频
+[TikTokDownloadSkill] [2026-03-25T19:08:34.835Z] 视频链接: https://www.tiktok.com/@lebaby0v0/video/7110422817136545051
+[TikTokDownloadSkill] [2026-03-25T19:08:34.836Z] 启动浏览器...
+[TikTokDownloadSkill] [2026-03-25T19:08:35.433Z] 打开视频页面: https://www.tiktok.com/@lebaby0v0/video/7110422817136545051
+[TikTokDownloadSkill] [2026-03-25T19:09:08.952Z] 正在提取视频信息: https://www.tiktok.com/@lebaby0v0/video/7110422817136545051
+[TikTokDownloadSkill] [2026-03-25T19:09:11.969Z] 尝试从 __UNIVERSAL_DATA__ 提取...
+[TikTokDownloadSkill] [2026-03-25T19:10:46.118Z] 开始下载TikTok视频
+[TikTokDownloadSkill] [2026-03-25T19:10:46.119Z] 视频链接: https://www.tiktok.com/@lebaby0v0/video/7110422817136545051
+[TikTokDownloadSkill] [2026-03-25T19:10:46.120Z] 启动浏览器...
+[TikTokDownloadSkill] [2026-03-25T19:10:46.629Z] 打开视频页面: https://www.tiktok.com/@lebaby0v0/video/7110422817136545051
+[TikTokDownloadSkill] [2026-03-25T19:11:20.310Z] 正在提取视频信息: https://www.tiktok.com/@lebaby0v0/video/7110422817136545051
+[TikTokDownloadSkill] [2026-03-25T19:11:23.316Z] 尝试从 __UNIVERSAL_DATA__ 提取...
+[TikTokDownloadSkill] [2026-03-25T19:11:23.325Z] 页面状态正常
+[TikTokDownloadSkill] [2026-03-25T19:11:23.328Z] ❌ 解析失败: 未找到 __UNIVERSAL_DATA__
+[TikTokDownloadSkill] [2026-03-25T19:12:46.271Z] 开始下载TikTok视频
+[TikTokDownloadSkill] [2026-03-25T19:12:46.272Z] 视频链接: https://www.tiktok.com/@lebaby0v0/video/7110422817136545051
+[TikTokDownloadSkill] [2026-03-25T19:12:46.273Z] 启动浏览器...
+[TikTokDownloadSkill] [2026-03-25T19:12:46.785Z] 打开视频页面: https://www.tiktok.com/@lebaby0v0/video/7110422817136545051
+[TikTokDownloadSkill] [2026-03-25T19:12:55.068Z] 正在提取视频信息: https://www.tiktok.com/@lebaby0v0/video/7110422817136545051
+[TikTokDownloadSkill] [2026-03-25T19:12:58.751Z] 尝试从页面 script 标签提取...
+[TikTokDownloadSkill] [2026-03-25T19:12:58.760Z] 页面状态正常
+[TikTokDownloadSkill] [2026-03-25T19:12:58.763Z] ❌ 解析失败: 未找到视频数据
+[TikTokDownloadSkill] [2026-03-25T19:18:14.604Z] 开始下载TikTok视频
+[TikTokDownloadSkill] [2026-03-25T19:18:14.605Z] 视频链接: https://www.tiktok.com/@lebaby0v0/video/7110422817136545051
+[TikTokDownloadSkill] [2026-03-25T19:18:14.606Z] 启动浏览器...
+[TikTokDownloadSkill] [2026-03-25T19:18:15.117Z] 打开视频页面: https://www.tiktok.com/@lebaby0v0/video/7110422817136545051
+[TikTokDownloadSkill] [2026-03-25T19:18:23.021Z] 正在提取视频信息: https://www.tiktok.com/@lebaby0v0/video/7110422817136545051
+[TikTokDownloadSkill] [2026-03-25T19:18:26.254Z] 页面状态正常
+[TikTokDownloadSkill] [2026-03-25T19:18:26.258Z] ❌ 提取失败: 找不到 __UNIVERSAL_DATA__

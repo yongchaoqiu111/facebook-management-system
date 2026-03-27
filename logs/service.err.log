@@ -1,0 +1,2 @@
+BullMQ: WARNING! Your redis options maxRetriesPerRequest must be null and will be overridden by BullMQ.
+BullMQ: WARNING! Your redis options maxRetriesPerRequest must be null and will be overridden by BullMQ.

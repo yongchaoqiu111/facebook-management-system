@@ -1,0 +1,37 @@
+{
+  "skillId": "mcp-facebook-interact",
+  "name": "Facebook 互动技能",
+  "version": "1.0.0",
+  "description": "Facebook 帖子互动功能，支持点赞、评论和分享",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "description": "互动动作：like、comment、share"
+      },
+      "postId": {
+        "type": "string",
+        "description": "帖子ID"
+      },
+      "content": {
+        "type": "string",
+        "description": "评论内容（仅评论时需要）"
+      },
+      "loginTimeoutSeconds": {
+        "type": "number",
+        "description": "登录超时时间（秒）"
+      }
+    },
+    "required": ["action", "postId"]
+  },
+  "outputSchema": {
+    "code": "number",
+    "data": {
+      "status": "string"
+    }
+  },
+  "healthCheckUrl": "/health",
+  "communicationMode": "local-function",
+  "timeout": 300000
+}

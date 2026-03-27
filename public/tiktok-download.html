@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TikTok下载 - 社交媒体管理系统</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <div id="app-header"></div>
+    
+    <div class="container">
+        <h1>TikTok媒体下载</h1>
+        
+        <div class="download-section">
+            <div class="form-group">
+                <label for="tiktok-username">TikTok用户名</label>
+                <input type="text" id="tiktok-username" placeholder="例如: lebaby0v0" required>
+                <small>输入TikTok用户名（无需@符号）</small>
+            </div>
+            
+            <button id="start-download" class="btn btn-primary">开始下载</button>
+        </div>
+        
+        <div id="download-status" class="status-section">
+            <h3>下载状态</h3>
+            <div id="status-message"></div>
+            <div id="download-progress"></div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+    <script src="routes.js"></script>
+    <script>
+        // 初始化导航栏
+        window.onload = function() {
+            initializeApp();
+            setupTikTokDownload();
+        };
+        
+        function setupTikTokDownload() {
+            const startButton = document.getElementById('start-download');
+            const usernameInput = document.getElementById('tiktok-username');
+            const statusMessage = document.getElementById('status-message');
+            const downloadProgress = document.getElementById('download-progress');
+            
+            startButton.addEventListener('click', async function() {
+                const username = usernameInput.value.trim();
+                
+                if (!username) {
+                    statusMessage.innerHTML = '<span class="error">请输入TikTok用户名</span>';
+                    return;
+                }
+                
+                statusMessage.innerHTML = '<span class="info">正在准备下载...</span>';
+                downloadProgress.innerHTML = '';
+                
+                try {
+                    const response = await fetch('/api/tiktok/download', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ username: username })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.code === 0) {
+                        statusMessage.innerHTML = '<span class="success">下载完成！</span>';
+                        downloadProgress.innerHTML = `
+                            <div class="progress-item">用户名: ${result.data.username}</div>
+                            <div class="progress-item">发现媒体: ${result.data.totalFound}</div>
+                            <div class="progress-item">成功下载: ${result.data.downloaded}</div>
+                            <div class="progress-item">下载失败: ${result.data.failed}</div>
+                            <div class="progress-item">跳过文件: ${result.data.skipped}</div>
+                            <div class="progress-item">保存目录: ${result.data.downloadDir}</div>
+                        `;
+                    } else {
+                        statusMessage.innerHTML = `<span class="error">${result.data.message}</span>`;
+                    }
+                } catch (error) {
+                    statusMessage.innerHTML = `<span class="error">下载失败: ${error.message}</span>`;
+                }
+            });
+        }
+    </script>
+</body>
+</html>

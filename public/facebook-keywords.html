@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facebook关键词管理 - Facebook管理系统</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .keywords-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .keywords-section h3 {
+            margin-bottom: 15px;
+            color: #34495e;
+        }
+        
+        .add-keyword-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .add-keyword-form input {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .keywords-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+        }
+        
+        .keyword-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            border-bottom: 1px solid #f1f3f5;
+        }
+        
+        .keyword-item:last-child {
+            border-bottom: none;
+        }
+        
+        .keyword-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .keyword-text {
+            font-size: 14px;
+            color: #2c3e50;
+        }
+        
+        .keyword-actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .btn-edit {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        
+        .btn-edit:hover {
+            background-color: #e0a800;
+        }
+        
+        .btn-delete {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .btn-delete:hover {
+            background-color: #c82333;
+        }
+        
+        .edit-form {
+            display: none;
+            width: 100%;
+            gap: 10px;
+            padding: 10px 0;
+        }
+        
+        .edit-form input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .edit-form.active {
+            display: flex;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 动态加载的头部 -->
+        <div id="app-header"></div>
+
+        <main>
+            <section class="keywords-manager">
+                <h2>Facebook加入小组关键词管理</h2>
+                
+                <!-- 文件状态信息 -->
+                <div class="status-section" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e9ecef;">
+                    <h3>文件状态</h3>
+                    <p><strong>存储文件:</strong> <span id="filePath">加载中...</span></p>
+                    <p><strong>最后修改:</strong> <span id="lastModified">加载中...</span></p>
+                </div>
+                
+                <div class="keywords-section">
+                    <h3>添加关键词</h3>
+                    <form class="add-keyword-form" id="addKeywordForm">
+                        <input type="text" id="newKeyword" placeholder="请输入关键词..." required>
+                        <button type="submit" class="btn btn-primary">添加</button>
+                    </form>
+                </div>
+
+                <div class="keywords-section">
+                    <h3>关键词列表</h3>
+                    <div class="keywords-list" id="keywordsList">
+                        <div class="empty-state">暂无关键词，请添加</div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2026 Facebook管理系统</p>
+        </footer>
+    </div>
+
+    <script src="routes.js"></script>
+    <script src="script.js"></script>
+    <script>
+        // Facebook关键词管理功能
+        document.addEventListener('DOMContentLoaded', function() {
+            loadKeywords();
+            loadFileStatus();
+        });
+        
+        // 加载文件状态
+        async function loadFileStatus() {
+            try {
+                const response = await fetch('/api/facebook/keywords/status');
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('filePath').textContent = data.data.filePath;
+                    document.getElementById('lastModified').textContent = data.data.lastModified;
+                } else {
+                    document.getElementById('filePath').textContent = '文件不存在';
+                    document.getElementById('lastModified').textContent = 'N/A';
+                }
+            } catch (error) {
+                console.error('加载文件状态失败:', error);
+                document.getElementById('filePath').textContent = '加载失败';
+                document.getElementById('lastModified').textContent = '加载失败';
+            }
+        }
+
+        // 加载关键词列表
+        async function loadKeywords() {
+            try {
+                const response = await fetch('/api/facebook/keywords');
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderKeywords(data.data.keywords);
+                } else {
+                    showMessage('加载关键词失败', 'error');
+                }
+            } catch (error) {
+                showMessage('网络错误，请稍后重试', 'error');
+                console.error('加载关键词失败:', error);
+            }
+        }
+
+        // 渲染关键词列表
+        function renderKeywords(keywords) {
+            const keywordsList = document.getElementById('keywordsList');
+            
+            if (keywords.length === 0) {
+                keywordsList.innerHTML = '<div class="empty-state">暂无关键词，请添加</div>';
+                return;
+            }
+
+            keywordsList.innerHTML = keywords.map((keyword, index) => `
+                <div class="keyword-item">
+                    <div class="keyword-text">${keyword}</div>
+                    <div class="keyword-actions">
+                        <button class="btn btn-edit" onclick="editKeyword(${index})">编辑</button>
+                        <button class="btn btn-delete" onclick="deleteKeyword('${keyword}')">删除</button>
+                    </div>
+                    <div class="edit-form" id="editForm-${index}">
+                        <input type="text" id="editInput-${index}" value="${keyword}" required>
+                        <button class="btn btn-primary" onclick="saveEdit(${index})">保存</button>
+                        <button class="btn btn-secondary" onclick="cancelEdit(${index})">取消</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 添加关键词
+        document.getElementById('addKeywordForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const keyword = document.getElementById('newKeyword').value.trim();
+            
+            if (!keyword) {
+                showMessage('请输入关键词', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/facebook/keywords', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ keyword })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage('关键词添加成功', 'success');
+                    document.getElementById('addKeywordForm').reset();
+                    loadKeywords();
+                    loadFileStatus(); // 更新文件状态
+                } else {
+                    showMessage(data.message || '添加关键词失败', 'error');
+                }
+            } catch (error) {
+                showMessage('网络错误，请稍后重试', 'error');
+                console.error('添加关键词失败:', error);
+            }
+        });
+
+        // 删除关键词
+        window.deleteKeyword = async function(keyword) {
+            if (!confirm(`确定要删除关键词 "${keyword}" 吗？`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/facebook/keywords/${encodeURIComponent(keyword)}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage('关键词删除成功', 'success');
+                    loadKeywords();
+                    loadFileStatus(); // 更新文件状态
+                } else {
+                    showMessage(data.message || '删除关键词失败', 'error');
+                }
+            } catch (error) {
+                showMessage('网络错误，请稍后重试', 'error');
+                console.error('删除关键词失败:', error);
+            }
+        };
+
+        // 编辑关键词
+        window.editKeyword = function(index) {
+            // 隐藏所有编辑表单
+            document.querySelectorAll('.edit-form').forEach(form => {
+                form.classList.remove('active');
+            });
+            
+            // 显示当前编辑表单
+            const editForm = document.getElementById(`editForm-${index}`);
+            editForm.classList.add('active');
+            
+            // 聚焦到输入框
+            setTimeout(() => {
+                document.getElementById(`editInput-${index}`).focus();
+            }, 100);
+        };
+
+        // 取消编辑
+        window.cancelEdit = function(index) {
+            const editForm = document.getElementById(`editForm-${index}`);
+            editForm.classList.remove('active');
+        };
+
+        // 保存编辑
+        window.saveEdit = async function(index) {
+            const newKeyword = document.getElementById(`editInput-${index}`).value.trim();
+            
+            if (!newKeyword) {
+                showMessage('请输入关键词', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/facebook/keywords', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        oldKeyword: document.querySelector(`#editForm-${index} ~ .keyword-text`)?.textContent,
+                        newKeyword
+                    })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage('关键词更新成功', 'success');
+                    loadKeywords();
+                    loadFileStatus(); // 更新文件状态
+                } else {
+                    showMessage(data.message || '更新关键词失败', 'error');
+                }
+            } catch (error) {
+                showMessage('网络错误，请稍后重试', 'error');
+                console.error('更新关键词失败:', error);
+            }
+        };
+    </script>
+</body>
+</html>

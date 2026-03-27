@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>社交媒体管理系统</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 动态加载的头部 -->
+        <div id="app-header"></div>
+
+        <main>
+            <section class="task-manager">
+                <h2>技能时间管理</h2>
+                
+                <div class="add-task-form">
+                    <h3>添加技能任务</h3>
+                    <form id="addTaskForm">
+                        <div class="form-group">
+                            <label for="platformSelect">选择平台</label>
+                            <select id="platformSelect" required>
+                                <option value="">请选择平台</option>
+                                <option value="general">通用技能</option>
+                                <option value="facebook">Facebook</option>
+                                <option value="instagram">Instagram</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="skillSelect">选择技能</label>
+                            <select id="skillSelect" required>
+                                <option value="">请先选择平台</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="timeInput">执行时间</label>
+                            <input type="time" id="timeInput" required>
+                            <small>格式: HH:MM，例如 08:30</small>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">添加任务</button>
+                    </form>
+                </div>
+
+                <div class="tasks-list">
+                    <h3>已添加任务</h3>
+                    <div id="tasksList" class="task-list">
+                        <!-- 任务列表将通过JavaScript动态生成 -->
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2026 社交媒体管理系统</p>
+        </footer>
+    </div>
+
+    <script src="routes.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

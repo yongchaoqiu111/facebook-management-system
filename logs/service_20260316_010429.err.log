@@ -1,0 +1,19 @@
+[Global] Uncaught Exception: Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1948:16)
+    at listenInCluster (node:net:2005:12)
+    at Server.listen (node:net:2110:7)
+    at app.listen (D:\weibo\node_modules\express\lib\application.js:635:24)
+    at bootstrap (D:\weibo\dist\index.js:200:9)
+    at Object.<anonymous> (D:\weibo\dist\index.js:204:1)
+    at Module._compile (node:internal/modules/cjs/loader:1812:14)
+    at Object..js (node:internal/modules/cjs/loader:1943:10)
+    at Module.load (node:internal/modules/cjs/loader:1533:32)
+    at Module._load (node:internal/modules/cjs/loader:1335:12) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+BullMQ: WARNING! Your redis options maxRetriesPerRequest must be null and will be overridden by BullMQ.
+BullMQ: WARNING! Your redis options maxRetriesPerRequest must be null and will be overridden by BullMQ.

@@ -1,0 +1,8 @@
+{
+  "baseUrl": "https://coding.dashscope.aliyuncs.com/v1",
+  "apiKey": "sk-86c44c3824544f9884049984a884522d",
+  "maxContextTokens": 4096,
+  "temperature": 0.7,
+  "model": "qwen3.5-plus",
+  "timeoutMs": 300000
+}

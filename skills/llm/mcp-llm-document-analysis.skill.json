@@ -1,0 +1,74 @@
+{
+  "name": "LLM 文档分析",
+  "description": "使用大语言模型分析文档内容，完成指定任务",
+  "version": "1.0.0",
+  "author": "System",
+  "skillId": "mcp-llm-document-analysis",
+  "main": "llm-document-analysis.ts",
+  "entry": "analyzeDocument",
+  "input": {
+    "type": "object",
+    "properties": {
+      "documentContent": {
+        "type": "string",
+        "description": "文档内容"
+      },
+      "task": {
+        "type": "string",
+        "description": "分析任务"
+      },
+      "skillId": {
+        "type": "string",
+        "description": "技能 ID"
+      },
+      "traceId": {
+        "type": "string",
+        "description": "追踪 ID"
+      }
+    },
+    "required": ["documentContent", "task", "skillId", "traceId"]
+  },
+  "output": {
+    "type": "object",
+    "properties": {
+      "code": {
+        "type": "number",
+        "description": "错误码，0 表示成功"
+      },
+      "data": {
+        "type": "object",
+        "properties": {
+          "analysis": {
+            "type": "string",
+            "description": "分析结果"
+          },
+          "tokens": {
+            "type": "object",
+            "properties": {
+              "prompt": {
+                "type": "number",
+                "description": "提示词 tokens"
+              },
+              "completion": {
+                "type": "number",
+                "description": "完成 tokens"
+              },
+              "total": {
+                "type": "number",
+                "description": "总 tokens"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  },
+  "tags": ["llm", "document", "analysis"],
+  "communication": {
+    "mode": "sync",
+    "timeout": 60000
+  }
+}

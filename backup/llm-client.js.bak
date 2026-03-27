@@ -1,0 +1,196 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.llmClient = exports.LLMSlient = void 0;
+const axios_1 = __importDefault(require("axios"));
+const config_1 = require("../config");
+const MODULE = 'LLMClient';
+function log(message) {
+    console.log(`[${MODULE}] [${new Date().toISOString()}] ${message}`);
+}
+function sanitizeLLMText(raw) {
+    // 移除 <think> 标签及其内容，确保匹配跨行内容
+    let sanitized = raw
+        .replace(/<think>[\s\S]*?<\/think>/gis, '')
+        .replace(/```[\s\S]*?```/g, '')
+        .trim();
+    // 移除可能的思考过程文本
+    sanitized = sanitized.replace(/好的，我需要.*?/s, '');
+    sanitized = sanitized.replace(/首先，我得.*?/s, '');
+    sanitized = sanitized.replace(/接下来，我要.*?/s, '');
+    sanitized = sanitized.replace(/然后，核心.*?/s, '');
+    sanitized = sanitized.replace(/添加个人观点时.*?/s, '');
+    return sanitized.trim();
+}
+class LLMSlient {
+    constructor() {
+        this.cache = new Map();
+    }
+    async generate(input) {
+        const cacheKey = this.generateCacheKey(input);
+        const cached = this.getCached(cacheKey);
+        if (cached) {
+            log(`Cache hit for skill=${input.skillId}`);
+            return cached;
+        }
+        const startTime = Date.now();
+        try {
+            const llmConfig = config_1.config.llm;
+            if (!llmConfig.baseUrl || !llmConfig.apiKey) {
+                return {
+                    ok: false,
+                    code: 400,
+                    message: 'LLM 配置未完成',
+                    traceId: input.traceId,
+                    durationMs: Date.now() - startTime
+                };
+            }
+            const requestData = this.prepareRequest(input);
+            const response = await this.sendRequest(requestData);
+            const output = this.processResponse(response, input.traceId, startTime);
+            this.cacheResult(cacheKey, input, output);
+            return output;
+        }
+        catch (error) {
+            log(`LLM 调用失败: ${error instanceof Error ? error.message : String(error)}`);
+            return {
+                ok: false,
+                code: 500,
+                message: `LLM 调用失败: ${error instanceof Error ? error.message : String(error)}`,
+                traceId: input.traceId,
+                durationMs: Date.now() - startTime
+            };
+        }
+    }
+    generateCacheKey(input) {
+        return `${input.prompt}_${JSON.stringify(input.parameters || {})}_${JSON.stringify(input.context || [])}`;
+    }
+    getCached(cacheKey) {
+        const cache = this.cache.get(cacheKey);
+        if (!cache)
+            return null;
+        if (Date.now() > cache.expiry) {
+            this.cache.delete(cacheKey);
+            return null;
+        }
+        return cache.output;
+    }
+    cacheResult(cacheKey, input, output) {
+        const cache = {
+            key: cacheKey,
+            input,
+            output,
+            timestamp: Date.now(),
+            expiry: Date.now() + 3600000 // 1小时过期
+        };
+        this.cache.set(cacheKey, cache);
+        // 限制缓存大小
+        if (this.cache.size > 100) {
+            const oldestKey = Array.from(this.cache.keys())[0];
+            this.cache.delete(oldestKey);
+        }
+    }
+    prepareRequest(input) {
+        const llmConfig = config_1.config.llm;
+        const temperature = input.parameters?.temperature ?? 0.7;
+        const maxTokens = input.parameters?.maxTokens ?? 4096;
+        const messages = [
+            {
+                role: 'system',
+                content: '你是一个专业的AI助手，能够根据用户的需求提供准确、有用的信息。'
+            }
+        ];
+        if (input.context && input.context.length > 0) {
+            input.context.forEach((ctx, index) => {
+                messages.push({
+                    role: index % 2 === 0 ? 'user' : 'assistant',
+                    content: ctx
+                });
+            });
+        }
+        messages.push({
+            role: 'user',
+            content: input.prompt
+        });
+        return {
+            model: llmConfig.model,
+            messages,
+            temperature,
+            max_tokens: maxTokens,
+            stream: false
+        };
+    }
+    async sendRequest(requestData) {
+        const llmConfig = config_1.config.llm;
+        const headers = {
+            Authorization: `Bearer ${llmConfig.apiKey}`,
+            'Content-Type': 'application/json'
+        };
+        const normalizedBase = llmConfig.baseUrl.replace(/\/+$/, '');
+        // 只使用 chat/completions 端点，增加超时时间
+        const chatResp = await axios_1.default.post(`${normalizedBase}/chat/completions`, requestData, {
+            headers,
+            timeout: 60000 // 增加到 60 秒
+        });
+        return chatResp.data;
+    }
+    processResponse(response, traceId, startTime) {
+        let content = '';
+        let tokens = undefined;
+        if (response.choices && response.choices.length > 0) {
+            if (response.choices[0].message?.content) {
+                content = sanitizeLLMText(response.choices[0].message.content.trim());
+            }
+            else if (response.choices[0].text) {
+                content = sanitizeLLMText(response.choices[0].text.trim());
+            }
+        }
+        if (response.usage) {
+            tokens = {
+                prompt: response.usage.prompt_tokens || 0,
+                completion: response.usage.completion_tokens || 0,
+                total: response.usage.total_tokens || 0
+            };
+        }
+        if (!content) {
+            return {
+                ok: false,
+                code: 404,
+                message: 'LLM 未返回内容',
+                traceId,
+                durationMs: Date.now() - startTime
+            };
+        }
+        return {
+            ok: true,
+            code: 0,
+            message: '成功',
+            data: {
+                content,
+                tokens
+            },
+            traceId,
+            durationMs: Date.now() - startTime
+        };
+    }
+    async analyzeDocument(documentContent, task, skillId, traceId) {
+        const prompt = `
+文档内容：
+${documentContent}
+
+任务：${task}
+
+请根据文档内容完成上述任务，提供详细、准确的分析结果。
+`;
+        const input = {
+            prompt,
+            skillId,
+            traceId
+        };
+        return this.generate(input);
+    }
+}
+exports.LLMSlient = LLMSlient;
+exports.llmClient = new LLMSlient();

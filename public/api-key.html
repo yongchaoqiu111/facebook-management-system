@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Key设置 - Facebook管理系统</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 动态加载的头部 -->
+        <div id="app-header"></div>
+
+        <main>
+            <section class="api-key-manager">
+                <h2>API Key设置</h2>
+                
+                <div class="api-key-form">
+                    <h3>修改API Key</h3>
+                    <form id="apiKeyForm">
+                        <div class="form-group">
+                            <label for="apiKeyInput">千问API Key</label>
+                            <input type="password" id="apiKeyInput" placeholder="请输入API Key" required>
+                            <small>API Key将安全存储在本地文件中</small>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">保存API Key</button>
+                    </form>
+                </div>
+
+                <div class="api-key-status">
+                    <h3>当前状态</h3>
+                    <div id="apiKeyStatus" class="status-box">
+                        <!-- API Key状态将通过JavaScript动态生成 -->
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2026 Facebook管理系统</p>
+        </footer>
+    </div>
+
+    <script src="routes.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,402 @@
+[Bootstrap] [2026-03-15T17:30:19.458Z] init redis singleton
+[Bootstrap] [2026-03-15T17:30:19.465Z] init sqlite cache
+[LLMCache] [2026-03-15T17:30:19.466Z] llm_cache table ready
+[LLMCache] [2026-03-15T17:30:19.468Z] expired cache cleaned: 0
+[LLMCache] [2026-03-15T17:30:19.474Z] cron scheduled at 04:00 daily
+[Bootstrap] [2026-03-15T17:30:19.475Z] generate skill json files
+[Bootstrap] [2026-03-15T17:30:19.479Z] start skill watcher
+[SkillRegistry] add D:\weibo\skills\mcp-weibo-hot.skill.json - mcp-weibo-hot
+[SkillRegistry] add D:\weibo\skills\mcp-weibo-image.skill.json - mcp-weibo-image
+[SkillRegistry] add D:\weibo\skills\mcp-weibo-interact.skill.json - mcp-weibo-interact
+[SkillRegistry] add D:\weibo\skills\mcp-weibo-llm-generate.skill.json - mcp-weibo-llm-generate
+[SkillRegistry] add D:\weibo\skills\mcp-weibo-message.skill.json - mcp-weibo-message
+[SkillRegistry] add D:\weibo\skills\mcp-weibo-post.skill.json - mcp-weibo-post
+[SkillRegistry] [2026-03-15T17:30:19.490Z] watcher started
+[Bootstrap] [2026-03-15T17:30:19.490Z] start bullmq workers
+[Bootstrap] [2026-03-15T17:30:19.491Z] schedule daily weibo task
+[Bootstrap] [2026-03-15T17:30:19.492Z] daily task scheduled: weibo_daily_post_default at 08:00
+[Bootstrap] [2026-03-15T17:30:19.507Z] service started at http://localhost:3000
+[TaskOrchestrator] [2026-03-15T17:30:53.306Z] task start: weibo_bullmq_test_1 account=default
+[IdempotentLock] [2026-03-15T17:30:53.308Z] weibo_bullmq_test_1 2026-03-16 lock: true
+[TaskOrchestrator] [2026-03-15T17:30:53.309Z] step start: step1 skill=mcp-weibo-hot
+[WeiboSkills] [2026-03-15T17:30:54.058Z] getWeiboHot limit=10
+[Traceability] [2026-03-15T17:30:54.059Z] trace_weibo_bullmq_test_1_1773595853306 step1 success
+[TaskOrchestrator] [2026-03-15T17:30:54.059Z] step end: step1 skill=mcp-weibo-hot duration=751ms status=success
+[TaskOrchestrator] [2026-03-15T17:30:54.059Z] step start: step2 skill=mcp-weibo-llm-generate
+[TaskOrchestrator] [2026-03-15T17:30:54.060Z] llm cache hit: weibo_bullmq_test_1
+[Traceability] [2026-03-15T17:30:54.060Z] trace_weibo_bullmq_test_1_1773595853306 step2 success
+[TaskOrchestrator] [2026-03-15T17:30:54.060Z] step end: step2 skill=mcp-weibo-llm-generate duration=1ms status=success
+[TaskOrchestrator] [2026-03-15T17:30:54.061Z] step start: step3 skill=mcp-weibo-image
+[WeiboSkills] [2026-03-15T17:30:54.336Z] processWeiboImage keyword=热搜话题 1 count=1
+[Traceability] [2026-03-15T17:30:54.337Z] trace_weibo_bullmq_test_1_1773595853306 step3 success
+[TaskOrchestrator] [2026-03-15T17:30:54.337Z] step end: step3 skill=mcp-weibo-image duration=276ms status=success
+[TaskOrchestrator] [2026-03-15T17:30:54.337Z] step start: step4 skill=mcp-weibo-post
+[WeiboSkills] [2026-03-15T17:30:54.924Z] postToWeibo account=default
+[Traceability] [2026-03-15T17:30:54.925Z] trace_weibo_bullmq_test_1_1773595853306 step4 success
+[TaskOrchestrator] [2026-03-15T17:30:54.925Z] step end: step4 skill=mcp-weibo-post duration=588ms status=success
+[TaskOrchestrator] [2026-03-15T17:30:54.926Z] task success: weibo_bullmq_test_1 duration=1620ms traceId=trace_weibo_bullmq_test_1_1773595853306
+[TaskOrchestrator] [2026-03-15T17:30:56.937Z] task start: weibo_bullmq_test_2 account=default
+[IdempotentLock] [2026-03-15T17:30:56.938Z] weibo_bullmq_test_2 2026-03-16 lock: true
+[TaskOrchestrator] [2026-03-15T17:30:56.939Z] step start: step1 skill=mcp-weibo-hot
+[WeiboSkills] [2026-03-15T17:30:57.277Z] getWeiboHot limit=10
+[Traceability] [2026-03-15T17:30:57.278Z] trace_weibo_bullmq_test_2_1773595856937 step1 success
+[TaskOrchestrator] [2026-03-15T17:30:57.279Z] step end: step1 skill=mcp-weibo-hot duration=340ms status=success
+[TaskOrchestrator] [2026-03-15T17:30:57.279Z] step start: step2 skill=mcp-weibo-llm-generate
+[TaskOrchestrator] [2026-03-15T17:30:57.280Z] llm cache hit: weibo_bullmq_test_2
+[Traceability] [2026-03-15T17:30:57.280Z] trace_weibo_bullmq_test_2_1773595856937 step2 success
+[TaskOrchestrator] [2026-03-15T17:30:57.280Z] step end: step2 skill=mcp-weibo-llm-generate duration=1ms status=success
+[TaskOrchestrator] [2026-03-15T17:30:57.281Z] step start: step3 skill=mcp-weibo-image
+[Traceability] [2026-03-15T17:30:57.699Z] trace_weibo_bullmq_test_2_1773595856937 step3 failure
+[TaskOrchestrator] [2026-03-15T17:30:57.700Z] step end: step3 skill=mcp-weibo-image duration=419ms status=failure
+[TaskOrchestrator] [2026-03-15T17:30:57.700Z] task attempt failed: weibo_bullmq_test_2 attempt=1 error=WEIBO_RATE_LIMIT: too many requests
+[HumanIntervention] [2026-03-15T17:30:57.708Z] queued human intervention: weibo_bullmq_test_2
+[HumanIntervention] [2026-03-15T17:30:57.708Z] dingTalkWebhook is empty, skip notification
+[TaskOrchestrator] [2026-03-15T17:30:57.708Z] task sent to human intervention: weibo_bullmq_test_2 code=WEIBO_RATE_LIMIT
+[TaskOrchestrator] [2026-03-15T17:30:59.729Z] task start: weibo_bullmq_test_3 account=default
+[IdempotentLock] [2026-03-15T17:30:59.731Z] weibo_bullmq_test_3 2026-03-16 lock: true
+[TaskOrchestrator] [2026-03-15T17:30:59.731Z] step start: step1 skill=mcp-weibo-hot
+[WeiboSkills] [2026-03-15T17:31:00.237Z] getWeiboHot limit=10
+[Traceability] [2026-03-15T17:31:00.238Z] trace_weibo_bullmq_test_3_1773595859729 step1 success
+[TaskOrchestrator] [2026-03-15T17:31:00.239Z] step end: step1 skill=mcp-weibo-hot duration=508ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:00.239Z] step start: step2 skill=mcp-weibo-llm-generate
+[TaskOrchestrator] [2026-03-15T17:31:00.240Z] llm cache hit: weibo_bullmq_test_3
+[Traceability] [2026-03-15T17:31:00.240Z] trace_weibo_bullmq_test_3_1773595859729 step2 success
+[TaskOrchestrator] [2026-03-15T17:31:00.240Z] step end: step2 skill=mcp-weibo-llm-generate duration=1ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:00.240Z] step start: step3 skill=mcp-weibo-image
+[WeiboSkills] [2026-03-15T17:31:01.188Z] processWeiboImage keyword=热搜话题 1 count=1
+[Traceability] [2026-03-15T17:31:01.189Z] trace_weibo_bullmq_test_3_1773595859729 step3 success
+[TaskOrchestrator] [2026-03-15T17:31:01.189Z] step end: step3 skill=mcp-weibo-image duration=949ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:01.190Z] step start: step4 skill=mcp-weibo-post
+[WeiboSkills] [2026-03-15T17:31:02.051Z] postToWeibo account=default
+[Traceability] [2026-03-15T17:31:02.052Z] trace_weibo_bullmq_test_3_1773595859729 step4 success
+[TaskOrchestrator] [2026-03-15T17:31:02.052Z] step end: step4 skill=mcp-weibo-post duration=862ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:02.052Z] task success: weibo_bullmq_test_3 duration=2323ms traceId=trace_weibo_bullmq_test_3_1773595859729
+[TaskOrchestrator] [2026-03-15T17:31:04.063Z] task start: weibo_bullmq_test_4 account=default
+[IdempotentLock] [2026-03-15T17:31:04.064Z] weibo_bullmq_test_4 2026-03-16 lock: true
+[TaskOrchestrator] [2026-03-15T17:31:04.064Z] step start: step1 skill=mcp-weibo-hot
+[WeiboSkills] [2026-03-15T17:31:04.830Z] getWeiboHot limit=10
+[Traceability] [2026-03-15T17:31:04.831Z] trace_weibo_bullmq_test_4_1773595864063 step1 success
+[TaskOrchestrator] [2026-03-15T17:31:04.831Z] step end: step1 skill=mcp-weibo-hot duration=767ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:04.831Z] step start: step2 skill=mcp-weibo-llm-generate
+[TaskOrchestrator] [2026-03-15T17:31:04.832Z] llm cache hit: weibo_bullmq_test_4
+[Traceability] [2026-03-15T17:31:04.832Z] trace_weibo_bullmq_test_4_1773595864063 step2 success
+[TaskOrchestrator] [2026-03-15T17:31:04.832Z] step end: step2 skill=mcp-weibo-llm-generate duration=1ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:04.833Z] step start: step3 skill=mcp-weibo-image
+[WeiboSkills] [2026-03-15T17:31:05.624Z] processWeiboImage keyword=热搜话题 1 count=1
+[Traceability] [2026-03-15T17:31:05.625Z] trace_weibo_bullmq_test_4_1773595864063 step3 success
+[TaskOrchestrator] [2026-03-15T17:31:05.625Z] step end: step3 skill=mcp-weibo-image duration=792ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:05.625Z] step start: step4 skill=mcp-weibo-post
+[WeiboSkills] [2026-03-15T17:31:06.090Z] postToWeibo account=default
+[Traceability] [2026-03-15T17:31:06.091Z] trace_weibo_bullmq_test_4_1773595864063 step4 success
+[TaskOrchestrator] [2026-03-15T17:31:06.091Z] step end: step4 skill=mcp-weibo-post duration=466ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:06.092Z] task success: weibo_bullmq_test_4 duration=2029ms traceId=trace_weibo_bullmq_test_4_1773595864063
+[TaskOrchestrator] [2026-03-15T17:31:08.109Z] task start: weibo_bullmq_test_5 account=default
+[IdempotentLock] [2026-03-15T17:31:08.110Z] weibo_bullmq_test_5 2026-03-16 lock: true
+[TaskOrchestrator] [2026-03-15T17:31:08.110Z] step start: step1 skill=mcp-weibo-hot
+[WeiboSkills] [2026-03-15T17:31:08.401Z] getWeiboHot limit=10
+[Traceability] [2026-03-15T17:31:08.402Z] trace_weibo_bullmq_test_5_1773595868109 step1 success
+[TaskOrchestrator] [2026-03-15T17:31:08.402Z] step end: step1 skill=mcp-weibo-hot duration=292ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:08.403Z] step start: step2 skill=mcp-weibo-llm-generate
+[TaskOrchestrator] [2026-03-15T17:31:08.403Z] llm cache hit: weibo_bullmq_test_5
+[Traceability] [2026-03-15T17:31:08.404Z] trace_weibo_bullmq_test_5_1773595868109 step2 success
+[TaskOrchestrator] [2026-03-15T17:31:08.404Z] step end: step2 skill=mcp-weibo-llm-generate duration=1ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:08.404Z] step start: step3 skill=mcp-weibo-image
+[WeiboSkills] [2026-03-15T17:31:08.622Z] processWeiboImage keyword=热搜话题 1 count=1
+[Traceability] [2026-03-15T17:31:08.623Z] trace_weibo_bullmq_test_5_1773595868109 step3 success
+[TaskOrchestrator] [2026-03-15T17:31:08.624Z] step end: step3 skill=mcp-weibo-image duration=220ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:08.625Z] step start: step4 skill=mcp-weibo-post
+[WeiboSkills] [2026-03-15T17:31:09.204Z] postToWeibo account=default
+[Traceability] [2026-03-15T17:31:09.205Z] trace_weibo_bullmq_test_5_1773595868109 step4 success
+[TaskOrchestrator] [2026-03-15T17:31:09.205Z] step end: step4 skill=mcp-weibo-post duration=580ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:09.205Z] task success: weibo_bullmq_test_5 duration=1096ms traceId=trace_weibo_bullmq_test_5_1773595868109
+[TaskOrchestrator] [2026-03-15T17:31:11.218Z] task start: weibo_bullmq_test_6 account=default
+[IdempotentLock] [2026-03-15T17:31:11.219Z] weibo_bullmq_test_6 2026-03-16 lock: true
+[TaskOrchestrator] [2026-03-15T17:31:11.219Z] step start: step1 skill=mcp-weibo-hot
+[WeiboSkills] [2026-03-15T17:31:12.008Z] getWeiboHot limit=10
+[Traceability] [2026-03-15T17:31:12.009Z] trace_weibo_bullmq_test_6_1773595871218 step1 success
+[TaskOrchestrator] [2026-03-15T17:31:12.009Z] step end: step1 skill=mcp-weibo-hot duration=790ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:12.010Z] step start: step2 skill=mcp-weibo-llm-generate
+[TaskOrchestrator] [2026-03-15T17:31:12.010Z] llm cache hit: weibo_bullmq_test_6
+[Traceability] [2026-03-15T17:31:12.011Z] trace_weibo_bullmq_test_6_1773595871218 step2 success
+[TaskOrchestrator] [2026-03-15T17:31:12.011Z] step end: step2 skill=mcp-weibo-llm-generate duration=1ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:12.011Z] step start: step3 skill=mcp-weibo-image
+[WeiboSkills] [2026-03-15T17:31:12.427Z] processWeiboImage keyword=热搜话题 1 count=1
+[Traceability] [2026-03-15T17:31:12.428Z] trace_weibo_bullmq_test_6_1773595871218 step3 success
+[TaskOrchestrator] [2026-03-15T17:31:12.428Z] step end: step3 skill=mcp-weibo-image duration=417ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:12.428Z] step start: step4 skill=mcp-weibo-post
+[WeiboSkills] [2026-03-15T17:31:12.848Z] postToWeibo account=default
+[Traceability] [2026-03-15T17:31:12.850Z] trace_weibo_bullmq_test_6_1773595871218 step4 success
+[TaskOrchestrator] [2026-03-15T17:31:12.850Z] step end: step4 skill=mcp-weibo-post duration=422ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:12.850Z] task success: weibo_bullmq_test_6 duration=1632ms traceId=trace_weibo_bullmq_test_6_1773595871218
+[TaskOrchestrator] [2026-03-15T17:31:14.865Z] task start: weibo_bullmq_test_7 account=default
+[IdempotentLock] [2026-03-15T17:31:14.866Z] weibo_bullmq_test_7 2026-03-16 lock: true
+[TaskOrchestrator] [2026-03-15T17:31:14.866Z] step start: step1 skill=mcp-weibo-hot
+[WeiboSkills] [2026-03-15T17:31:15.327Z] getWeiboHot limit=10
+[Traceability] [2026-03-15T17:31:15.327Z] trace_weibo_bullmq_test_7_1773595874865 step1 success
+[TaskOrchestrator] [2026-03-15T17:31:15.328Z] step end: step1 skill=mcp-weibo-hot duration=462ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:15.328Z] step start: step2 skill=mcp-weibo-llm-generate
+[TaskOrchestrator] [2026-03-15T17:31:15.328Z] llm cache hit: weibo_bullmq_test_7
+[Traceability] [2026-03-15T17:31:15.329Z] trace_weibo_bullmq_test_7_1773595874865 step2 success
+[TaskOrchestrator] [2026-03-15T17:31:15.329Z] step end: step2 skill=mcp-weibo-llm-generate duration=1ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:15.329Z] step start: step3 skill=mcp-weibo-image
+[WeiboSkills] [2026-03-15T17:31:15.640Z] processWeiboImage keyword=热搜话题 1 count=1
+[Traceability] [2026-03-15T17:31:15.644Z] trace_weibo_bullmq_test_7_1773595874865 step3 success
+[TaskOrchestrator] [2026-03-15T17:31:15.644Z] step end: step3 skill=mcp-weibo-image duration=315ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:15.644Z] step start: step4 skill=mcp-weibo-post
+[WeiboSkills] [2026-03-15T17:31:16.389Z] postToWeibo account=default
+[Traceability] [2026-03-15T17:31:16.389Z] trace_weibo_bullmq_test_7_1773595874865 step4 success
+[TaskOrchestrator] [2026-03-15T17:31:16.390Z] step end: step4 skill=mcp-weibo-post duration=746ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:16.390Z] task success: weibo_bullmq_test_7 duration=1525ms traceId=trace_weibo_bullmq_test_7_1773595874865
+[TaskOrchestrator] [2026-03-15T17:31:18.407Z] task start: weibo_bullmq_test_8 account=default
+[IdempotentLock] [2026-03-15T17:31:18.408Z] weibo_bullmq_test_8 2026-03-16 lock: true
+[TaskOrchestrator] [2026-03-15T17:31:18.408Z] step start: step1 skill=mcp-weibo-hot
+[WeiboSkills] [2026-03-15T17:31:18.993Z] getWeiboHot limit=10
+[Traceability] [2026-03-15T17:31:18.994Z] trace_weibo_bullmq_test_8_1773595878407 step1 success
+[TaskOrchestrator] [2026-03-15T17:31:18.994Z] step end: step1 skill=mcp-weibo-hot duration=586ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:18.994Z] step start: step2 skill=mcp-weibo-llm-generate
+[TaskOrchestrator] [2026-03-15T17:31:18.995Z] llm cache hit: weibo_bullmq_test_8
+[Traceability] [2026-03-15T17:31:18.995Z] trace_weibo_bullmq_test_8_1773595878407 step2 success
+[TaskOrchestrator] [2026-03-15T17:31:18.995Z] step end: step2 skill=mcp-weibo-llm-generate duration=1ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:18.995Z] step start: step3 skill=mcp-weibo-image
+[WeiboSkills] [2026-03-15T17:31:19.742Z] processWeiboImage keyword=热搜话题 1 count=1
+[Traceability] [2026-03-15T17:31:19.742Z] trace_weibo_bullmq_test_8_1773595878407 step3 success
+[TaskOrchestrator] [2026-03-15T17:31:19.742Z] step end: step3 skill=mcp-weibo-image duration=747ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:19.743Z] step start: step4 skill=mcp-weibo-post
+[WeiboSkills] [2026-03-15T17:31:20.349Z] postToWeibo account=default
+[Traceability] [2026-03-15T17:31:20.350Z] trace_weibo_bullmq_test_8_1773595878407 step4 success
+[TaskOrchestrator] [2026-03-15T17:31:20.350Z] step end: step4 skill=mcp-weibo-post duration=607ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:20.350Z] task success: weibo_bullmq_test_8 duration=1943ms traceId=trace_weibo_bullmq_test_8_1773595878407
+[TaskOrchestrator] [2026-03-15T17:31:22.362Z] task start: weibo_bullmq_test_9 account=default
+[IdempotentLock] [2026-03-15T17:31:22.363Z] weibo_bullmq_test_9 2026-03-16 lock: true
+[TaskOrchestrator] [2026-03-15T17:31:22.363Z] step start: step1 skill=mcp-weibo-hot
+[WeiboSkills] [2026-03-15T17:31:22.890Z] getWeiboHot limit=10
+[Traceability] [2026-03-15T17:31:22.891Z] trace_weibo_bullmq_test_9_1773595882362 step1 success
+[TaskOrchestrator] [2026-03-15T17:31:22.891Z] step end: step1 skill=mcp-weibo-hot duration=528ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:22.891Z] step start: step2 skill=mcp-weibo-llm-generate
+[TaskOrchestrator] [2026-03-15T17:31:22.892Z] llm cache hit: weibo_bullmq_test_9
+[Traceability] [2026-03-15T17:31:22.892Z] trace_weibo_bullmq_test_9_1773595882362 step2 success
+[TaskOrchestrator] [2026-03-15T17:31:22.892Z] step end: step2 skill=mcp-weibo-llm-generate duration=1ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:22.893Z] step start: step3 skill=mcp-weibo-image
+[WeiboSkills] [2026-03-15T17:31:23.153Z] processWeiboImage keyword=热搜话题 1 count=1
+[Traceability] [2026-03-15T17:31:23.154Z] trace_weibo_bullmq_test_9_1773595882362 step3 success
+[TaskOrchestrator] [2026-03-15T17:31:23.154Z] step end: step3 skill=mcp-weibo-image duration=261ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:23.154Z] step start: step4 skill=mcp-weibo-post
+[WeiboSkills] [2026-03-15T17:31:23.647Z] postToWeibo account=default
+[Traceability] [2026-03-15T17:31:23.648Z] trace_weibo_bullmq_test_9_1773595882362 step4 success
+[TaskOrchestrator] [2026-03-15T17:31:23.648Z] step end: step4 skill=mcp-weibo-post duration=494ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:23.648Z] task success: weibo_bullmq_test_9 duration=1286ms traceId=trace_weibo_bullmq_test_9_1773595882362
+[TaskOrchestrator] [2026-03-15T17:31:25.660Z] task start: weibo_bullmq_test_10 account=default
+[IdempotentLock] [2026-03-15T17:31:25.663Z] weibo_bullmq_test_10 2026-03-16 lock: true
+[TaskOrchestrator] [2026-03-15T17:31:25.663Z] step start: step1 skill=mcp-weibo-hot
+[WeiboSkills] [2026-03-15T17:31:26.187Z] getWeiboHot limit=10
+[Traceability] [2026-03-15T17:31:26.188Z] trace_weibo_bullmq_test_10_1773595885660 step1 success
+[TaskOrchestrator] [2026-03-15T17:31:26.188Z] step end: step1 skill=mcp-weibo-hot duration=525ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:26.188Z] step start: step2 skill=mcp-weibo-llm-generate
+[TaskOrchestrator] [2026-03-15T17:31:26.189Z] llm cache hit: weibo_bullmq_test_10
+[Traceability] [2026-03-15T17:31:26.189Z] trace_weibo_bullmq_test_10_1773595885660 step2 success
+[TaskOrchestrator] [2026-03-15T17:31:26.189Z] step end: step2 skill=mcp-weibo-llm-generate duration=1ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:26.189Z] step start: step3 skill=mcp-weibo-image
+[WeiboSkills] [2026-03-15T17:31:26.638Z] processWeiboImage keyword=热搜话题 1 count=1
+[Traceability] [2026-03-15T17:31:26.639Z] trace_weibo_bullmq_test_10_1773595885660 step3 success
+[TaskOrchestrator] [2026-03-15T17:31:26.639Z] step end: step3 skill=mcp-weibo-image duration=450ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:26.639Z] step start: step4 skill=mcp-weibo-post
+[WeiboSkills] [2026-03-15T17:31:27.089Z] postToWeibo account=default
+[Traceability] [2026-03-15T17:31:27.090Z] trace_weibo_bullmq_test_10_1773595885660 step4 success
+[TaskOrchestrator] [2026-03-15T17:31:27.090Z] step end: step4 skill=mcp-weibo-post duration=451ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:27.091Z] task success: weibo_bullmq_test_10 duration=1431ms traceId=trace_weibo_bullmq_test_10_1773595885660
+[TaskOrchestrator] [2026-03-15T17:31:29.098Z] task start: weibo_bullmq_test_11 account=default
+[IdempotentLock] [2026-03-15T17:31:29.099Z] weibo_bullmq_test_11 2026-03-16 lock: true
+[TaskOrchestrator] [2026-03-15T17:31:29.100Z] step start: step1 skill=mcp-weibo-hot
+[WeiboSkills] [2026-03-15T17:31:29.778Z] getWeiboHot limit=10
+[Traceability] [2026-03-15T17:31:29.779Z] trace_weibo_bullmq_test_11_1773595889098 step1 success
+[TaskOrchestrator] [2026-03-15T17:31:29.779Z] step end: step1 skill=mcp-weibo-hot duration=679ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:29.780Z] step start: step2 skill=mcp-weibo-llm-generate
+[TaskOrchestrator] [2026-03-15T17:31:29.780Z] llm cache hit: weibo_bullmq_test_11
+[Traceability] [2026-03-15T17:31:29.781Z] trace_weibo_bullmq_test_11_1773595889098 step2 success
+[TaskOrchestrator] [2026-03-15T17:31:29.781Z] step end: step2 skill=mcp-weibo-llm-generate duration=1ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:29.781Z] step start: step3 skill=mcp-weibo-image
+[WeiboSkills] [2026-03-15T17:31:30.432Z] processWeiboImage keyword=热搜话题 1 count=1
+[Traceability] [2026-03-15T17:31:30.433Z] trace_weibo_bullmq_test_11_1773595889098 step3 success
+[TaskOrchestrator] [2026-03-15T17:31:30.434Z] step end: step3 skill=mcp-weibo-image duration=653ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:30.434Z] step start: step4 skill=mcp-weibo-post
+[WeiboSkills] [2026-03-15T17:31:31.352Z] postToWeibo account=default
+[Traceability] [2026-03-15T17:31:31.353Z] trace_weibo_bullmq_test_11_1773595889098 step4 success
+[TaskOrchestrator] [2026-03-15T17:31:31.353Z] step end: step4 skill=mcp-weibo-post duration=919ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:31.353Z] task success: weibo_bullmq_test_11 duration=2255ms traceId=trace_weibo_bullmq_test_11_1773595889098
+[TaskOrchestrator] [2026-03-15T17:31:33.369Z] task start: weibo_bullmq_test_12 account=default
+[IdempotentLock] [2026-03-15T17:31:33.370Z] weibo_bullmq_test_12 2026-03-16 lock: true
+[TaskOrchestrator] [2026-03-15T17:31:33.370Z] step start: step1 skill=mcp-weibo-hot
+[WeiboSkills] [2026-03-15T17:31:34.054Z] getWeiboHot limit=10
+[Traceability] [2026-03-15T17:31:34.055Z] trace_weibo_bullmq_test_12_1773595893369 step1 success
+[TaskOrchestrator] [2026-03-15T17:31:34.055Z] step end: step1 skill=mcp-weibo-hot duration=685ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:34.055Z] step start: step2 skill=mcp-weibo-llm-generate
+[TaskOrchestrator] [2026-03-15T17:31:34.056Z] llm cache hit: weibo_bullmq_test_12
+[Traceability] [2026-03-15T17:31:34.056Z] trace_weibo_bullmq_test_12_1773595893369 step2 success
+[TaskOrchestrator] [2026-03-15T17:31:34.056Z] step end: step2 skill=mcp-weibo-llm-generate duration=1ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:34.056Z] step start: step3 skill=mcp-weibo-image
+[WeiboSkills] [2026-03-15T17:31:34.519Z] processWeiboImage keyword=热搜话题 1 count=1
+[Traceability] [2026-03-15T17:31:34.520Z] trace_weibo_bullmq_test_12_1773595893369 step3 success
+[TaskOrchestrator] [2026-03-15T17:31:34.520Z] step end: step3 skill=mcp-weibo-image duration=464ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:34.520Z] step start: step4 skill=mcp-weibo-post
+[WeiboSkills] [2026-03-15T17:31:34.954Z] postToWeibo account=default
+[Traceability] [2026-03-15T17:31:34.955Z] trace_weibo_bullmq_test_12_1773595893369 step4 success
+[TaskOrchestrator] [2026-03-15T17:31:34.955Z] step end: step4 skill=mcp-weibo-post duration=435ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:34.956Z] task success: weibo_bullmq_test_12 duration=1587ms traceId=trace_weibo_bullmq_test_12_1773595893369
+[TaskOrchestrator] [2026-03-15T17:31:36.965Z] task start: weibo_bullmq_test_13 account=default
+[IdempotentLock] [2026-03-15T17:31:36.966Z] weibo_bullmq_test_13 2026-03-16 lock: true
+[TaskOrchestrator] [2026-03-15T17:31:36.966Z] step start: step1 skill=mcp-weibo-hot
+[WeiboSkills] [2026-03-15T17:31:37.271Z] getWeiboHot limit=10
+[Traceability] [2026-03-15T17:31:37.272Z] trace_weibo_bullmq_test_13_1773595896965 step1 success
+[TaskOrchestrator] [2026-03-15T17:31:37.273Z] step end: step1 skill=mcp-weibo-hot duration=307ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:37.273Z] step start: step2 skill=mcp-weibo-llm-generate
+[TaskOrchestrator] [2026-03-15T17:31:37.274Z] llm cache hit: weibo_bullmq_test_13
+[Traceability] [2026-03-15T17:31:37.274Z] trace_weibo_bullmq_test_13_1773595896965 step2 success
+[TaskOrchestrator] [2026-03-15T17:31:37.274Z] step end: step2 skill=mcp-weibo-llm-generate duration=1ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:37.275Z] step start: step3 skill=mcp-weibo-image
+[WeiboSkills] [2026-03-15T17:31:38.067Z] processWeiboImage keyword=热搜话题 1 count=1
+[Traceability] [2026-03-15T17:31:38.068Z] trace_weibo_bullmq_test_13_1773595896965 step3 success
+[TaskOrchestrator] [2026-03-15T17:31:38.068Z] step end: step3 skill=mcp-weibo-image duration=793ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:38.068Z] step start: step4 skill=mcp-weibo-post
+[Traceability] [2026-03-15T17:31:38.803Z] trace_weibo_bullmq_test_13_1773595896965 step4 failure
+[TaskOrchestrator] [2026-03-15T17:31:38.804Z] step end: step4 skill=mcp-weibo-post duration=736ms status=failure
+[TaskOrchestrator] [2026-03-15T17:31:38.804Z] task attempt failed: weibo_bullmq_test_13 attempt=1 error=WEIBO_TOKEN_EXPIRED: token expired
+[HumanIntervention] [2026-03-15T17:31:38.806Z] queued human intervention: weibo_bullmq_test_13
+[HumanIntervention] [2026-03-15T17:31:38.807Z] dingTalkWebhook is empty, skip notification
+[TaskOrchestrator] [2026-03-15T17:31:38.807Z] task sent to human intervention: weibo_bullmq_test_13 code=WEIBO_TOKEN_EXPIRED
+[TaskOrchestrator] [2026-03-15T17:31:40.827Z] task start: weibo_bullmq_test_14 account=default
+[IdempotentLock] [2026-03-15T17:31:40.828Z] weibo_bullmq_test_14 2026-03-16 lock: true
+[TaskOrchestrator] [2026-03-15T17:31:40.828Z] step start: step1 skill=mcp-weibo-hot
+[WeiboSkills] [2026-03-15T17:31:41.508Z] getWeiboHot limit=10
+[Traceability] [2026-03-15T17:31:41.509Z] trace_weibo_bullmq_test_14_1773595900827 step1 success
+[TaskOrchestrator] [2026-03-15T17:31:41.509Z] step end: step1 skill=mcp-weibo-hot duration=681ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:41.509Z] step start: step2 skill=mcp-weibo-llm-generate
+[TaskOrchestrator] [2026-03-15T17:31:41.510Z] llm cache hit: weibo_bullmq_test_14
+[Traceability] [2026-03-15T17:31:41.510Z] trace_weibo_bullmq_test_14_1773595900827 step2 success
+[TaskOrchestrator] [2026-03-15T17:31:41.510Z] step end: step2 skill=mcp-weibo-llm-generate duration=1ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:41.511Z] step start: step3 skill=mcp-weibo-image
+[WeiboSkills] [2026-03-15T17:31:41.978Z] processWeiboImage keyword=热搜话题 1 count=1
+[Traceability] [2026-03-15T17:31:41.982Z] trace_weibo_bullmq_test_14_1773595900827 step3 success
+[TaskOrchestrator] [2026-03-15T17:31:41.982Z] step end: step3 skill=mcp-weibo-image duration=471ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:41.983Z] step start: step4 skill=mcp-weibo-post
+[WeiboSkills] [2026-03-15T17:31:42.611Z] postToWeibo account=default
+[Traceability] [2026-03-15T17:31:42.612Z] trace_weibo_bullmq_test_14_1773595900827 step4 success
+[TaskOrchestrator] [2026-03-15T17:31:42.613Z] step end: step4 skill=mcp-weibo-post duration=630ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:42.613Z] task success: weibo_bullmq_test_14 duration=1786ms traceId=trace_weibo_bullmq_test_14_1773595900827
+[TaskOrchestrator] [2026-03-15T17:31:44.627Z] task start: weibo_bullmq_test_15 account=default
+[IdempotentLock] [2026-03-15T17:31:44.628Z] weibo_bullmq_test_15 2026-03-16 lock: true
+[TaskOrchestrator] [2026-03-15T17:31:44.629Z] step start: step1 skill=mcp-weibo-hot
+[WeiboSkills] [2026-03-15T17:31:44.965Z] getWeiboHot limit=10
+[Traceability] [2026-03-15T17:31:44.966Z] trace_weibo_bullmq_test_15_1773595904627 step1 success
+[TaskOrchestrator] [2026-03-15T17:31:44.966Z] step end: step1 skill=mcp-weibo-hot duration=337ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:44.967Z] step start: step2 skill=mcp-weibo-llm-generate
+[TaskOrchestrator] [2026-03-15T17:31:44.967Z] llm cache hit: weibo_bullmq_test_15
+[Traceability] [2026-03-15T17:31:44.968Z] trace_weibo_bullmq_test_15_1773595904627 step2 success
+[TaskOrchestrator] [2026-03-15T17:31:44.968Z] step end: step2 skill=mcp-weibo-llm-generate duration=1ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:44.968Z] step start: step3 skill=mcp-weibo-image
+[WeiboSkills] [2026-03-15T17:31:45.763Z] processWeiboImage keyword=热搜话题 1 count=1
+[Traceability] [2026-03-15T17:31:45.764Z] trace_weibo_bullmq_test_15_1773595904627 step3 success
+[TaskOrchestrator] [2026-03-15T17:31:45.765Z] step end: step3 skill=mcp-weibo-image duration=797ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:45.765Z] step start: step4 skill=mcp-weibo-post
+[WeiboSkills] [2026-03-15T17:31:46.244Z] postToWeibo account=default
+[Traceability] [2026-03-15T17:31:46.245Z] trace_weibo_bullmq_test_15_1773595904627 step4 success
+[TaskOrchestrator] [2026-03-15T17:31:46.246Z] step end: step4 skill=mcp-weibo-post duration=481ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:46.246Z] task success: weibo_bullmq_test_15 duration=1619ms traceId=trace_weibo_bullmq_test_15_1773595904627
+[TaskOrchestrator] [2026-03-15T17:31:48.263Z] task start: weibo_bullmq_test_16 account=default
+[IdempotentLock] [2026-03-15T17:31:48.264Z] weibo_bullmq_test_16 2026-03-16 lock: true
+[TaskOrchestrator] [2026-03-15T17:31:48.264Z] step start: step1 skill=mcp-weibo-hot
+[WeiboSkills] [2026-03-15T17:31:48.771Z] getWeiboHot limit=10
+[Traceability] [2026-03-15T17:31:48.773Z] trace_weibo_bullmq_test_16_1773595908263 step1 success
+[TaskOrchestrator] [2026-03-15T17:31:48.773Z] step end: step1 skill=mcp-weibo-hot duration=509ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:48.774Z] step start: step2 skill=mcp-weibo-llm-generate
+[TaskOrchestrator] [2026-03-15T17:31:48.774Z] llm cache hit: weibo_bullmq_test_16
+[Traceability] [2026-03-15T17:31:48.775Z] trace_weibo_bullmq_test_16_1773595908263 step2 success
+[TaskOrchestrator] [2026-03-15T17:31:48.775Z] step end: step2 skill=mcp-weibo-llm-generate duration=1ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:48.775Z] step start: step3 skill=mcp-weibo-image
+[Traceability] [2026-03-15T17:31:49.240Z] trace_weibo_bullmq_test_16_1773595908263 step3 failure
+[TaskOrchestrator] [2026-03-15T17:31:49.241Z] step end: step3 skill=mcp-weibo-image duration=466ms status=failure
+[TaskOrchestrator] [2026-03-15T17:31:49.242Z] task attempt failed: weibo_bullmq_test_16 attempt=1 error=WEIBO_CAPTCHA_REQUIRED: captcha required
+[HumanIntervention] [2026-03-15T17:31:49.244Z] queued human intervention: weibo_bullmq_test_16
+[HumanIntervention] [2026-03-15T17:31:49.244Z] dingTalkWebhook is empty, skip notification
+[TaskOrchestrator] [2026-03-15T17:31:49.244Z] task sent to human intervention: weibo_bullmq_test_16 code=WEIBO_CAPTCHA_REQUIRED
+[TaskOrchestrator] [2026-03-15T17:31:51.253Z] task start: weibo_bullmq_test_17 account=default
+[IdempotentLock] [2026-03-15T17:31:51.253Z] weibo_bullmq_test_17 2026-03-16 lock: true
+[TaskOrchestrator] [2026-03-15T17:31:51.254Z] step start: step1 skill=mcp-weibo-hot
+[WeiboSkills] [2026-03-15T17:31:51.774Z] getWeiboHot limit=10
+[Traceability] [2026-03-15T17:31:51.775Z] trace_weibo_bullmq_test_17_1773595911253 step1 success
+[TaskOrchestrator] [2026-03-15T17:31:51.776Z] step end: step1 skill=mcp-weibo-hot duration=522ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:51.776Z] step start: step2 skill=mcp-weibo-llm-generate
+[TaskOrchestrator] [2026-03-15T17:31:51.776Z] llm cache hit: weibo_bullmq_test_17
+[Traceability] [2026-03-15T17:31:51.777Z] trace_weibo_bullmq_test_17_1773595911253 step2 success
+[TaskOrchestrator] [2026-03-15T17:31:51.777Z] step end: step2 skill=mcp-weibo-llm-generate duration=1ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:51.777Z] step start: step3 skill=mcp-weibo-image
+[WeiboSkills] [2026-03-15T17:31:52.680Z] processWeiboImage keyword=热搜话题 1 count=1
+[Traceability] [2026-03-15T17:31:52.681Z] trace_weibo_bullmq_test_17_1773595911253 step3 success
+[TaskOrchestrator] [2026-03-15T17:31:52.681Z] step end: step3 skill=mcp-weibo-image duration=904ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:52.681Z] step start: step4 skill=mcp-weibo-post
+[WeiboSkills] [2026-03-15T17:31:53.662Z] postToWeibo account=default
+[Traceability] [2026-03-15T17:31:53.663Z] trace_weibo_bullmq_test_17_1773595911253 step4 success
+[TaskOrchestrator] [2026-03-15T17:31:53.663Z] step end: step4 skill=mcp-weibo-post duration=982ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:53.663Z] task success: weibo_bullmq_test_17 duration=2410ms traceId=trace_weibo_bullmq_test_17_1773595911253
+[TaskOrchestrator] [2026-03-15T17:31:55.670Z] task start: weibo_bullmq_test_18 account=default
+[IdempotentLock] [2026-03-15T17:31:55.671Z] weibo_bullmq_test_18 2026-03-16 lock: true
+[TaskOrchestrator] [2026-03-15T17:31:55.671Z] step start: step1 skill=mcp-weibo-hot
+[WeiboSkills] [2026-03-15T17:31:56.587Z] getWeiboHot limit=10
+[Traceability] [2026-03-15T17:31:56.588Z] trace_weibo_bullmq_test_18_1773595915670 step1 success
+[TaskOrchestrator] [2026-03-15T17:31:56.588Z] step end: step1 skill=mcp-weibo-hot duration=917ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:56.588Z] step start: step2 skill=mcp-weibo-llm-generate
+[TaskOrchestrator] [2026-03-15T17:31:56.589Z] llm cache hit: weibo_bullmq_test_18
+[Traceability] [2026-03-15T17:31:56.589Z] trace_weibo_bullmq_test_18_1773595915670 step2 success
+[TaskOrchestrator] [2026-03-15T17:31:56.589Z] step end: step2 skill=mcp-weibo-llm-generate duration=1ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:56.590Z] step start: step3 skill=mcp-weibo-image
+[WeiboSkills] [2026-03-15T17:31:57.538Z] processWeiboImage keyword=热搜话题 1 count=1
+[Traceability] [2026-03-15T17:31:57.539Z] trace_weibo_bullmq_test_18_1773595915670 step3 success
+[TaskOrchestrator] [2026-03-15T17:31:57.539Z] step end: step3 skill=mcp-weibo-image duration=949ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:57.539Z] step start: step4 skill=mcp-weibo-post
+[WeiboSkills] [2026-03-15T17:31:58.112Z] postToWeibo account=default
+[Traceability] [2026-03-15T17:31:58.112Z] trace_weibo_bullmq_test_18_1773595915670 step4 success
+[TaskOrchestrator] [2026-03-15T17:31:58.113Z] step end: step4 skill=mcp-weibo-post duration=574ms status=success
+[TaskOrchestrator] [2026-03-15T17:31:58.113Z] task success: weibo_bullmq_test_18 duration=2443ms traceId=trace_weibo_bullmq_test_18_1773595915670
+[TaskOrchestrator] [2026-03-15T17:32:00.127Z] task start: weibo_bullmq_test_19 account=default
+[IdempotentLock] [2026-03-15T17:32:00.128Z] weibo_bullmq_test_19 2026-03-16 lock: true
+[TaskOrchestrator] [2026-03-15T17:32:00.129Z] step start: step1 skill=mcp-weibo-hot
+[WeiboSkills] [2026-03-15T17:32:00.420Z] getWeiboHot limit=10
+[Traceability] [2026-03-15T17:32:00.420Z] trace_weibo_bullmq_test_19_1773595920127 step1 success
+[TaskOrchestrator] [2026-03-15T17:32:00.421Z] step end: step1 skill=mcp-weibo-hot duration=292ms status=success
+[TaskOrchestrator] [2026-03-15T17:32:00.421Z] step start: step2 skill=mcp-weibo-llm-generate
+[TaskOrchestrator] [2026-03-15T17:32:00.421Z] llm cache hit: weibo_bullmq_test_19
+[Traceability] [2026-03-15T17:32:00.422Z] trace_weibo_bullmq_test_19_1773595920127 step2 success
+[TaskOrchestrator] [2026-03-15T17:32:00.422Z] step end: step2 skill=mcp-weibo-llm-generate duration=1ms status=success
+[TaskOrchestrator] [2026-03-15T17:32:00.422Z] step start: step3 skill=mcp-weibo-image
+[WeiboSkills] [2026-03-15T17:32:00.995Z] processWeiboImage keyword=热搜话题 1 count=1
+[Traceability] [2026-03-15T17:32:00.996Z] trace_weibo_bullmq_test_19_1773595920127 step3 success
+[TaskOrchestrator] [2026-03-15T17:32:00.997Z] step end: step3 skill=mcp-weibo-image duration=575ms status=success
+[TaskOrchestrator] [2026-03-15T17:32:00.997Z] step start: step4 skill=mcp-weibo-post
+[WeiboSkills] [2026-03-15T17:32:01.772Z] postToWeibo account=default
+[Traceability] [2026-03-15T17:32:01.773Z] trace_weibo_bullmq_test_19_1773595920127 step4 success
+[TaskOrchestrator] [2026-03-15T17:32:01.773Z] step end: step4 skill=mcp-weibo-post duration=776ms status=success
+[TaskOrchestrator] [2026-03-15T17:32:01.774Z] task success: weibo_bullmq_test_19 duration=1647ms traceId=trace_weibo_bullmq_test_19_1773595920127
+[TaskOrchestrator] [2026-03-15T17:32:03.787Z] task start: weibo_bullmq_test_20 account=default
+[IdempotentLock] [2026-03-15T17:32:03.788Z] weibo_bullmq_test_20 2026-03-16 lock: true
+[TaskOrchestrator] [2026-03-15T17:32:03.788Z] step start: step1 skill=mcp-weibo-hot
+[WeiboSkills] [2026-03-15T17:32:04.047Z] getWeiboHot limit=10
+[Traceability] [2026-03-15T17:32:04.048Z] trace_weibo_bullmq_test_20_1773595923787 step1 success
+[TaskOrchestrator] [2026-03-15T17:32:04.048Z] step end: step1 skill=mcp-weibo-hot duration=260ms status=success
+[TaskOrchestrator] [2026-03-15T17:32:04.049Z] step start: step2 skill=mcp-weibo-llm-generate
+[TaskOrchestrator] [2026-03-15T17:32:04.049Z] llm cache hit: weibo_bullmq_test_20
+[Traceability] [2026-03-15T17:32:04.049Z] trace_weibo_bullmq_test_20_1773595923787 step2 success
+[TaskOrchestrator] [2026-03-15T17:32:04.050Z] step end: step2 skill=mcp-weibo-llm-generate duration=1ms status=success
+[TaskOrchestrator] [2026-03-15T17:32:04.050Z] step start: step3 skill=mcp-weibo-image
+[WeiboSkills] [2026-03-15T17:32:04.716Z] processWeiboImage keyword=热搜话题 1 count=1
+[Traceability] [2026-03-15T17:32:04.717Z] trace_weibo_bullmq_test_20_1773595923787 step3 success
+[TaskOrchestrator] [2026-03-15T17:32:04.717Z] step end: step3 skill=mcp-weibo-image duration=667ms status=success
+[TaskOrchestrator] [2026-03-15T17:32:04.717Z] step start: step4 skill=mcp-weibo-post
+[WeiboSkills] [2026-03-15T17:32:04.997Z] postToWeibo account=default
+[Traceability] [2026-03-15T17:32:04.998Z] trace_weibo_bullmq_test_20_1773595923787 step4 success
+[TaskOrchestrator] [2026-03-15T17:32:04.998Z] step end: step4 skill=mcp-weibo-post duration=281ms status=success
+[TaskOrchestrator] [2026-03-15T17:32:04.999Z] task success: weibo_bullmq_test_20 duration=1212ms traceId=trace_weibo_bullmq_test_20_1773595923787
+[HumanIntervention] [2026-03-15T17:37:49.738Z] human job pending: 5 taskId=manual_hi_2
+[HumanIntervention] [2026-03-15T17:37:49.739Z] human job processed: 5 taskId=manual_hi_2
+[HumanIntervention] [2026-03-15T17:42:55.828Z] dead-letter pending: 4 taskId=manual_dl_event_2
+[HumanIntervention] [2026-03-15T17:42:55.829Z] dead-letter processed: 4 taskId=manual_dl_event_2
+[HumanIntervention] [2026-03-15T17:43:29.161Z] human job pending: 6 taskId=manual_hi_event_1
+[HumanIntervention] [2026-03-15T17:43:29.161Z] human job processed: 6 taskId=manual_hi_event_1

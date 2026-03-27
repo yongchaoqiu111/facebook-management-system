@@ -1,0 +1,130 @@
+{
+  "reputableMedia": [
+    {
+      "name": "新华社",
+      "domain": "xinhua.net",
+      "country": "CN",
+      "category": "general",
+      "priority": 1
+    },
+    {
+      "name": "人民日报",
+      "domain": "people.com.cn",
+      "country": "CN",
+      "category": "general",
+      "priority": 1
+    },
+    {
+      "name": "央视新闻",
+      "domain": "cctv.com",
+      "country": "CN",
+      "category": "general",
+      "priority": 1
+    },
+    {
+      "name": "科技日报",
+      "domain": "stdaily.com",
+      "country": "CN",
+      "category": "technology",
+      "priority": 2
+    },
+    {
+      "name": "中国科学报",
+      "domain": "paper.cn",
+      "country": "CN",
+      "category": "science",
+      "priority": 2
+    },
+    {
+      "name": "新浪科技",
+      "domain": "tech.sina.com.cn",
+      "country": "CN",
+      "category": "technology",
+      "priority": 3
+    },
+    {
+      "name": "腾讯科技",
+      "domain": "tech.qq.com",
+      "country": "CN",
+      "category": "technology",
+      "priority": 3
+    },
+    {
+      "name": "网易科技",
+      "domain": "tech.163.com",
+      "country": "CN",
+      "category": "technology",
+      "priority": 3
+    },
+    {
+      "name": "36氪",
+      "domain": "36kr.com",
+      "country": "CN",
+      "category": "technology",
+      "priority": 3
+    },
+    {
+      "name": "虎嗅网",
+      "domain": "huxiu.com",
+      "country": "CN",
+      "category": "technology",
+      "priority": 3
+    },
+    {
+      "name": "The New York Times",
+      "domain": "nytimes.com",
+      "country": "US",
+      "category": "general",
+      "priority": 2
+    },
+    {
+      "name": "The Guardian",
+      "domain": "theguardian.com",
+      "country": "UK",
+      "category": "general",
+      "priority": 2
+    },
+    {
+      "name": "BBC News",
+      "domain": "bbc.com",
+      "country": "UK",
+      "category": "general",
+      "priority": 2
+    },
+    {
+      "name": "Reuters",
+      "domain": "reuters.com",
+      "country": "UK",
+      "category": "general",
+      "priority": 2
+    },
+    {
+      "name": "Bloomberg",
+      "domain": "bloomberg.com",
+      "country": "US",
+      "category": "business",
+      "priority": 2
+    },
+    {
+      "name": "Wired",
+      "domain": "wired.com",
+      "country": "US",
+      "category": "technology",
+      "priority": 2
+    },
+    {
+      "name": "TechCrunch",
+      "domain": "techcrunch.com",
+      "country": "US",
+      "category": "technology",
+      "priority": 3
+    },
+    {
+      "name": "MIT Technology Review",
+      "domain": "technologyreview.com",
+      "country": "US",
+      "category": "technology",
+      "priority": 2
+    }
+  ]
+}

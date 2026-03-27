@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TikTok 自动化工具 - 登录管理</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 30px 0;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .primary {
+            background-color: #0066cc;
+            color: white;
+        }
+        .primary:hover {
+            background-color: #0052a3;
+        }
+        .secondary {
+            background-color: #666;
+            color: white;
+        }
+        .secondary:hover {
+            background-color: #555;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .nav {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .nav a {
+            text-decoration: none;
+            color: #0066cc;
+            font-weight: bold;
+            padding: 8px 16px;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        .nav a:hover {
+            background-color: #e3f2fd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>TikTok 自动化工具</h1>
+        
+        <div class="nav">
+            <a href="login.html">登录管理</a>
+            <a href="capture.html">评论抓取</a>
+            <a href="filter.html">评论过滤</a>
+        </div>
+        
+        <h2>登录管理</h2>
+        
+        <div class="button-group">
+            <button class="primary" onclick="openTiktok()">打开 TikTok 登录</button>
+            <button class="secondary" onclick="saveCookie()">保存 Cookie</button>
+            <button class="secondary" onclick="loginWithCookie()">使用 Cookie 登录</button>
+        </div>
+        
+        <h2>自动关注设置</h2>
+        <div style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 4px;">
+            <div style="display: flex; gap: 20px; margin-bottom: 15px;">
+                <div style="flex: 1;">
+                    <label>关注间隔（秒）：</label>
+                    <input type="number" id="followInterval" value="5" min="1" style="width: 100%; padding: 5px;">
+                </div>
+                <div style="flex: 1;">
+                    <label>关注数量：</label>
+                    <input type="number" id="followCount" value="10" min="1" style="width: 100%; padding: 5px;">
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="secondary" onclick="saveSettings()" style="flex: 1;">保存设置</button>
+                <button class="primary" onclick="startAutoFollow()" style="flex: 1;">开始自动关注</button>
+            </div>
+        </div>
+
+        <!-- 执行状态 -->
+        <div style="margin-top: 20px; padding: 15px; background-color: #e9ecef; border-radius: 4px;">
+            <h3>执行状态</h3>
+            <div style="margin-bottom: 10px;">
+                <label>当前状态：</label>
+                <span id="status-text" style="font-weight: bold; color: #6c757d;">未开始</span>
+            </div>
+            <div style="margin-bottom: 10px;">
+                <label>当前操作：</label>
+                <span id="current-action" style="font-weight: bold; color: #0066cc;">等待开始</span>
+            </div>
+            <div style="margin-bottom: 10px;">
+                <label>总用户数：</label>
+                <span id="total-users">0</span>
+            </div>
+            <div style="margin-bottom: 10px;">
+                <label>当前进度：</label>
+                <span id="current-count">0</span>/<span id="total-count">0</span>
+            </div>
+        </div>
+
+        <!-- 定时任务管理 -->
+        <div style="margin-top: 20px; padding: 20px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">
+            <h3>自动关注定时任务</h3>
+            <p style="margin-bottom: 15px; color: #666;">设置自动关注的执行时间，到时间后会自动执行一次</p>
+            
+            <!-- 添加任务表单 -->
+            <div style="margin-bottom: 20px;">
+                <h4>添加定时任务</h4>
+                <div style="display: flex; gap: 10px;">
+                    <input type="time" id="taskTime" step="60" style="width: 70%; padding: 12px; font-size: 18px;">
+                    <button class="primary" onclick="addTimeTask()" style="width: 30%; padding: 12px 20px; font-size: 16px;">添加</button>
+                </div>
+            </div>
+            
+            <!-- 任务列表 -->
+            <div>
+                <h4>已添加任务</h4>
+                <div id="tasksList" style="margin-top: 10px; max-height: 300px; overflow-y: auto;">
+                    <div style="text-align: center; color: #666; padding: 20px;" id="noTasks">暂无任务</div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="status" class="status info" style="display: none;">
+            请选择操作
+        </div>
+    </div>
+
+    <script>
+        function updateStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+
+        async function openTiktok() {
+            try {
+                updateStatus('正在打开 TikTok...', 'info');
+                const response = await fetch('/open-tiktok');
+                const data = await response.json();
+                if (data.success) {
+                    updateStatus(data.message, 'success');
+                } else {
+                    updateStatus('错误: ' + data.error, 'error');
+                }
+            } catch (error) {
+                updateStatus('请求失败: ' + error.message, 'error');
+            }
+        }
+
+        async function saveCookie() {
+            try {
+                updateStatus('正在保存 Cookie...', 'info');
+                const response = await fetch('/save-cookie');
+                const data = await response.json();
+                if (data.success) {
+                    updateStatus(data.message, 'success');
+                } else {
+                    updateStatus('错误: ' + data.error, 'error');
+                }
+            } catch (error) {
+                updateStatus('请求失败: ' + error.message, 'error');
+            }
+        }
+
+        async function loginWithCookie() {
+            try {
+                updateStatus('正在使用 Cookie 登录...', 'info');
+                const response = await fetch('/login-with-cookie');
+                const data = await response.json();
+                if (data.success) {
+                    updateStatus(data.message, 'success');
+                } else {
+                    updateStatus('错误: ' + data.error, 'error');
+                }
+            } catch (error) {
+                updateStatus('请求失败: ' + error.message, 'error');
+            }
+        }
+
+        // 保存设置
+        function saveSettings() {
+            const interval = document.getElementById('followInterval').value;
+            const count = document.getElementById('followCount').value;
+            
+            // 保存设置到本地存储
+            localStorage.setItem('followInterval', interval);
+            localStorage.setItem('followCount', count);
+            
+            updateStatus('设置保存成功', 'success');
+        }
+
+        // 加载设置
+        function loadSettings() {
+            const interval = localStorage.getItem('followInterval') || '5';
+            const count = localStorage.getItem('followCount') || '10';
+            
+            document.getElementById('followInterval').value = interval;
+            document.getElementById('followCount').value = count;
+        }
+
+        async function startAutoFollow() {
+            try {
+                updateStatus('正在准备自动关注...', 'success');
+                
+                const interval = document.getElementById('followInterval').value;
+                const count = document.getElementById('followCount').value;
+                
+                // 先获取初始状态（总用户数、上次进度等）
+                const initialResponse = await fetch('/get-initial-status');
+                const initialData = await initialResponse.json();
+                
+                if (initialData.success) {
+                    // 更新状态显示
+                    updateFollowStatus(initialData.data);
+                    updateStatus(`准备完成，共${initialData.data.totalUsers}个用户，上次执行到第${initialData.data.lastProgress + 1}个`, 'success');
+                    
+                    // 开始定时更新状态
+                    startStatusPolling();
+                    
+                    // 然后执行自动关注
+                    const followResponse = await fetch(`/auto-follow?interval=${interval}&count=${count}`);
+                    const followData = await followResponse.json();
+                    
+                    if (followData.success) {
+                        updateStatus('自动关注任务已完成', 'success');
+                        stopStatusPolling();
+                    } else {
+                        updateStatus('自动关注失败: ' + followData.error, 'error');
+                        stopStatusPolling();
+                    }
+                } else {
+                    updateStatus('获取初始状态失败: ' + initialData.error, 'error');
+                }
+            } catch (error) {
+                updateStatus('请求失败: ' + error.message, 'error');
+                stopStatusPolling();
+            }
+        }
+
+        async function getStatus() {
+            try {
+                const response = await fetch('/get-status');
+                const data = await response.json();
+                if (data.success) {
+                    updateFollowStatus(data.data);
+                }
+            } catch (error) {
+                console.error('获取状态失败:', error);
+            }
+        }
+
+        function updateFollowStatus(status) {
+            document.getElementById('status-text').textContent = status.status === 'running' ? '运行中' : '已停止';
+            document.getElementById('current-action').textContent = status.currentAction;
+            document.getElementById('total-users').textContent = status.totalUsers;
+            document.getElementById('current-count').textContent = status.currentCount;
+            document.getElementById('total-count').textContent = status.totalUsers;
+        }
+
+        let statusPollingInterval;
+
+        function startStatusPolling() {
+            // 立即获取一次状态
+            getStatus();
+            // 设置轮询
+            statusPollingInterval = setInterval(getStatus, 2000);
+        }
+
+        function stopStatusPolling() {
+            if (statusPollingInterval) {
+                clearInterval(statusPollingInterval);
+                statusPollingInterval = null;
+            }
+        }
+
+        // 添加定时任务
+        function addTimeTask() {
+            const timeInput = document.getElementById('taskTime');
+            const time = timeInput.value;
+            
+            if (!time) {
+                updateStatus('请选择执行时间', 'error');
+                return;
+            }
+            
+            fetch('/api/tasks', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ time })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateStatus('任务添加成功', 'success');
+                    timeInput.value = '';
+                    loadTasks();
+                } else {
+                    updateStatus('添加任务失败: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                updateStatus('添加任务失败: ' + error.message, 'error');
+            });
+        }
+
+        // 加载任务列表
+        function loadTasks() {
+            fetch('/api/tasks')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        renderTasks(data.data);
+                    } else {
+                        updateStatus('加载任务失败: ' + data.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('加载任务失败:', error);
+                    updateStatus('加载任务失败: ' + error.message, 'error');
+                });
+        }
+
+        // 渲染任务列表
+        function renderTasks(tasks) {
+            const tasksList = document.getElementById('tasksList');
+            const noTasks = document.getElementById('noTasks');
+            
+            if (tasks.length === 0) {
+                // 如果noTasks元素不存在，创建它
+                if (!noTasks) {
+                    const noTasksElement = document.createElement('div');
+                    noTasksElement.id = 'noTasks';
+                    noTasksElement.style.cssText = 'text-align: center; color: #666; padding: 20px;';
+                    noTasksElement.textContent = '暂无任务';
+                    tasksList.appendChild(noTasksElement);
+                } else {
+                    noTasks.style.display = 'block';
+                }
+                return;
+            }
+            
+            // 如果有任务，隐藏"暂无任务"提示
+            if (noTasks) {
+                noTasks.style.display = 'none';
+            }
+            tasksList.innerHTML = '';
+            
+            tasks.forEach(task => {
+                const taskItem = document.createElement('div');
+                taskItem.style.cssText = `
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 10px 15px;
+                    margin-bottom: 8px;
+                    background-color: white;
+                    border-radius: 4px;
+                    border: 1px solid #dee2e6;
+                `;
+                
+                const taskInfo = document.createElement('div');
+                taskInfo.innerHTML = `
+                    <strong>执行时间:</strong> ${task.time}<br>
+                    <small style="color: #666;">技能: 自动关注</small>
+                `;
+                
+                const taskActions = document.createElement('div');
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = '删除';
+                deleteButton.className = 'secondary';
+                deleteButton.style.cssText = `
+                    background-color: #dc3545;
+                    color: white;
+                    padding: 5px 12px;
+                    font-size: 14px;
+                    margin-left: 10px;
+                `;
+                deleteButton.onclick = () => deleteTask(task.id);
+                
+                taskActions.appendChild(deleteButton);
+                taskItem.appendChild(taskInfo);
+                taskItem.appendChild(taskActions);
+                tasksList.appendChild(taskItem);
+            });
+        }
+
+        // 删除任务
+        function deleteTask(taskId) {
+            if (confirm('确定要删除这个任务吗？')) {
+                fetch(`/api/tasks/${taskId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateStatus('任务删除成功', 'success');
+                        loadTasks();
+                    } else {
+                        updateStatus('删除任务失败: ' + data.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('删除任务失败:', error);
+                    updateStatus('删除任务失败: ' + error.message, 'error');
+                });
+            }
+        }
+
+        // 页面加载时初始化
+        window.onload = function() {
+            loadSettings();
+            loadTasks();
+        };
+    </script>
+</body>
+</html>

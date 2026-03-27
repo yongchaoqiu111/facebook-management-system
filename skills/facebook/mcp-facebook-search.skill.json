@@ -1,0 +1,41 @@
+{
+  "skillId": "mcp-facebook-search",
+  "name": "Facebook 搜索技能",
+  "version": "1.0.0",
+  "description": "Facebook 内容搜索功能，支持关键词搜索和结果过滤",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "keywords": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "搜索关键词数组"
+      },
+      "maxPosts": {
+        "type": "number",
+        "description": "最大返回帖子数"
+      },
+      "loginTimeoutSeconds": {
+        "type": "number",
+        "description": "登录超时时间（秒）"
+      }
+    },
+    "required": ["keywords"]
+  },
+  "outputSchema": {
+    "code": "number",
+    "data": [
+      {
+        "postId": "string",
+        "text": "string",
+        "url": "string",
+        "author": "string"
+      }
+    ]
+  },
+  "healthCheckUrl": "/health",
+  "communicationMode": "local-function",
+  "timeout": 300000
+}

@@ -1,0 +1,15 @@
+{
+  "keywords": [
+    "AI",
+    "人工智能",
+    "机器学习",
+    "ChatGPT"
+  ],
+  "maxVideos": 20,
+  "maxCommentsPerVideo": 5,
+  "searchIntervalMs": 2000,
+  "searchBoxX": 1171,
+  "searchBoxY": 47,
+  "commentButtonX": 2382,
+  "commentButtonY": 762
+}

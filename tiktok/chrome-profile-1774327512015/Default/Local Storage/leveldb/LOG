@@ -1,0 +1,14 @@
+2026/03/24-12:45:12.361 53a8 Creating DB D:\weibo\douyinss\chrome-profile-1774327512015\Default\Local Storage\leveldb since it was missing.
+2026/03/24-12:45:12.389 53a8 Reusing MANIFEST D:\weibo\douyinss\chrome-profile-1774327512015\Default\Local Storage\leveldb/MANIFEST-000001
+2026/03/24-12:46:12.411 53a8 Level-0 table #5: started
+2026/03/24-12:46:12.418 53a8 Level-0 table #5: 30096 bytes OK
+2026/03/24-12:46:12.420 53a8 Delete type=0 #3
+2026/03/24-12:47:12.676 53a8 Level-0 table #7: started
+2026/03/24-12:47:12.684 53a8 Level-0 table #7: 41412 bytes OK
+2026/03/24-12:47:12.687 53a8 Delete type=0 #4
+2026/03/24-12:50:12.678 53a8 Level-0 table #9: started
+2026/03/24-12:50:12.685 53a8 Level-0 table #9: 39360 bytes OK
+2026/03/24-12:50:12.692 53a8 Delete type=0 #6
+2026/03/24-13:00:12.677 53a8 Level-0 table #11: started
+2026/03/24-13:00:12.685 53a8 Level-0 table #11: 24892 bytes OK
+2026/03/24-13:00:12.691 53a8 Delete type=0 #8

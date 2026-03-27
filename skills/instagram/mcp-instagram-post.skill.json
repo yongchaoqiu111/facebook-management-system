@@ -1,0 +1,40 @@
+{
+  "skillId": "mcp-instagram-post",
+  "name": "Instagram 发帖技能",
+  "version": "1.0.0",
+  "description": "Instagram 自动发帖功能，支持发布文本和图片",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "text": {
+        "type": "string",
+        "description": "帖子文本内容"
+      },
+      "imagePaths": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "图片文件路径数组"
+      },
+      "publish": {
+        "type": "boolean",
+        "description": "是否发布（false为草稿模式）"
+      },
+      "loginTimeoutSeconds": {
+        "type": "number",
+        "description": "登录超时时间（秒）"
+      }
+    }
+  },
+  "outputSchema": {
+    "code": "number",
+    "data": {
+      "postId": "string",
+      "status": "string"
+    }
+  },
+  "healthCheckUrl": "/health",
+  "communicationMode": "local-function",
+  "timeout": 600000
+}

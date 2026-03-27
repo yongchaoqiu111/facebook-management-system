@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>技能测试页面</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 动态加载的头部 -->
+        <div id="app-header"></div>
+
+        <main>
+            <h2>技能测试</h2>
+            <p>点击下方按钮触发相应技能</p>
+        
+        <div class="skills-grid">
+            <!-- Facebook自动发帖 -->
+            <div class="skill-card">
+                <h3>Facebook自动发帖</h3>
+                <p>自动发布帖子到Facebook</p>
+                <button onclick="executeSkill('facebook-auto-post')" class="btn btn-primary">自动发帖</button>
+            </div>
+            
+            <!-- Facebook互动 -->
+            <div class="skill-card">
+                <h3>Facebook互动</h3>
+                <p>点赞/评论互动</p>
+                <button onclick="executeSkill('facebook-interact')" class="btn btn-secondary">互动</button>
+            </div>
+            
+            <!-- Facebook评论截流 -->
+            <div class="skill-card">
+                <h3>Facebook评论截流</h3>
+                <p>搜索关键词并自动回复评论</p>
+                <button onclick="executeSkill('facebook-comment-intercept')" class="btn btn-success">开始截流</button>
+            </div>
+            
+            <!-- Facebook加入小组 -->
+            <div class="skill-card">
+                <h3>自动加入小组</h3>
+                <p>自动加入Facebook小组</p>
+                <button onclick="executeSkill('facebook-join-groups')" class="btn btn-warning">加入小组</button>
+            </div>
+            
+            <!-- Facebook帖子分析 -->
+            <div class="skill-card">
+                <h3>帖子分析</h3>
+                <p>分析Facebook帖子</p>
+                <button onclick="executeSkill('facebook-post-analysis')" class="btn btn-info">分析帖子</button>
+            </div>
+            
+            <!-- Facebook自动评论 -->
+            <div class="skill-card">
+                <h3>自动评论</h3>
+                <p>自动分析帖子评论并回复</p>
+                <button onclick="executeSkill('facebook-auto-comment')" class="btn btn-dark">自动评论</button>
+            </div>
+            
+            <!-- Facebook自动点赞 -->
+            <div class="skill-card">
+                <h3>自动点赞</h3>
+                <p>搜索关键词并自动点赞帖子</p>
+                <button onclick="executeSkill('facebook-auto-like')" class="btn btn-success">自动点赞</button>
+            </div>
+            
+            <!-- 关闭浏览器窗口 -->
+            <div class="skill-card">
+                <h3>关闭窗口</h3>
+                <p>关闭所有浏览器窗口</p>
+                <button onclick="executeSkill('facebook-close-window')" class="btn btn-danger">关闭窗口</button>
+            </div>
+            
+            <!-- 登录管理 -->
+            <div class="skill-card">
+                <h3>登录管理</h3>
+                <p>打开登录页面</p>
+                <a href="login.html" class="btn btn-outline-primary">登录页面</a>
+            </div>
+        </div>
+        
+        <!-- 状态显示 -->
+        <div class="status-section">
+            <h3>执行状态</h3>
+            <div id="status" class="status-box"></div>
+        </div>
+        </main>
+    </div>
+
+    <script src="routes.js"></script>
+    <script>
+        async function executeSkill(skillName) {
+            const status = document.getElementById('status');
+            status.innerHTML = `<div class="status-item"><span class="status-pending">执行中...</span> ${skillName}</div>`;
+            
+            try {
+                const response = await fetch('/api/execute-task', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ skill: skillName })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    status.innerHTML = `<div class="status-item"><span class="status-success">✓ 成功</span> ${skillName}</div>`;
+                } else {
+                    status.innerHTML = `<div class="status-item"><span class="status-error">✗ 失败</span> ${skillName}: ${result.message}</div>`;
+                }
+            } catch (error) {
+                status.innerHTML = `<div class="status-item"><span class="status-error">✗ 错误</span> ${skillName}: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

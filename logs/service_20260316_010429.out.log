@@ -1,0 +1,43 @@
+[Bootstrap] [2026-03-15T17:04:33.561Z] init redis singleton
+[Bootstrap] [2026-03-15T17:04:33.567Z] init sqlite cache
+[LLMCache] [2026-03-15T17:04:33.570Z] llm_cache table ready
+[LLMCache] [2026-03-15T17:04:33.572Z] expired cache cleaned: 0
+[LLMCache] [2026-03-15T17:04:33.579Z] cron scheduled at 04:00 daily
+[Bootstrap] [2026-03-15T17:04:33.580Z] generate skill json files
+[Bootstrap] [2026-03-15T17:04:33.586Z] start skill watcher
+[SkillRegistry] add D:\weibo\skills\mcp-weibo-hot.skill.json - mcp-weibo-hot
+[SkillRegistry] add D:\weibo\skills\mcp-weibo-image.skill.json - mcp-weibo-image
+[SkillRegistry] add D:\weibo\skills\mcp-weibo-interact.skill.json - mcp-weibo-interact
+[SkillRegistry] add D:\weibo\skills\mcp-weibo-llm-generate.skill.json - mcp-weibo-llm-generate
+[SkillRegistry] add D:\weibo\skills\mcp-weibo-message.skill.json - mcp-weibo-message
+[SkillRegistry] add D:\weibo\skills\mcp-weibo-post.skill.json - mcp-weibo-post
+[SkillRegistry] [2026-03-15T17:04:33.595Z] watcher started
+[Bootstrap] [2026-03-15T17:04:33.596Z] start bullmq workers
+[Bootstrap] [2026-03-15T17:04:33.598Z] schedule daily weibo task
+[Bootstrap] [2026-03-15T17:04:33.599Z] daily task scheduled: weibo_daily_post_default at 08:00
+[SkillRegistry] change D:\weibo\skills\mcp-weibo-hot.skill.json - mcp-weibo-hot
+[SkillRegistry] change D:\weibo\skills\mcp-weibo-llm-generate.skill.json - mcp-weibo-llm-generate
+[SkillRegistry] change D:\weibo\skills\mcp-weibo-image.skill.json - mcp-weibo-image
+[SkillRegistry] change D:\weibo\skills\mcp-weibo-post.skill.json - mcp-weibo-post
+[SkillRegistry] change D:\weibo\skills\mcp-weibo-interact.skill.json - mcp-weibo-interact
+[SkillRegistry] change D:\weibo\skills\mcp-weibo-message.skill.json - mcp-weibo-message
+[HumanIntervention] [2026-03-15T17:30:57.711Z] human job pending: 1 taskId=weibo_bullmq_test_2
+[HumanIntervention] [2026-03-15T17:30:57.712Z] human job processed: 1 taskId=weibo_bullmq_test_2
+[HumanIntervention] [2026-03-15T17:31:38.807Z] human job pending: 2 taskId=weibo_bullmq_test_13
+[HumanIntervention] [2026-03-15T17:31:38.808Z] human job processed: 2 taskId=weibo_bullmq_test_13
+[HumanIntervention] [2026-03-15T17:31:49.245Z] human job pending: 3 taskId=weibo_bullmq_test_16
+[HumanIntervention] [2026-03-15T17:31:49.245Z] human job processed: 3 taskId=weibo_bullmq_test_16
+[HumanIntervention] [2026-03-15T17:32:58.070Z] human job pending: 4 taskId=manual_hi_1
+[HumanIntervention] [2026-03-15T17:32:58.070Z] human job processed: 4 taskId=manual_hi_1
+[HumanIntervention] [2026-03-15T17:32:58.074Z] dead-letter pending: 1 taskId=manual_dl_1
+[HumanIntervention] [2026-03-15T17:32:58.075Z] dead-letter processed: 1 taskId=manual_dl_1
+[HumanIntervention] [2026-03-15T17:38:21.832Z] dead-letter pending: 2 taskId=manual_dl_2
+[HumanIntervention] [2026-03-15T17:38:21.833Z] dead-letter processed: 2 taskId=manual_dl_2
+[HumanIntervention] [2026-03-15T17:42:24.419Z] dead-letter pending: 3 taskId=manual_dl_event_1
+[HumanIntervention] [2026-03-15T17:42:24.420Z] dead-letter processed: 3 taskId=manual_dl_event_1
+[SkillRegistry] change D:\weibo\skills\mcp-weibo-hot.skill.json - mcp-weibo-hot
+[SkillRegistry] change D:\weibo\skills\mcp-weibo-llm-generate.skill.json - mcp-weibo-llm-generate
+[SkillRegistry] change D:\weibo\skills\mcp-weibo-image.skill.json - mcp-weibo-image
+[SkillRegistry] change D:\weibo\skills\mcp-weibo-post.skill.json - mcp-weibo-post
+[SkillRegistry] change D:\weibo\skills\mcp-weibo-interact.skill.json - mcp-weibo-interact
+[SkillRegistry] change D:\weibo\skills\mcp-weibo-message.skill.json - mcp-weibo-message

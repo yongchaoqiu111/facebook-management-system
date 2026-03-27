@@ -1,0 +1,62 @@
+{
+  "name": "热搜词探索",
+  "description": "定时探索热搜词，搜索相关新闻，生成Facebook帖子，并更新热搜词库",
+  "version": "1.0.0",
+  "author": "System",
+  "skillId": "mcp-hot-search-explorer",
+  "main": "hot-search-explorer.ts",
+  "entry": "exploreHotSearch",
+  "input": {
+    "type": "object",
+    "properties": {
+      "skillId": {
+        "type": "string",
+        "description": "技能 ID"
+      },
+      "traceId": {
+        "type": "string",
+        "description": "追踪 ID"
+      }
+    },
+    "required": ["skillId", "traceId"]
+  },
+  "output": {
+    "type": "object",
+    "properties": {
+      "code": {
+        "type": "number",
+        "description": "错误码，0 表示成功"
+      },
+      "data": {
+        "type": "object",
+        "properties": {
+          "searchKeyword": {
+            "type": "string",
+            "description": "搜索的关键词"
+          },
+          "newsCount": {
+            "type": "number",
+            "description": "找到的新闻数量"
+          },
+          "generatedPost": {
+            "type": "string",
+            "description": "生成的Facebook帖子"
+          },
+          "updatedKeywords": {
+            "type": "boolean",
+            "description": "是否更新了关键词库"
+          }
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "cheerio": "^1.0.0-rc.12"
+  },
+  "tags": ["hot-search", "google", "news", "facebook"],
+  "communication": {
+    "mode": "sync",
+    "timeout": 60000
+  }
+}

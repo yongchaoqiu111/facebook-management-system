@@ -1,0 +1,108 @@
+{
+  "name": "weibo-project-dependencies",
+  "version": "1.0.0",
+  "description": "项目依赖说明书",
+  "lastUpdated": "2026-03-18",
+  "dependencies": [
+    {
+      "name": "@types/node",
+      "version": "^25.5.0",
+      "type": "development",
+      "description": "Node.js的类型声明文件",
+      "installation": "npm install @types/node",
+      "usedBy": [
+        "skills/facebook-join-groups.ts"
+      ]
+    },
+    {
+      "name": "@types/random",
+      "version": "^2.1.1",
+      "type": "development",
+      "description": "random库的类型声明文件",
+      "installation": "npm install @types/random",
+      "usedBy": [
+        "skills/facebook-join-groups.ts"
+      ]
+    },
+    {
+      "name": "playwright",
+      "version": "^1.58.2",
+      "type": "production",
+      "description": "浏览器自动化库，用于模拟用户操作",
+      "installation": "npm install playwright",
+      "usedBy": [
+        "skills/facebook-join-groups.ts",
+        "js/save-facebook-cookies.js",
+        "js/test-facebook-login.js"
+      ]
+    },
+    {
+      "name": "random",
+      "version": "^5.4.1",
+      "type": "production",
+      "description": "随机数生成库，用于随机选择关键词",
+      "installation": "npm install random",
+      "usedBy": [
+        "skills/facebook-join-groups.ts"
+      ]
+    },
+    {
+      "name": "axios",
+      "version": "^1.6.0",
+      "type": "production",
+      "description": "HTTP客户端，用于发送网络请求",
+      "installation": "npm install axios",
+      "usedBy": [
+        "skills/weibo/weibo-skills.ts",
+        "core/llm/llm-client.ts",
+        "skills/hot-search/hot-search-explorer.ts"
+      ]
+    },
+    {
+      "name": "dotenv",
+      "version": "^16.3.0",
+      "type": "production",
+      "description": "环境变量管理库，用于加载.env文件",
+      "installation": "npm install dotenv",
+      "usedBy": [
+        "core/config.ts"
+      ]
+    },
+    {
+      "name": "cheerio",
+      "version": "^1.0.0-rc.12",
+      "type": "production",
+      "description": "HTML解析库，用于提取网页内容",
+      "installation": "npm install cheerio",
+      "usedBy": [
+        "skills/hot-search/hot-search-explorer.ts"
+      ]
+    },
+    {
+      "name": "node-schedule",
+      "version": "^2.1.1",
+      "type": "production",
+      "description": "定时任务库，用于调度热搜词探索任务",
+      "installation": "npm install node-schedule",
+      "usedBy": [
+        "scripts/hot-search-scheduler.js"
+      ]
+    }
+  ],
+  "installationGuide": {
+    "title": "依赖安装指南",
+    "steps": [
+      "1. 确保已安装Node.js（推荐版本16.0.0及以上）",
+      "2. 打开终端，进入项目根目录",
+      "3. 运行命令：npm install，安装所有依赖",
+      "4. 对于playwright，还需要运行：npx playwright install，安装浏览器驱动"
+    ],
+    "addingNewDependency": "当添加新的依赖时，请执行以下步骤：\n1. 运行命令：npm install <dependency-name>\n2. 更新本文件，添加新依赖的信息\n3. 记录依赖的用途和使用位置"
+  },
+  "notes": [
+    "本文件记录了项目中使用的所有依赖库",
+    "当添加新技能时，如果需要新的依赖，必须更新本文件",
+    "确保所有依赖的版本与本文件中记录的一致",
+    "在新机器上复刻项目时，请参考本文件安装所有必要的依赖"
+  ]
+}

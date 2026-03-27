@@ -1,0 +1,9 @@
+{  "compilerOptions": {    "target": "ES2020",    "module": "commonjs",    "moduleResolution": "node",    "esModuleInterop": true,    "forceConsistentCasingInFileNames": true,    "strict": true,    "skipLibCheck": true,    "resolveJsonModule": true,    "outDir": "./dist",    "types": ["node"]  },  "include": [
+    "skills/facebook-join-groups.ts",
+    "skills/test-facebook-join-groups.ts",
+    "skills/facebook/facebook-skills.ts",
+    "skills/facebook/comment-intercept.ts",
+    "skills/hot-search/hot-search-explorer.ts",
+    "skills/news-distillation/news-distillation.ts",
+    "core/llm/llm-client.ts"
+  ],  "exclude": [    "node_modules"  ]}

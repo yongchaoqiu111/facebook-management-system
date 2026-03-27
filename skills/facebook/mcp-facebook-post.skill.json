@@ -1,0 +1,45 @@
+{
+  "skillId": "mcp-facebook-post",
+  "name": "Facebook 发帖技能",
+  "version": "1.0.0",
+  "description": "Facebook 图文/视频发布功能，支持草稿模式和正式发布",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "text": {
+        "type": "string",
+        "description": "帖子文本内容"
+      },
+      "imagePaths": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "图片路径数组"
+      },
+      "videoPath": {
+        "type": "string",
+        "description": "视频路径"
+      },
+      "publish": {
+        "type": "boolean",
+        "description": "是否正式发布"
+      },
+      "loginTimeoutSeconds": {
+        "type": "number",
+        "description": "登录超时时间（秒）"
+      }
+    },
+    "required": ["text"]
+  },
+  "outputSchema": {
+    "code": "number",
+    "data": {
+      "postId": "string",
+      "status": "string"
+    }
+  },
+  "healthCheckUrl": "/health",
+  "communicationMode": "local-function",
+  "timeout": 600000
+}
