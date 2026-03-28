@@ -4,48 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Instagram媒体下载</title>
+    <link rel="stylesheet" href="styles.css">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f5f5f5;
-        }
-        header {
-            background-color: #3b5998;
-            color: white;
-            padding: 20px;
-            text-align: center;
-        }
-        header h1 {
-            margin: 0;
-            font-size: 24px;
-        }
-        nav {
-            margin-top: 15px;
-        }
-        nav a {
-            color: white;
-            text-decoration: none;
-            margin: 0 15px;
-            padding: 5px 10px;
-            border-radius: 3px;
-        }
-        nav a:hover {
-            background-color: rgba(255, 255, 255, 0.2);
-        }
-        nav a.active {
-            background-color: #627aa6;
-            font-weight: bold;
-        }
-        .container {
-            max-width: 800px;
-            margin: 30px auto;
-            padding: 30px;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
         .input-group {
             margin-bottom: 20px;
         }
@@ -55,7 +15,8 @@
             font-weight: bold;
             color: #555;
         }
-        input[type="text"] {
+        input[type="text"],
+        select {
             width: 100%;
             padding: 12px;
             border: 1px solid #ddd;
@@ -101,13 +62,26 @@
             color: #0c5460;
             border: 1px solid #bee5eb;
         }
+        .media-management {
+            display: flex;
+            gap: 30px;
+            margin: 30px 0;
+        }
+        .management-column {
+            flex: 1;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
     </style>
 </head>
 <body>
-    <div id="app-header"></div>
-    
     <div class="container">
-        <h2>Instagram媒体下载</h2>
+        <div id="app-header"></div>
+        
+        <main>
+            <h2>Instagram媒体下载</h2>
         
         <div class="input-group">
             <label for="username">Instagram用户名</label>
@@ -116,7 +90,42 @@
         
         <button id="downloadBtn" onclick="startDownload()">开始下载</button>
         
+        <div class="media-management">
+            <div class="management-column">
+                <h3>Instagram媒体管理</h3>
+                
+                <div class="input-group">
+                    <label for="userFolder">选择用户文件夹</label>
+                    <select id="userFolder">
+                        <option value="">加载中...</option>
+                    </select>
+                    <button onclick="loadUserFolders()" style="margin-top: 10px;">刷新文件夹列表</button>
+                </div>
+                
+                <button id="moveBtn" onclick="moveFiles()" style="margin-top: 20px;">移动文件到Instagram images目录</button>
+                
+                <button id="cleanBtn" onclick="cleanImages()" style="margin-top: 10px; background-color: #dc3545;">清理Instagram images目录</button>
+            </div>
+            
+            <div class="management-column">
+                <h3>Facebook媒体管理</h3>
+                
+                <div class="input-group">
+                    <label for="facebookUserFolder">选择用户文件夹</label>
+                    <select id="facebookUserFolder">
+                        <option value="">加载中...</option>
+                    </select>
+                    <button onclick="loadFacebookUserFolders()" style="margin-top: 10px;">刷新文件夹列表</button>
+                </div>
+                
+                <button id="facebookMoveBtn" onclick="moveFilesToFacebook()" style="margin-top: 20px;">移动文件到Facebook目录</button>
+                
+                <button id="facebookCleanBtn" onclick="cleanFacebookImages()" style="margin-top: 10px; background-color: #dc3545;">清理Facebook目录</button>
+            </div>
+        </div>
+        
         <div id="status" class="status"></div>
+        </main>
     </div>
 
     <script src="routes.js"></script>
@@ -165,6 +174,212 @@
             status.className = `status ${type}`;
             status.style.display = 'block';
         }
+        
+        // 加载用户文件夹列表
+        function loadUserFolders() {
+            showStatus('正在加载用户文件夹列表...', 'info');
+            
+            fetch('/api/instagram/user-folders')
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('userFolder');
+                    select.innerHTML = '<option value="">-- 选择用户文件夹 --</option>';
+                    
+                    if (data.code === 0 && data.data.folders.length > 0) {
+                        data.data.folders.forEach(folder => {
+                            const option = document.createElement('option');
+                            option.value = folder;
+                            option.textContent = folder;
+                            select.appendChild(option);
+                        });
+                        showStatus(`成功加载 ${data.data.folders.length} 个用户文件夹`, 'success');
+                    } else {
+                        showStatus('未找到用户文件夹', 'info');
+                    }
+                })
+                .catch(error => {
+                    showStatus(`加载失败: ${error.message}`, 'error');
+                });
+        }
+        
+        // 移动文件到images目录
+        function moveFiles() {
+            const username = document.getElementById('userFolder').value;
+            
+            if (!username) {
+                showStatus('请选择用户文件夹', 'error');
+                return;
+            }
+            
+            const moveBtn = document.getElementById('moveBtn');
+            moveBtn.disabled = true;
+            moveBtn.textContent = '移动中...';
+            showStatus('正在移动文件...', 'info');
+            
+            fetch('/api/instagram/move-files', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username: username })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 0) {
+                    showStatus(`移动完成！<br>成功移动: ${data.data.moved}<br>跳过文件: ${data.data.skipped}<br>目标目录: ${data.data.targetDir}`, 'success');
+                } else {
+                    showStatus(`移动失败: ${data.data.message}`, 'error');
+                }
+            })
+            .catch(error => {
+                showStatus(`请求失败: ${error.message}`, 'error');
+            })
+            .finally(() => {
+                moveBtn.disabled = false;
+                moveBtn.textContent = '移动文件到images目录';
+            });
+        }
+        
+        // 清理images目录
+        function cleanImages() {
+            if (!confirm('确定要清理images目录中的所有文件吗？此操作不可恢复！')) {
+                return;
+            }
+            
+            const cleanBtn = document.getElementById('cleanBtn');
+            cleanBtn.disabled = true;
+            cleanBtn.textContent = '清理中...';
+            showStatus('正在清理images目录...', 'info');
+            
+            fetch('/api/instagram/clean-images', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 0) {
+                    showStatus(`清理完成！<br>已删除: ${data.data.deleted} 个文件`, 'success');
+                } else {
+                    showStatus(`清理失败: ${data.data.message}`, 'error');
+                }
+            })
+            .catch(error => {
+                showStatus(`请求失败: ${error.message}`, 'error');
+            })
+            .finally(() => {
+                cleanBtn.disabled = false;
+                cleanBtn.textContent = '清理images目录';
+            });
+        }
+        
+        // Facebook相关功能
+        
+        // 加载Facebook用户文件夹列表
+        function loadFacebookUserFolders() {
+            showStatus('正在加载用户文件夹列表...', 'info');
+            
+            fetch('/api/instagram/user-folders')
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('facebookUserFolder');
+                    select.innerHTML = '<option value="">-- 选择用户文件夹 --</option>';
+                    
+                    if (data.code === 0 && data.data.folders.length > 0) {
+                        data.data.folders.forEach(folder => {
+                            const option = document.createElement('option');
+                            option.value = folder;
+                            option.textContent = folder;
+                            select.appendChild(option);
+                        });
+                        showStatus(`成功加载 ${data.data.folders.length} 个用户文件夹`, 'success');
+                    } else {
+                        showStatus('未找到用户文件夹', 'info');
+                    }
+                })
+                .catch(error => {
+                    showStatus(`加载失败: ${error.message}`, 'error');
+                });
+        }
+        
+        // 移动文件到Facebook目录
+        function moveFilesToFacebook() {
+            const username = document.getElementById('facebookUserFolder').value;
+            
+            if (!username) {
+                showStatus('请选择用户文件夹', 'error');
+                return;
+            }
+            
+            const moveBtn = document.getElementById('facebookMoveBtn');
+            moveBtn.disabled = true;
+            moveBtn.textContent = '移动中...';
+            showStatus('正在移动文件到Facebook目录...', 'info');
+            
+            fetch('/api/facebook/move-files', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username: username })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 0) {
+                    showStatus(`移动完成！<br>成功移动: ${data.data.moved}<br>跳过文件: ${data.data.skipped}<br>目标目录: ${data.data.targetDir}`, 'success');
+                } else {
+                    showStatus(`移动失败: ${data.data.message}`, 'error');
+                }
+            })
+            .catch(error => {
+                showStatus(`请求失败: ${error.message}`, 'error');
+            })
+            .finally(() => {
+                moveBtn.disabled = false;
+                moveBtn.textContent = '移动文件到Facebook目录';
+            });
+        }
+        
+        // 清理Facebook目录
+        function cleanFacebookImages() {
+            if (!confirm('确定要清理Facebook目录中的所有文件吗？此操作不可恢复！')) {
+                return;
+            }
+            
+            const cleanBtn = document.getElementById('facebookCleanBtn');
+            cleanBtn.disabled = true;
+            cleanBtn.textContent = '清理中...';
+            showStatus('正在清理Facebook目录...', 'info');
+            
+            fetch('/api/facebook/clean-images', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 0) {
+                    showStatus(`清理完成！<br>已删除: ${data.data.deleted} 个文件`, 'success');
+                } else {
+                    showStatus(`清理失败: ${data.data.message}`, 'error');
+                }
+            })
+            .catch(error => {
+                showStatus(`请求失败: ${error.message}`, 'error');
+            })
+            .finally(() => {
+                cleanBtn.disabled = false;
+                cleanBtn.textContent = '清理Facebook目录';
+            });
+        }
+        
+        // 页面加载时自动加载用户文件夹列表
+        window.onload = function() {
+            loadUserFolders();
+            loadFacebookUserFolders();
+        };
     </script>
 </body>
 </html>

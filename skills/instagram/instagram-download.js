@@ -404,8 +404,8 @@ async function downloadInstagramMedia(input) {
     // 等待页面完全加载
     await page.waitForTimeout(3000);
     
-    // 创建下载目录（使用指定路径）
-    const downloadDir = path.join(userConfigDir, 'assets', 'instgram', 'download');
+    // 创建下载目录（使用指定路径和用户名）
+    const downloadDir = path.join(userConfigDir, 'assets', 'instgram', 'download', username);
     if (!fs.existsSync(downloadDir)) {
       fs.mkdirSync(downloadDir, { recursive: true });
     }

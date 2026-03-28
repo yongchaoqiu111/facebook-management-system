@@ -83,6 +83,346 @@ app.post('/api/instagram/download', async (req, res) => {
     }
 });
 
+// 获取用户文件夹列表
+app.get('/api/instagram/user-folders', (req, res) => {
+    try {
+        const downloadBaseDir = path.join(__dirname, 'user-config', 'assets', 'instgram', 'download');
+        
+        if (!fs.existsSync(downloadBaseDir)) {
+            return res.json({
+                code: 0,
+                data: {
+                    folders: []
+                }
+            });
+        }
+        
+        const folders = fs.readdirSync(downloadBaseDir, { withFileTypes: true })
+            .filter(dirent => dirent.isDirectory())
+            .map(dirent => dirent.name);
+        
+        res.json({
+            code: 0,
+            data: {
+                folders: folders
+            }
+        });
+        
+    } catch (error) {
+        console.error('获取用户文件夹列表失败:', error);
+        res.json({
+            code: 500,
+            data: {
+                message: error.message
+            }
+        });
+    }
+});
+
+// 移动文件到images目录
+app.post('/api/instagram/move-files', (req, res) => {
+    try {
+        const { username } = req.body;
+        
+        if (!username) {
+            return res.json({
+                code: 400,
+                data: {
+                    message: '用户名不能为空'
+                }
+            });
+        }
+        
+        const sourceDir = path.join(__dirname, 'user-config', 'assets', 'instgram', 'download', username);
+        const targetDir = path.join(__dirname, 'user-config', 'assets', 'instgram', 'images');
+        
+        if (!fs.existsSync(sourceDir)) {
+            return res.json({
+                code: 404,
+                data: {
+                    message: `用户文件夹不存在: ${sourceDir}`
+                }
+            });
+        }
+        
+        // 确保目标目录存在
+        if (!fs.existsSync(targetDir)) {
+            fs.mkdirSync(targetDir, { recursive: true });
+        }
+        
+        // 获取目标目录中的现有文件，确定起始编号
+        let maxNumber = 0;
+        if (fs.existsSync(targetDir)) {
+            const existingFiles = fs.readdirSync(targetDir);
+            existingFiles.forEach(file => {
+                const match = file.match(/^(\d+)\.\w+$/);
+                if (match) {
+                    const number = parseInt(match[1]);
+                    if (number > maxNumber) {
+                        maxNumber = number;
+                    }
+                }
+            });
+        }
+        
+        let currentNumber = maxNumber + 1;
+        let movedCount = 0;
+        let skippedCount = 0;
+        
+        // 读取源目录中的文件
+        const files = fs.readdirSync(sourceDir);
+        
+        files.forEach(file => {
+            const sourcePath = path.join(sourceDir, file);
+            const ext = path.extname(file);
+            
+            // 跳过非媒体文件
+            if (!['.jpg', '.jpeg', '.png', '.gif', '.mp4', '.webm'].includes(ext.toLowerCase())) {
+                skippedCount++;
+                return;
+            }
+            
+            const targetPath = path.join(targetDir, `${currentNumber}${ext}`);
+            fs.renameSync(sourcePath, targetPath);
+            movedCount++;
+            currentNumber++;
+        });
+        
+        res.json({
+            code: 0,
+            data: {
+                moved: movedCount,
+                skipped: skippedCount,
+                targetDir: targetDir
+            }
+        });
+        
+    } catch (error) {
+        console.error('移动文件失败:', error);
+        res.json({
+            code: 500,
+            data: {
+                message: error.message
+            }
+        });
+    }
+});
+
+// 清理images目录
+app.post('/api/instagram/clean-images', (req, res) => {
+    try {
+        const targetDir = path.join(__dirname, 'user-config', 'assets', 'instgram', 'images');
+        
+        if (!fs.existsSync(targetDir)) {
+            return res.json({
+                code: 0,
+                data: {
+                    deleted: 0
+                }
+            });
+        }
+        
+        let deletedCount = 0;
+        
+        // 读取并删除所有文件
+        const files = fs.readdirSync(targetDir);
+        files.forEach(file => {
+            const filePath = path.join(targetDir, file);
+            if (fs.statSync(filePath).isFile()) {
+                fs.unlinkSync(filePath);
+                deletedCount++;
+            }
+        });
+        
+        res.json({
+            code: 0,
+            data: {
+                deleted: deletedCount
+            }
+        });
+        
+    } catch (error) {
+        console.error('清理images目录失败:', error);
+        res.json({
+            code: 500,
+            data: {
+                message: error.message
+            }
+        });
+    }
+});
+
+// Facebook目录管理API
+
+// 获取Facebook用户文件夹列表
+app.get('/api/facebook/user-folders', (req, res) => {
+    try {
+        const downloadBaseDir = path.join(__dirname, 'user-config', 'assets', 'instgram', 'download');
+        
+        if (!fs.existsSync(downloadBaseDir)) {
+            return res.json({
+                code: 0,
+                data: {
+                    folders: []
+                }
+            });
+        }
+        
+        const folders = fs.readdirSync(downloadBaseDir, { withFileTypes: true })
+            .filter(dirent => dirent.isDirectory())
+            .map(dirent => dirent.name);
+        
+        res.json({
+            code: 0,
+            data: {
+                folders: folders
+            }
+        });
+        
+    } catch (error) {
+        console.error('获取Facebook用户文件夹列表失败:', error);
+        res.json({
+            code: 500,
+            data: {
+                message: error.message
+            }
+        });
+    }
+});
+
+// 移动文件到Facebook目录
+app.post('/api/facebook/move-files', (req, res) => {
+    try {
+        const { username } = req.body;
+        
+        if (!username) {
+            return res.json({
+                code: 400,
+                data: {
+                    message: '用户名不能为空'
+                }
+            });
+        }
+        
+        const sourceDir = path.join(__dirname, 'user-config', 'assets', 'instgram', 'download', username);
+        const targetDir = path.join(__dirname, 'user-config', 'assets', 'images');
+        
+        if (!fs.existsSync(sourceDir)) {
+            return res.json({
+                code: 404,
+                data: {
+                    message: `用户文件夹不存在: ${sourceDir}`
+                }
+            });
+        }
+        
+        // 确保目标目录存在
+        if (!fs.existsSync(targetDir)) {
+            fs.mkdirSync(targetDir, { recursive: true });
+        }
+        
+        // 获取目标目录中的现有文件，确定起始编号
+        let maxNumber = 0;
+        if (fs.existsSync(targetDir)) {
+            const existingFiles = fs.readdirSync(targetDir);
+            existingFiles.forEach(file => {
+                const match = file.match(/^(\d+)\.\w+$/);
+                if (match) {
+                    const number = parseInt(match[1]);
+                    if (number > maxNumber) {
+                        maxNumber = number;
+                    }
+                }
+            });
+        }
+        
+        let currentNumber = maxNumber + 1;
+        let movedCount = 0;
+        let skippedCount = 0;
+        
+        // 读取源目录中的文件
+        const files = fs.readdirSync(sourceDir);
+        
+        files.forEach(file => {
+            const sourcePath = path.join(sourceDir, file);
+            const ext = path.extname(file);
+            
+            // 跳过非媒体文件
+            if (!['.jpg', '.jpeg', '.png', '.gif', '.mp4', '.webm'].includes(ext.toLowerCase())) {
+                skippedCount++;
+                return;
+            }
+            
+            const targetPath = path.join(targetDir, `${currentNumber}${ext}`);
+            fs.renameSync(sourcePath, targetPath);
+            movedCount++;
+            currentNumber++;
+        });
+        
+        res.json({
+            code: 0,
+            data: {
+                moved: movedCount,
+                skipped: skippedCount,
+                targetDir: targetDir
+            }
+        });
+        
+    } catch (error) {
+        console.error('移动文件到Facebook目录失败:', error);
+        res.json({
+            code: 500,
+            data: {
+                message: error.message
+            }
+        });
+    }
+});
+
+// 清理Facebook目录
+app.post('/api/facebook/clean-images', (req, res) => {
+    try {
+        const targetDir = path.join(__dirname, 'user-config', 'assets', 'images');
+        
+        if (!fs.existsSync(targetDir)) {
+            return res.json({
+                code: 0,
+                data: {
+                    deleted: 0
+                }
+            });
+        }
+        
+        let deletedCount = 0;
+        
+        // 读取并删除所有文件
+        const files = fs.readdirSync(targetDir);
+        files.forEach(file => {
+            const filePath = path.join(targetDir, file);
+            if (fs.statSync(filePath).isFile()) {
+                fs.unlinkSync(filePath);
+                deletedCount++;
+            }
+        });
+        
+        res.json({
+            code: 0,
+            data: {
+                deleted: deletedCount
+            }
+        });
+        
+    } catch (error) {
+        console.error('清理Facebook目录失败:', error);
+        res.json({
+            code: 500,
+            data: {
+                message: error.message
+            }
+        });
+    }
+});
+
 // 任务存储文件
 const tasksFile = path.join(__dirname, 'data', 'tasks.json');
 // 任务执行状态文件

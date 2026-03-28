@@ -1,8 +1,10 @@
-datr	T8HGae7JTyYHfMUnYx4DWn-x	.instagram.com	/	1809193294.717661	✓	✓
-ig_did	B6EA49BF-1174-4944-9AFF-26EE12978A3C	.instagram.com	/	1806169334.71105	✓	✓
-mid	acbBTwALAAFWM_yvRA6t5LI0a4s_	.instagram.com	/	1809193294.717788	✓	✓
-wd	1280x720	.instagram.com	/	1775238141		✓
-csrftoken	kHX5a9gtF8i1MVYJXA0rdxVZzqUp1swy	.instagram.com	/	1809193341.013312		✓
-ds_user_id	43252996489	.instagram.com	/	1782409341.013545		✓
-sessionid	43252996489%3AxJTndAyMDILst4%3A15%3AAYjPZU9syLK7jwBx666pLCe2cfgMvej29gNN0g87xQ	.instagram.com	/	1806169334.711133	✓	✓
-rur	"PRN\05443252996489\0541806169341:01fecbb37fc8dec3633bdcddd8a0438d299f01a7a8156c3fb5eb8ffe7b0c021a527250d6"	.instagram.com	/	-1	✓	✓
+datr	T8HGae7JTyYHfMUnYx4DWn-x	.instagram.com	/	-1	✓	✓
+ig_did	B6EA49BF-1174-4944-9AFF-26EE12978A3C	.instagram.com	/	-1	✓	✓
+mid	acbBTwALAAFWM_yvRA6t5LI0a4s_	.instagram.com	/	-1	✓	✓
+csrftoken	kHX5a9gtF8i1MVYJXA0rdxVZzqUp1swy	.instagram.com	/	1809238216.583365		✓
+ds_user_id	43252996489	.instagram.com	/	1782454216.583645		✓
+sessionid	43252996489%3AxJTndAyMDILst4%3A15%3AAYjPZU9syLK7jwBx666pLCe2cfgMvej29gNN0g87xQ	.instagram.com	/	-1	✓	✓
+wd	1920x1080	.instagram.com	/	1775283011		✓
+test_cookie	CheckForPermission	.doubleclick.net	/	1774679114.249992		✓
+rur	"PRN\05443252996489\0541806214217:01fe2abfed9bbb448607561ac0699b604f3a28d23f6fd1d89a8493a29564c8aba37b2f58"	.instagram.com	/	-1	✓	✓
+fr	0dRRT09Vwn40mvSEe.AWemhS7_AkQb5XRhUdvJBbHTH7_6ueZ28fYcc53rk6kbDBDEFPs.Bpx3DJ..AAA.0.0.Bpx3DJ.AWe_wy2FtXl4TMef6249IwkpQUU	.facebook.com	/	1782454216.847116	✓	✓

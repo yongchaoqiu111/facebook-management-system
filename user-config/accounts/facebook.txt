@@ -1,0 +1,8 @@
+_GRECAPTCHA	09AKhCRwjJTazmTGR8UzFAUfn0JMqPBj5IFt_5uJT21h_a7RNx189-re-GsMubvTrD_rL9YheeYilWZE7lrt90ROc	www.google.com	/recaptcha	1790231679.132918	✓	✓
+datr	XnbHaWdQFQ7m2H6FlRtUkFcU	.facebook.com	/	1809239646.195166	✓	✓
+sb	XnbHacC4y_NyBRwU3fuxaBNJ	.facebook.com	/	1809239685.614869	✓	✓
+wd	1280x720	.facebook.com	/	1775284494		✓
+c_user	61586359747589	.facebook.com	/	1806215692.806274		✓
+fr	122a7tDOmAdBLT7SO.AWeinhxyR3X6xCTfxCXNXWKHBd9m0T-ftlm058YVj12IaVJYuAs.Bpx3aN..AAA.0.0.Bpx3aN.AWePCMdJkIVfOQV2b9Nf5YHf3pA	.facebook.com	/	1782455692.806399	✓	✓
+xs	35%3APLnKVplhNcG9rg%3A2%3A1774679683%3A-1%3A-1%3A%3AAcwaEUVB_X_glx7IhapNfaitQtcywjqvEDP7__Y_eQ	.facebook.com	/	1806215692.80648	✓	✓
+presence	C%7B%22t3%22%3A%5B%5D%2C%22utc3%22%3A1774679694552%2C%22v%22%3A1%7D	.facebook.com	/	-1		✓
