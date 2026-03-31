@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package kuaishou;
+
+// 基础消息体
+message PushFrame {
+  int32 opcode = 1;
+  bytes body = 2;
+}
+
+// 弹幕消息
+message DanmakuMsg {
+  string content = 1;      // 弹幕内容
+  UserInfo user = 2;       // 用户信息
+  int64 timestamp = 3;     // 发送时间
+  string room_id = 4;      // 直播间ID
+}
+
+// 用户信息
+message UserInfo {
+  string uid = 1;          // 用户ID
+  string nickname = 2;     // 昵称
+  string avatar = 3;       // 头像
+}

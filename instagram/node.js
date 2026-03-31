@@ -12,6 +12,14 @@ const PORT = 3003;
 // 全局存储浏览器实例
 let browserInstance = null;
 
+// 全局变量：存储当前处理的用户信息
+let currentUserInfo = {
+    url: '',
+    posts: null,
+    followers: null,
+    following: null
+};
+
 // 任务存储文件
 const tasksFile = path.join(__dirname, "json", "tasks.json");
 // 任务执行状态文件
@@ -930,8 +938,20 @@ app.get("/get-filter-status", async (req, res) => {
         
     } catch (error) {
         console.error('获取过滤状态失败:', error);
-        res.json({ success: false, error: error.message });
+        res.json({
+            success: false,
+            error: error.message
+        });
     }
+});
+
+// 获取当前处理用户信息
+app.get("/get-current-user", (req, res) => {
+    console.log('获取当前用户信息:', currentUserInfo);
+    res.json({ 
+        success: true, 
+        data: currentUserInfo 
+    });
 });
 
 app.get("/get-initial-status", async (req, res) => {
@@ -982,14 +1002,27 @@ app.get("/get-initial-status", async (req, res) => {
 });
 
 // 启动过滤路由
-app.get("/start-filter", async (req, res) => {
+app.post("/start-filter", async (req, res) => {
     try {
         console.log('正在启动过滤功能...');
         
         filterStatus.status = '运行中';
         filterStatus.currentAction = '正在执行过滤...';
         
-        // 直接在服务器端执行过滤逻辑，避免调用外部脚本
+        // 获取筛选条件
+        const { maxFollowers, maxFollowing, delaySeconds } = req.body;
+        
+        if (!maxFollowers || !maxFollowing || !delaySeconds) {
+            filterStatus.status = '失败';
+            filterStatus.currentAction = '参数错误';
+            res.json({
+                success: false,
+                error: '请提供最大粉丝数、最大关注数和间隔时间'
+            });
+            return;
+        }
+        
+        // 读取评论数据
         const commentsFile = path.join(__dirname, "json", "全部评论.json");
         const keywordsFile = path.join(__dirname, "json", "keywords.json");
         const resultFile = path.join(__dirname, "json", "筛选结果.json");
@@ -997,33 +1030,287 @@ app.get("/start-filter", async (req, res) => {
         console.log('读取评论文件:', commentsFile);
         console.log('读取关键词文件:', keywordsFile);
         
-        // 读取关键词配置
-        const keywordsConfig = JSON.parse(fs.readFileSync(keywordsFile, 'utf8'));
-        const keywords = keywordsConfig.keywords || [];
-        
-        if (keywords.length === 0) {
-            console.error('关键词列表为空');
-            filterStatus.status = '失败';
-            filterStatus.currentAction = '关键词列表为空';
-            res.json({
-                success: false,
-                error: '关键词列表为空，请先在网页中添加关键词'
-            });
-            return;
-        }
+        // 跳过关键词检查，直接基于粉丝和关注数量过滤
         
         // 读取评论数据
         const commentsData = JSON.parse(fs.readFileSync(commentsFile, 'utf8'));
         console.log('评论总数:', commentsData.length);
         
-        // 执行过滤
-        console.log('开始执行关键词过滤...');
-        const result = commentsData.filter(item => {
-            if (!item.text) return false;
-            return keywords.some(word => item.text.includes(word));
+        // 启动浏览器进行实时检测
+        console.log('🌐 启动浏览器...');
+        const puppeteer = require('puppeteer');
+        const browser = await puppeteer.launch({
+            headless: false,
+            defaultViewport: null,
+            args: [
+                '--start-maximized',
+                '--window-position=0,0',
+                '--window-size=1920,1080',
+                '--disable-extensions',
+                '--disable-gpu',
+                '--no-sandbox'
+            ]
         });
+        console.log('✅ 浏览器已启动，窗口可见');
         
-        console.log('过滤完成，符合条件:', result.length);
+        const page = await browser.newPage();
+        
+        // 延迟函数
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        
+        // 获取用户信息
+        async function getUserInfo(userUrl) {
+            try {
+                console.log(`🔍 正在获取用户信息: ${userUrl}`);
+                
+                // 打开新标签页
+                const newPage = await browser.newPage();
+                
+                // 设置页面可见性
+                await newPage.bringToFront();
+                
+                // 访问用户主页
+                console.log(`🌐 正在访问用户页面: ${userUrl}`);
+                await newPage.goto(userUrl, { 
+                    waitUntil: 'networkidle2',
+                    timeout: 60000
+                });
+                console.log(`✅ 页面加载完成`);
+                
+                // 等待页面完全加载
+                await delay(3000);
+                
+                // 检查并关闭登录弹窗
+                console.log(`🔧 检查登录弹窗`);
+                await newPage.evaluate(() => {
+                    // 查找Instagram登录弹窗的关闭按钮（更精确的选择器）
+                    const closeButtons = document.querySelectorAll(
+                        '[aria-label="Close"], ' +
+                        '[aria-label="关闭"], ' +
+                        '[aria-label="Close this modal"], ' +
+                        '.x1i10hfl.xjqpnuy.x2hbi6w.x972fbf.xcfux6l.x1qhh985.xm0m39n.x9f619.x1ypdohk.xdl72j9.x2lah0s.xe8uvvx.xdj266r.x11i5rnm.xat24cr.x1mh8g0r.x2lwn1j.x78zum5.xdt5ytf.x1iyjqo2.x2ql1qa, ' +
+                        'button[class*="_"], ' +
+                        'div[role="button"], ' +
+                        'svg[aria-label="Close"], ' +
+                        'svg[aria-label="关闭"], ' +
+                        '[data-testid="close-button"], ' +
+                        '[data-testid="modal-close"]'
+                    );
+                    
+                    console.log(`📊 找到 ${closeButtons.length} 个可能的关闭按钮`);
+                    
+                    for (const button of closeButtons) {
+                        const text = button.innerText || button.textContent || '';
+                        const ariaLabel = button.getAttribute('aria-label') || '';
+                        const testId = button.getAttribute('data-testid') || '';
+                        
+                        console.log(`🔍 检查按钮: 文本="${text}", aria-label="${ariaLabel}", testid="${testId}"`);
+                        
+                        if (text.includes('Close') || text.includes('关闭') || text.includes('×') || 
+                            ariaLabel.includes('Close') || ariaLabel.includes('关闭') ||
+                            testId.includes('close') || testId.includes('Close')) {
+                            button.click();
+                            console.log('✅ 已关闭登录弹窗');
+                            break;
+                        }
+                    }
+                });
+                await delay(3000);
+                
+                // 提取粉丝数量和关注数量
+                console.log(`🔧 开始提取用户数据`);
+                
+                // 先截图保存页面状态
+                await newPage.screenshot({ path: `screenshot_${Date.now()}.png`, fullPage: true });
+                console.log(`📸 已保存页面截图`);
+                
+                const userInfo = await newPage.evaluate(() => {
+                    console.log('📝 开始执行页面脚本');
+                    
+                    // 获取页面标题和URL
+                    console.log(`🌐 页面标题: ${document.title}`);
+                    console.log(`🔗 当前URL: ${window.location.href}`);
+                    
+                    // 定义辅助函数：将文本转换为数字（支持中文单位）
+                    function textToNumber(text) {
+                        if (!text) return null;
+                        
+                        let numStr = text.trim();
+                        // 处理中文单位：万, 亿
+                        if (numStr.includes('万')) {
+                            const num = parseFloat(numStr.replace('万', ''));
+                            return Math.round(num * 10000);
+                        } else if (numStr.includes('亿')) {
+                            const num = parseFloat(numStr.replace('亿', ''));
+                            return Math.round(num * 100000000);
+                        } else {
+                            // 处理普通数字
+                            numStr = numStr.replace(/[,.]/g, '');
+                            return parseInt(numStr);
+                        }
+                    }
+                    
+                    let posts = null;
+                    let followers = null;
+                    let following = null;
+                    
+                    // 方法1: 根据用户提供的选择器提取（帖子数、粉丝数和关注数）
+                    console.log('🔍 尝试方法1: 使用用户提供的选择器');
+                    
+                    // 获取所有数字span
+                    const numberSpans = document.querySelectorAll('.html-span.xdj266r.x14z9mp.xat24cr.x1lziwak.xexx8yu.xyri2b.x18d9i69.x1c1uobl.x1hl2dhg.x16tdsg8.x1vvkbs');
+                    console.log(`📊 找到 ${numberSpans.length} 个数字span元素`);
+                    
+                    const spanTexts = [];
+                    for (const span of numberSpans) {
+                        const text = span.textContent || '';
+                        if (text.trim()) {
+                            spanTexts.push(text);
+                        }
+                    }
+                    console.log(`📝 数字span文本: ${JSON.stringify(spanTexts)}`);
+                    
+                    // 按顺序：第一个是帖子数，第二个是粉丝数，第三个是关注数
+                    if (numberSpans.length >= 1) {
+                        posts = textToNumber(numberSpans[0].textContent);
+                        console.log(`✅ 第一个span为帖子数: ${posts}`);
+                    }
+                    if (numberSpans.length >= 2) {
+                        followers = textToNumber(numberSpans[1].textContent);
+                        console.log(`✅ 第二个span为粉丝数: ${followers}`);
+                    }
+                    if (numberSpans.length >= 3) {
+                        following = textToNumber(numberSpans[2].textContent);
+                        console.log(`✅ 第三个span为关注数: ${following}`);
+                    }
+                    
+                    return { posts, followers, following };
+                });
+                
+                console.log(`✅ 用户信息获取成功：帖子 ${userInfo.posts}, 粉丝 ${userInfo.followers}, 关注 ${userInfo.following}`);
+                
+                // 更新全局变量，存储当前用户信息
+                currentUserInfo = {
+                    url: userUrl,
+                    posts: userInfo.posts,
+                    followers: userInfo.followers,
+                    following: userInfo.following
+                };
+                
+                // 如果获取到了数据，等待一段时间让用户查看
+                if (userInfo.followers || userInfo.following) {
+                    console.log(`⏳ 等待用户查看数据...`);
+                    await delay(3000);
+                }
+                
+                // 如果没有获取到数据，等待更长时间再尝试
+                if (!userInfo.posts && !userInfo.followers && !userInfo.following) {
+                    console.log(`⏳ 未获取到数据，等待后重试...`);
+                    await delay(5000);
+                    
+                    const retryInfo = await newPage.evaluate(() => {
+                        const numberSpans = document.querySelectorAll('.html-span.xdj266r.x14z9mp.xat24cr.x1lziwak.xexx8yu.xyri2b.x18d9i69.x1c1uobl.x1hl2dhg.x16tdsg8.x1vvkbs');
+                        
+                        let posts = null;
+                        let followers = null;
+                        let following = null;
+                        
+                        // 按顺序：第一个是帖子数，第二个是粉丝数，第三个是关注数
+                        if (numberSpans.length >= 1) {
+                            posts = parseInt(numberSpans[0].textContent.replace(/[,.]/g, ''));
+                        }
+                        if (numberSpans.length >= 2) {
+                            followers = parseInt(numberSpans[1].textContent.replace(/[,.]/g, ''));
+                        }
+                        if (numberSpans.length >= 3) {
+                            following = parseInt(numberSpans[2].textContent.replace(/[,.]/g, ''));
+                        }
+                        
+                        return { posts, followers, following };
+                    });
+                    
+                    if (retryInfo.followers || retryInfo.following || retryInfo.posts) {
+                        console.log(`✅ 重试成功: 帖子 ${retryInfo.posts}, 粉丝 ${retryInfo.followers}, 关注 ${retryInfo.following}`);
+                        // 更新全局变量，存储当前用户信息
+                        currentUserInfo = {
+                            url: userUrl,
+                            posts: retryInfo.posts,
+                            followers: retryInfo.followers,
+                            following: retryInfo.following
+                        };
+                        // 等待一段时间，让用户可以看到数据
+                        console.log(`⏳ 等待用户查看数据...`);
+                        await delay(3000);
+                        await newPage.close();
+                        return retryInfo;
+                    }
+                }
+                
+                await newPage.close();
+                return userInfo;
+            } catch (error) {
+                console.error(`❌ 获取用户信息失败 (${userUrl}): ${error.message}`);
+                console.error(`📋 错误堆栈: ${error.stack}`);
+                return { posts: null, followers: null, following: null };
+            }
+        }
+        
+        // 过滤结果数组
+        const result = [];
+        
+        // 逐个检查用户
+        for (let i = 0; i < commentsData.length; i++) {
+            const item = commentsData[i];
+            console.log(`\n处理第 ${i + 1}/${commentsData.length} 条数据`);
+            
+            // 跳过关键词检查，只基于粉丝和关注数量过滤
+            
+            // 如果没有用户URL，跳过
+            if (!item.userUrl) {
+                console.log('❌ 跳过：无用户URL');
+                continue;
+            }
+            
+            // 获取用户实际的粉丝数和关注数
+            const userInfo = await getUserInfo(item.userUrl);
+            
+            // 判断是否符合条件
+            let shouldInclude = true;
+            
+            // 粉丝数量过滤：如果粉丝数 > 最大粉丝数，则跳过
+            if (maxFollowers && userInfo.followers !== null && userInfo.followers > parseInt(maxFollowers)) {
+                console.log(`❌ 跳过：粉丝数 ${userInfo.followers} > 最大粉丝数 ${maxFollowers}`);
+                shouldInclude = false;
+            }
+            
+            // 关注数量过滤：如果关注数 > 最大关注数，则跳过
+            if (maxFollowing && userInfo.following !== null && userInfo.following > parseInt(maxFollowing)) {
+                console.log(`❌ 跳过：关注数 ${userInfo.following} > 最大关注数 ${maxFollowing}`);
+                shouldInclude = false;
+            }
+            
+            if (shouldInclude) {
+                // 添加用户信息到结果中
+                const filteredItem = {
+                    ...item,
+                    followers: userInfo.followers,
+                    following: userInfo.following
+                };
+                result.push(filteredItem);
+                console.log(`✅ 符合条件，已添加到结果`);
+            }
+            
+            // 添加延迟，使用用户设置的间隔时间
+            const delayMs = parseInt(delaySeconds) * 1000;
+            console.log(`⏳ 等待 ${delaySeconds} 秒...`);
+            await delay(delayMs);
+        }
+        
+        // 关闭浏览器
+        await browser.close();
+        console.log('🌐 浏览器已关闭');
         
         // 保存结果
         fs.writeFileSync(resultFile, JSON.stringify(result, null, 2), 'utf8');
@@ -1036,7 +1323,6 @@ app.get("/start-filter", async (req, res) => {
         
         console.log('过滤完成，结果数量:', filterStatus.resultCount);
         
-        console.log('过滤功能已完成');
         res.json({
             success: true,
             message: '过滤功能已完成',
@@ -1061,7 +1347,7 @@ app.post("/start-capture", async (req, res) => {
         
         const { exec } = require('child_process');
         
-        const command = 'powershell -Command "Start-Process powershell -ArgumentList \'-NoExit -Command \"d:; cd \\weibo\\instagram\\js; node c.js\"\' -WindowStyle Normal"';
+        const command = 'powershell -Command "Start-Process powershell -ArgumentList \'-NoExit -Command \"d:; cd \\weibo\\instagram; node js\\c.js\"\' -WindowStyle Normal"';
         
         console.log('执行命令:', command);
         

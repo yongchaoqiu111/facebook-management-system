@@ -227,7 +227,7 @@
             showMessage('正在启动弹幕抓取功能...', 'info');
             updateDanmakuStatus({ status: 'running', currentAction: '正在启动浏览器...' });
 
-            fetch('http://localhost:3001/api/danmaku/start', {
+            fetch('http://localhost:3005/api/danmaku/start', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -254,7 +254,7 @@
         function stopDanmakuCapture() {
             showMessage('正在停止弹幕抓取...', 'info');
             
-            fetch('http://localhost:3001/api/danmaku/stop', {
+            fetch('http://localhost:3005/api/danmaku/stop', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -277,7 +277,7 @@
 
         // 获取弹幕抓取状态
         function getDanmakuStatus() {
-            fetch('http://localhost:3001/api/danmaku/status')
+            fetch('http://localhost:3005/api/danmaku/status')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -334,7 +334,7 @@
 
             showMessage('正在保存直播间...', 'info');
 
-            fetch('http://localhost:3001/api/save-live-room', {
+            fetch('http://localhost:3005/api/save-live-room', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -357,7 +357,7 @@
 
         // 加载已保存的直播间
         function loadSavedLiveRooms() {
-            fetch('http://localhost:3001/api/get-saved-live-rooms')
+            fetch('http://localhost:3005/api/get-saved-live-rooms')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {

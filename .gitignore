@@ -30,4 +30,4 @@ build/
 
 # Temporary files
 temp/
-tmp/
+tmp/"*.rar" 

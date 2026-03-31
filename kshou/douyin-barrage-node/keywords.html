@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>关键词管理</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .input-section {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        #keywordInput {
+            flex: 1;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #addBtn {
+            background-color: #4CAF50;
+            color: white;
+        }
+        #addBtn:hover {
+            background-color: #45a049;
+        }
+        .keywords-list {
+            margin-top: 20px;
+        }
+        .keyword-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .keyword-text {
+            flex: 1;
+            font-size: 16px;
+        }
+        .keyword-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .edit-btn {
+            background-color: #2196F3;
+            color: white;
+        }
+        .edit-btn:hover {
+            background-color: #0b7dda;
+        }
+        .delete-btn {
+            background-color: #f44336;
+            color: white;
+        }
+        .delete-btn:hover {
+            background-color: #da190b;
+        }
+        .edit-mode {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+        .edit-input {
+            flex: 1;
+            padding: 5px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .save-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 5px 10px;
+        }
+        .cancel-btn {
+            background-color: #9e9e9e;
+            color: white;
+            padding: 5px 10px;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #e8f4f8;
+            border: 1px solid #b3e5fc;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #0d47a1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>关键词管理</h1>
+        
+        <div class="input-section">
+            <input type="text" id="keywordInput" placeholder="输入关键词..." />
+            <button id="addBtn">添加</button>
+        </div>
+        
+        <div class="keywords-list" id="keywordsList">
+            <!-- 关键词列表将动态生成 -->
+        </div>
+        
+        <div class="status" id="status">
+            当前关键词数量: 0
+        </div>
+    </div>
+
+    <script>
+        // 从本地存储加载关键词
+        let keywords = JSON.parse(localStorage.getItem('danmakuKeywords')) || [];
+        
+        // 更新关键词列表显示
+        function updateKeywordsList() {
+            const list = document.getElementById('keywordsList');
+            list.innerHTML = '';
+            
+            keywords.forEach((keyword, index) => {
+                const item = document.createElement('div');
+                item.className = 'keyword-item';
+                item.innerHTML = `
+                    <div class="keyword-text">${keyword}</div>
+                    <div class="keyword-actions">
+                        <button class="edit-btn" onclick="editKeyword(${index})">编辑</button>
+                        <button class="delete-btn" onclick="deleteKeyword(${index})">删除</button>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+            
+            // 更新状态
+            document.getElementById('status').textContent = `当前关键词数量: ${keywords.length}`;
+        }
+        
+        // 添加关键词
+        function addKeyword() {
+            const input = document.getElementById('keywordInput');
+            const keyword = input.value.trim();
+            
+            if (keyword && !keywords.includes(keyword)) {
+                keywords.push(keyword);
+                localStorage.setItem('danmakuKeywords', JSON.stringify(keywords));
+                updateKeywordsList();
+                input.value = '';
+            }
+        }
+        
+        // 删除关键词
+        function deleteKeyword(index) {
+            keywords.splice(index, 1);
+            localStorage.setItem('danmakuKeywords', JSON.stringify(keywords));
+            updateKeywordsList();
+        }
+        
+        // 编辑关键词
+        function editKeyword(index) {
+            const item = document.querySelectorAll('.keyword-item')[index];
+            const currentKeyword = keywords[index];
+            
+            item.innerHTML = `
+                <div class="edit-mode">
+                    <input type="text" class="edit-input" value="${currentKeyword}" id="editInput${index}" />
+                    <button class="save-btn" onclick="saveKeyword(${index})">保存</button>
+                    <button class="cancel-btn" onclick="updateKeywordsList()">取消</button>
+                </div>
+            `;
+            
+            // 自动聚焦到输入框
+            setTimeout(() => {
+                document.getElementById(`editInput${index}`).focus();
+            }, 100);
+        }
+        
+        // 保存编辑后的关键词
+        function saveKeyword(index) {
+            const input = document.getElementById(`editInput${index}`);
+            const newKeyword = input.value.trim();
+            
+            if (newKeyword && !keywords.includes(newKeyword)) {
+                keywords[index] = newKeyword;
+                localStorage.setItem('danmakuKeywords', JSON.stringify(keywords));
+                updateKeywordsList();
+            } else {
+                updateKeywordsList();
+            }
+        }
+        
+        // 绑定事件
+        document.getElementById('addBtn').addEventListener('click', addKeyword);
+        document.getElementById('keywordInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                addKeyword();
+            }
+        });
+        
+        // 初始化
+        updateKeywordsList();
+    </script>
+</body>
+</html>

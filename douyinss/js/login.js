@@ -38,7 +38,7 @@ const taskJobs = new Map();
 
 // 全局状态跟踪
 let executionStatus = {
-    status: 'idle', // idle, running, stopped
+    status: '空闲', // 空闲, 运行中, 已停止
     totalUsers: 0,
     currentCount: 0,
     progress: 0,
@@ -143,7 +143,7 @@ async function executeTask(task) {
     
     // 更新任务执行状态为开始
     updateTaskStatus(task.id, {
-        status: 'running',
+        status: '运行中',
         startTime: new Date().toISOString()
     });
     
@@ -511,20 +511,20 @@ async function autoFollow(interval = 5, count = 10) {
     console.log(`====================================`);
     
     // 更新状态
-    executionStatus.status = 'running';
+    executionStatus.status = '运行中';
     executionStatus.currentAction = '运行中...';
     
     // 读取筛选结果文件
     console.log(`[1/8] 读取筛选结果文件...`);
     const filterResultFile = path.join(path.dirname(__dirname), "json", "筛选结果.json");
     if (!fs.existsSync(filterResultFile)) {
-        executionStatus.status = 'stopped';
+        executionStatus.status = '已停止';
         throw new Error("筛选结果.json 文件不存在");
     }
     
     const filterResult = JSON.parse(fs.readFileSync(filterResultFile, "utf8"));
     if (!filterResult || !Array.isArray(filterResult)) {
-        executionStatus.status = 'stopped';
+        executionStatus.status = '已停止';
         throw new Error("筛选结果.json 文件格式错误");
     }
     console.log(`[1/8] 成功读取筛选结果，共 ${filterResult.length} 个用户`);
@@ -999,20 +999,6 @@ class DouyinDanmakuAutomation {
             this.page = await this.browser.newPage();
             console.log('✅ 新页面已创建');
             
-            // 设置请求拦截
-            await this.page.setRequestInterception(true);
-            console.log('✅ 请求拦截已设置');
-            
-            // 拦截WebSocket连接和数据
-            this.page.on('request', async (request) => {
-                const url = request.url();
-                // 检查是否是WebSocket连接
-                if (url.includes('webcast') && url.includes('push')) {
-                    console.log(`🔌 发现WebSocket连接: ${url}`);
-                }
-                await request.continue();
-            });
-            
             // 监听浏览器控制台输出
             this.page.on('console', msg => {
                 const text = msg.text();
@@ -1145,259 +1131,6 @@ class DouyinDanmakuAutomation {
                 
                 // 每30秒更新一次关键词
                 setInterval(window.refreshKeywords, 30000);
-                
-                // 拦截WebSocket消息
-                (function() {
-                    // 保存原始WebSocket构造函数
-                    const originalWebSocket = window.WebSocket;
-                    
-                    // 重写WebSocket构造函数
-                    window.WebSocket = function(url, protocols) {
-                        const ws = new originalWebSocket(url, protocols);
-                        
-                        // 记录WebSocket连接
-                        console.log(`🌐 WebSocket连接建立: ${url}`);
-                        
-                        // 拦截send方法
-                        const originalSend = ws.send;
-                        ws.send = function(data) {
-                            console.log(`📤 WebSocket发送数据:`, data);
-                            return originalSend.apply(this, arguments);
-                        };
-                        
-                        // 拦截onmessage事件
-                        const originalOnMessage = ws.onmessage;
-                        ws.onmessage = function(event) {
-                            try {
-                                const data = event.data;
-                                console.log(`📥 WebSocket接收数据类型: ${typeof data}, 类型: ${data instanceof ArrayBuffer ? 'ArrayBuffer' : typeof data}`);
-                                
-                                if (typeof data === 'string') {
-                                    try {
-                                        const jsonData = JSON.parse(data);
-                                        console.log(`📥 WebSocket接收JSON数据:`, jsonData);
-                                        
-                                        // 解析WebSocket数据，提取用户信息和弹幕内容
-                                        if (jsonData.message && jsonData.message.payload) {
-                                            const payload = jsonData.message.payload;
-                                            
-                                            // 提取用户信息
-                                            let userInfo = null;
-                                            if (payload.user) {
-                                                userInfo = payload.user;
-                                            } else if (payload.common && payload.common.user_id) {
-                                                userInfo = {
-                                                    id: payload.common.user_id,
-                                                    nickname: payload.common.user_nickname,
-                                                    sec_uid: payload.common.sec_uid
-                                                };
-                                            }
-                                            
-                                            // 提取弹幕内容
-                                            let content = '';
-                                            if (payload.content) {
-                                                content = payload.content;
-                                            } else if (payload.text) {
-                                                content = payload.text;
-                                            }
-                                            
-                                            // 如果找到用户信息和内容，调用sendDanmaku函数
-                                            if (userInfo && content) {
-                                                // 构建用户URL
-                                                const userUrl = userInfo.sec_uid ? `https://www.douyin.com/user/${userInfo.sec_uid}` : '';
-                                                
-                                                // 构建弹幕数据
-                                                const danmaku = {
-                                                    content: content,
-                                                    user: {
-                                                        nickname: userInfo.nickname || '',
-                                                        url: userUrl
-                                                    }
-                                                };
-                                                
-                                                console.log(`📤 从WebSocket提取弹幕: ${danmaku.user.nickname}: ${danmaku.content}`);
-                                                // 调用sendDanmaku函数处理弹幕
-                                                window.sendDanmaku(danmaku);
-                                            }
-                                        }
-                                    } catch (e) {
-                                        console.log(`📥 WebSocket接收文本数据: ${data.substring(0, 200)}...`);
-                                    }
-                                } else if (data instanceof ArrayBuffer) {
-                                    console.log(`📥 WebSocket接收二进制数据，长度: ${data.byteLength} bytes`);
-                                    
-                                    try {
-                                        // 检查是否已经加载protobuf库
-                                        if (typeof protobuf === 'undefined') {
-                                            console.log('📥 正在加载protobuf.js库...');
-                                            // 动态加载protobuf.js
-                                            const script = document.createElement('script');
-                                            script.src = 'https://cdn.jsdelivr.net/npm/protobufjs@7.2.5/dist/protobuf.min.js';
-                                            script.onload = () => {
-                                                console.log('📥 protobuf.js库加载完成');
-                                                parseProtobufData(data);
-                                            };
-                                            document.head.appendChild(script);
-                                        } else {
-                                            parseProtobufData(data);
-                                        }
-                                    } catch (error) {
-                                        console.log(`📥 Protobuf解析失败:`, error);
-                                    }
-                                    
-                                    function parseProtobufData(data) {
-                                        try {
-                                            // 定义抖音Protobuf协议（包含压缩头）
-                                            const protoDefinition = `
-                                                syntax = "proto3";
-                                                package douyin;
-                                                
-                                                // 外层包装头（包含压缩信息）
-                                                message PushFrame {
-                                                    int32 ver = 1;
-                                                    int64 timestamp = 2;
-                                                    string magic = 3;
-                                                    int32 compress_type = 4;
-                                                    bytes payload = 5; // gzip压缩后的Protobuf数据
-                                                }
-                                                
-                                                // 解压后的业务响应包
-                                                message WebcastResponse {
-                                                    int32 code = 1;
-                                                    repeated WebcastMessage messages = 3;
-                                                }
-                                                
-                                                message WebcastMessage {
-                                                    string method = 1;
-                                                    bytes payload = 2;
-                                                }
-                                                
-                                                // 弹幕消息
-                                                message WebcastChatMessage {
-                                                    User user = 1;
-                                                    string content = 2;
-                                                }
-                                                
-                                                // 用户信息（含sec_uid）
-                                                message User {
-                                                    string sec_uid = 22; // 核心字段
-                                                    string nickname = 4;
-                                                    string id = 1;
-                                                }
-                                            `;
-                                            
-                                            // 加载protobuf定义
-                                            const root = protobuf.parse(protoDefinition).root;
-                                            const PushFrame = root.lookupType('douyin.PushFrame');
-                                            const WebcastResponse = root.lookupType('douyin.WebcastResponse');
-                                            const WebcastChatMessage = root.lookupType('douyin.WebcastChatMessage');
-                                            
-                                            // 第一步：解析外层压缩包头
-                                            const frame = PushFrame.decode(new Uint8Array(data));
-                                            console.log(`✅ 外层包头解析成功，压缩类型: ${frame.compress_type}`);
-                                            console.log(`✅ 压缩数据长度: ${frame.payload.length} 字节`);
-                                            
-                                            // 第二步：检查是否需要解压
-                                            if (frame.compress_type === 1) { // 1 = gzip压缩
-                                                console.log(`📥 检测到gzip压缩数据，开始解压...`);
-                                                if (typeof pako === 'undefined') {
-                                                    console.log('📥 正在加载pako.js库...');
-                                                    const script = document.createElement('script');
-                                                    script.src = 'https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js';
-                                                    script.onload = () => {
-                                                        console.log('📥 pako.js库加载完成');
-                                                        decompressAndParseBusinessData(frame.payload);
-                                                    };
-                                                    document.head.appendChild(script);
-                                                    return;
-                                                } else {
-                                                    decompressAndParseBusinessData(frame.payload);
-                                                }
-                                            } else {
-                                                // 不需要解压，直接解析
-                                                parseBusinessData(new Uint8Array(frame.payload));
-                                            }
-                                            
-                                            function decompressAndParseBusinessData(compressedPayload) {
-                                                try {
-                                                    // 使用pako解压gzip数据
-                                                    const decompressed = pako.inflate(compressedPayload);
-                                                    console.log(`✅ 解压成功，原始数据长度: ${decompressed.length} 字节`);
-                                                    parseBusinessData(decompressed);
-                                                } catch (decompressError) {
-                                                    console.log(`❌ 解压失败:`, decompressError);
-                                                }
-                                            }
-                                            
-                                            function parseBusinessData(businessData) {
-                                                try {
-                                                    // 第三步：解析业务数据
-                                                    const response = WebcastResponse.decode(businessData);
-                                                    console.log(`✅ 业务数据解析成功，消息数量: ${response.messages.length}`);
-                                                    
-                                                    // 遍历所有消息
-                                                    response.messages.forEach(msg => {
-                                                        console.log(`📥 消息类型: ${msg.method}`);
-                                                        
-                                                        // 只处理弹幕消息
-                                                        if (msg.method === 'WebcastChatMessage') {
-                                                            const chatMsg = WebcastChatMessage.decode(msg.payload);
-                                                            const user = chatMsg.user;
-                                                            const content = chatMsg.content;
-                                                            const sec_uid = user.sec_uid;
-                                                            const nickname = user.nickname;
-                                                            
-                                                            console.log('='*50);
-                                                            console.log(`弹幕内容: ${content}`);
-                                                            console.log(`用户昵称: ${nickname}`);
-                                                            console.log(`sec_uid: ${sec_uid}`);
-                                                            console.log('='*50);
-                                                            
-                                                            // 构建用户URL
-                                                            if (sec_uid) {
-                                                                const userUrl = `https://www.douyin.com/user/${sec_uid}`;
-                                                                const danmaku = {
-                                                                    content: content,
-                                                                    user: {
-                                                                        nickname: nickname || '',
-                                                                        url: userUrl
-                                                                    }
-                                                                };
-                                                                console.log(`📤 提取弹幕: ${danmaku.user.nickname}: ${danmaku.content}`);
-                                                                window.sendDanmaku(danmaku);
-                                                            }
-                                                        }
-                                                    });
-                                                } catch (businessError) {
-                                                    console.log(`❌ 业务数据解析失败:`, businessError);
-                                                }
-                                            }
-                                            
-                                        } catch (error) {
-                                            console.log(`📥 解析失败:`, error);
-                                            
-                                            // 打印原始字节数据（十六进制）
-                                            const view = new DataView(data);
-                                            const hexArray = [];
-                                            for (let i = 0; i < Math.min(50, data.byteLength); i++) {
-                                                hexArray.push(view.getUint8(i).toString(16).padStart(2, '0'));
-                                            }
-                                            console.log(`📥 原始字节数据(前50字节): ${hexArray.join(' ')}`);
-                                        }
-                                    }
-                                }
-                            } catch (error) {
-                                console.error('处理WebSocket消息失败:', error);
-                            }
-                            
-                            if (originalOnMessage) {
-                                return originalOnMessage.apply(this, arguments);
-                            }
-                        };
-                        
-                        return ws;
-                    };
-                })();
 
                 // 递归搜索函数，查找包含用户信息的对象（从备份文件提取的成功逻辑）
                 function searchUserData(obj, path = '') {
@@ -1674,50 +1407,46 @@ class DouyinDanmakuAutomation {
 
     saveDanmakuToFile(danmaku) {
         try {
-            console.log(`💾 处理弹幕数据:`, danmaku);
+            const timestamp = new Date().toLocaleTimeString('zh-CN');
+            
+            // 实时在终端输出弹幕信息
+            console.log(`\n${'='.repeat(60)}`);
+            console.log(`📺 [${timestamp}] 弹幕来袭！`);
+            console.log(`👤 用户: ${danmaku.user.nickname}`);
+            console.log(`💬 内容: ${danmaku.content}`);
+            console.log(`🔗 用户主页: ${danmaku.user.url}`);
+            console.log(`${'='.repeat(60)}`);
             
             // 读取关键词文件（读取json目录下的关键词文件）
             let keywords = [];
             const keywordsFile = path.join(path.dirname(__dirname), 'json', 'keywords.json');
-            console.log(`读取关键词文件: ${keywordsFile}`);
             
             if (fs.existsSync(keywordsFile)) {
                 const keywordsContent = fs.readFileSync(keywordsFile, 'utf8');
-                console.log(`关键词文件内容: ${keywordsContent}`);
                 const keywordsConfig = JSON.parse(keywordsContent);
                 keywords = keywordsConfig.keywords || [];
-                console.log(`提取到关键词: ${keywords.join(', ')}`);
             } else {
-                console.log(`关键词文件不存在: ${keywordsFile}`);
                 // 尝试读取根目录下的关键词文件作为备用
                 const backupKeywordsFile = path.join(path.dirname(__dirname), 'keywords.json');
                 if (fs.existsSync(backupKeywordsFile)) {
                     const keywordsContent = fs.readFileSync(backupKeywordsFile, 'utf8');
-                    console.log(`读取备用关键词文件: ${backupKeywordsFile}`);
-                    console.log(`关键词文件内容: ${keywordsContent}`);
                     const keywordsConfig = JSON.parse(keywordsContent);
                     keywords = keywordsConfig.keywords || [];
-                    console.log(`提取到关键词: ${keywords.join(', ')}`);
                 }
             }
 
             // 如果有关键词，进行过滤
             let shouldSave = true;
             if (keywords.length > 0) {
-                console.log(`开始过滤，关键词数量: ${keywords.length}`);
                 const content = danmaku.content.toLowerCase();
                 const nickname = danmaku.user.nickname.toLowerCase();
-                console.log(`弹幕内容(小写): ${content}`);
-                console.log(`昵称(小写): ${nickname}`);
                 
                 // 检查内容或昵称是否包含关键词
                 let matchedKeyword = null;
                 const containsKeyword = keywords.some(keyword => {
                     const keywordLower = keyword.toLowerCase();
-                    console.log(`检查关键词: ${keywordLower}`);
                     const contentMatch = content.includes(keywordLower);
                     const nicknameMatch = nickname.includes(keywordLower);
-                    console.log(`  内容匹配: ${contentMatch}, 昵称匹配: ${nicknameMatch}`);
                     if (contentMatch || nicknameMatch) {
                         matchedKeyword = keyword;
                         return true;
@@ -1726,13 +1455,13 @@ class DouyinDanmakuAutomation {
                 });
                 
                 if (!containsKeyword) {
-                    console.log(`❌ 弹幕不包含关键词，跳过保存: ${danmaku.user.nickname}: ${danmaku.content}`);
+                    console.log(`❌ 未命中关键词，跳过保存`);
                     shouldSave = false;
                 } else {
-                    console.log(`✅ 弹幕包含关键词 "${matchedKeyword}"，保存: ${danmaku.user.nickname}: ${danmaku.content}`);
+                    console.log(`✅ 🔍 命中关键词: "${matchedKeyword}"`);
                 }
             } else {
-                console.log(`⚠️  无关键词，直接保存弹幕: ${danmaku.user.nickname}: ${danmaku.content}`);
+                console.log(`⚠️  无关键词，直接保存`);
             }
 
             if (!shouldSave) return;
@@ -1740,7 +1469,7 @@ class DouyinDanmakuAutomation {
             // 基于userUrl的过滤：同一个用户只记录一条
             const userUrl = danmaku.user.url || '';
             if (userUrl && this.userUrlCache.has(userUrl)) {
-                console.log(`❌ 同一个用户(userUrl: ${userUrl})已存在，跳过保存`);
+                console.log(`❌ 用户已存在，跳过保存`);
                 return;
             }
 
@@ -1771,7 +1500,7 @@ class DouyinDanmakuAutomation {
             // 写入文件
             fs.writeFileSync(this.outputFile, JSON.stringify(existingData, null, 2));
             this.danmakuCount++;
-            console.log(`✅ 已保存弹幕数据到文件: ${this.outputFile} (累计: ${this.danmakuCount}条)`);
+            console.log(`💾 已保存到文件 (累计: ${this.danmakuCount}条)`);
         } catch (error) {
             console.error('保存弹幕数据失败:', error);
         }
@@ -2085,7 +1814,7 @@ app.get("/api/danmaku/status", async (req, res) => {
         res.json({ 
             success: true, 
             data: { 
-                status: isDanmakuRunning ? '运行中' : '已停止',
+                status: isDanmakuRunning ? 'running' : 'stopped',
                 danmakuCount: danmakuCount,
                 currentAction: isDanmakuRunning ? '正在监控直播间' : '等待开始'
             } 

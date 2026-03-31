@@ -26,13 +26,22 @@ echo.
 echo Press Ctrl+C to stop the server
 echo.
 
-node node.js
+REM 启动服务器（非阻塞模式）
+start "" node node.js
 
-if %errorlevel% neq 0 (
-    echo.
-    echo Server failed to start with error code: %errorlevel%
-    pause
-    exit /b %errorlevel%
-)
+REM 等待服务器启动
+echo Waiting for server to start...
+timeout /t 3 /nobreak >nul
+
+REM 打开浏览器
+echo Opening browser...
+start http://localhost:3003
+
+echo.
+echo Server started successfully!
+echo Browser opened to http://localhost:3003
+echo.
+echo Press Ctrl+C to stop the server
+echo.
 
 pause

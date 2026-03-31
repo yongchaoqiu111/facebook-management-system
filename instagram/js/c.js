@@ -44,6 +44,62 @@ function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+async function getUserInfo(browser, page, userUrl) {
+    try {
+        console.log(`🔍 正在获取用户信息: ${userUrl}`);
+        
+        // 打开新标签页
+        const newPage = await browser.newPage();
+        
+        // 访问用户主页
+        await newPage.goto(userUrl, { 
+            waitUntil: 'domcontentloaded',
+            timeout: 60000 // 增加超时时间到60秒
+        });
+        await delay(2000);
+        
+        // 提取粉丝数量和关注数量
+        const userInfo = await newPage.evaluate(() => {
+            // 查找粉丝和关注数量的元素
+            const statsElements = document.querySelectorAll('a[href$="/followers/"], a[href$="/following/"]');
+            
+            let followers = null;
+            let following = null;
+            
+            for (const element of statsElements) {
+                const text = element.innerText;
+                if (text.includes('followers') || text.includes('フォロワー')) {
+                    // 提取数字部分
+                    const numberMatch = text.match(/[\d.,]+/);
+                    if (numberMatch) {
+                        let numStr = numberMatch[0].replace(/[,.]/g, '');
+                        followers = parseInt(numStr);
+                    }
+                } else if (text.includes('following') || text.includes('フォロー中')) {
+                    // 提取数字部分
+                    const numberMatch = text.match(/[\d.,]+/);
+                    if (numberMatch) {
+                        let numStr = numberMatch[0].replace(/[,.]/g, '');
+                        following = parseInt(numStr);
+                    }
+                }
+            }
+            
+            return { followers, following };
+        });
+        
+        // 关闭标签页
+        await newPage.close();
+        
+        console.log(`✅ 用户信息获取成功: 粉丝 ${userInfo.followers}, 关注 ${userInfo.following}`);
+        return userInfo;
+        
+    } catch (error) {
+        console.error(`❌ 获取用户信息失败: ${error.message}`);
+        return { followers: null, following: null };
+    }
+}
+
 (async () => {
   const browser = await puppeteer.launch({
     headless: false,
@@ -64,7 +120,10 @@ function delay(ms) {
   }
   
   if (!isLoggedIn) {
-      await page.goto('https://www.instagram.com', { waitUntil: 'networkidle2' });
+      await page.goto('https://www.instagram.com', { 
+          waitUntil: 'domcontentloaded',
+          timeout: 60000 // 增加超时时间到60秒
+      });
       console.log('请手动登录，登录完成后按回车...');
       await new Promise(resolve => rl.once('line', resolve));
   }
@@ -157,7 +216,7 @@ function delay(ms) {
           const key = userUrl + text;
           if (text && text.length > 1 && text.length < 500 && userUrl && !seen.has(key)) {
             seen.add(key);
-            result.push({ text, userUrl });
+            result.push({ text, userUrl, followers: null, following: null });
           }
         } catch (err) {}
       }
@@ -167,10 +226,14 @@ function delay(ms) {
     console.log(`\n📝 抓到 ${comments.length} 条评论`);
 
     if (comments.length > 0) {
-      const existing = JSON.parse(fs.readFileSync(ALL_DATA_FILE, 'utf8'));
-      const newData = [...existing, ...comments];
-      fs.writeFileSync(ALL_DATA_FILE, JSON.stringify(newData, null, 2));
-      console.log(`💾 已追加，当前共 ${newData.length} 条\n`);
+      try {
+        const existing = JSON.parse(fs.readFileSync(ALL_DATA_FILE, 'utf8'));
+        const newData = [...existing, ...comments];
+        fs.writeFileSync(ALL_DATA_FILE, JSON.stringify(newData, null, 2));
+        console.log(`💾 已追加，当前共 ${newData.length} 条\n`);
+      } catch (error) {
+        console.error('❌ 保存数据失败:', error.message);
+      }
     } else {
       console.log('⚠️ 未抓到评论，请确认评论框已打开且评论已加载\n');
     }

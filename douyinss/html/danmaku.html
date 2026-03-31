@@ -299,9 +299,9 @@
 
             // 根据状态更新颜色
             const statusElement = document.getElementById('danmakuStatus');
-            if (status.status === '运行中') {
+            if (status.status === 'running') {
                 statusElement.style.color = '#28a745'; // 绿色
-            } else if (status.status === '已停止') {
+            } else if (status.status === 'stopped') {
                 statusElement.style.color = '#007bff'; // 蓝色
             } else {
                 statusElement.style.color = '#6c757d'; // 灰色
