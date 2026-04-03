@@ -114,24 +114,6 @@
         </div>
         
         <div style="margin-top: 30px; padding: 20px; background-color: #e9ecef; border-radius: 8px;">
-            <h4>用户筛选条件</h4>
-            <div style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 5px;">粉丝数量范围：</label>
-                <div style="display: flex; gap: 10px;">
-                    <input type="number" id="minFollowers" placeholder="最小粉丝数" style="flex: 1; padding: 8px; font-size: 14px;">
-                    <span style="align-self: center;">-</span>
-                    <input type="number" id="maxFollowers" placeholder="最大粉丝数" style="flex: 1; padding: 8px; font-size: 14px;">
-                </div>
-            </div>
-            <div style="margin-bottom: 20px;">
-                <label style="display: block; margin-bottom: 5px;">关注数量范围：</label>
-                <div style="display: flex; gap: 10px;">
-                    <input type="number" id="minFollowing" placeholder="最小关注数" style="flex: 1; padding: 8px; font-size: 14px;">
-                    <span style="align-self: center;">-</span>
-                    <input type="number" id="maxFollowing" placeholder="最大关注数" style="flex: 1; padding: 8px; font-size: 14px;">
-                </div>
-            </div>
-            
             <h4>过滤状态</h4>
             <div style="margin-bottom: 10px;">
                 <label>当前状态：</label>
@@ -312,30 +294,19 @@
         }
 
         function startFilter() {
-            showMessage('正在启动过滤功能...', 'success');
+            showMessage('正在启动关键词过滤功能...', 'success');
             
-            // 获取筛选条件
-            const minFollowers = document.getElementById('minFollowers').value.trim();
-            const maxFollowers = document.getElementById('maxFollowers').value.trim();
-            const minFollowing = document.getElementById('minFollowing').value.trim();
-            const maxFollowing = document.getElementById('maxFollowing').value.trim();
-            
-            fetch('http://localhost:3003/start-filter', {
+            fetch('http://localhost:3003/start-keyword-filter', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    minFollowers,
-                    maxFollowers,
-                    minFollowing,
-                    maxFollowing
-                })
+                body: JSON.stringify({})
             })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        showMessage('过滤功能已启动，正在执行', 'success');
+                        showMessage('关键词过滤功能已启动，正在执行', 'success');
                         // 启动定时检查状态
                         const statusChecker = setInterval(() => {
                             loadFilterStatus();
@@ -345,16 +316,16 @@
                                 .then(statusData => {
                                     if (statusData.success && statusData.data.status === '已完成') {
                                         clearInterval(statusChecker);
-                                        showMessage('过滤已完成！', 'success');
+                                        showMessage('关键词过滤已完成！', 'success');
                                     }
                                 });
                         }, 3000);
                     } else {
-                        showMessage('启动过滤失败: ' + data.error, 'error');
+                        showMessage('启动关键词过滤失败: ' + data.error, 'error');
                     }
                 })
                 .catch(error => {
-                    showMessage('启动过滤失败: ' + error.message, 'error');
+                    showMessage('启动关键词过滤失败: ' + error.message, 'error');
                 });
         }
 

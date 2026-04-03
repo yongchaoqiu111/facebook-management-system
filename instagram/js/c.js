@@ -1,4 +1,5 @@
 const puppeteer = require('puppeteer');
+const chromeFinder = require('chrome-finder');
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
@@ -8,8 +9,12 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
-const ALL_DATA_FILE = path.join(path.dirname(__dirname), "json", "全部评论.json");
-const COOKIE_FILE = path.join(path.dirname(__dirname), "cookie.txt");
+// 使用用户目录存储数据
+const userDataDir = path.join(process.env.APPDATA || process.env.HOME || '.', 'InstagramAutomation');
+fs.mkdirSync(userDataDir, { recursive: true });
+
+const ALL_DATA_FILE = path.join(userDataDir, "全部评论.json");
+const COOKIE_FILE = path.join(userDataDir, "cookie.txt");
 
 async function loadCookies(page) {
     try {
@@ -101,7 +106,14 @@ async function getUserInfo(browser, page, userUrl) {
 }
 
 (async () => {
+  const chromePath = chromeFinder();
+  if (!chromePath) {
+      console.error('❌ 未找到Chrome浏览器，请确保已安装Chrome');
+      process.exit(1);
+  }
+  
   const browser = await puppeteer.launch({
+    executablePath: chromePath,
     headless: false,
     defaultViewport: null,
     args: ['--start-maximized']

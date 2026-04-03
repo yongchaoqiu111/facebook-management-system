@@ -2,10 +2,17 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 
+// 使用用户目录存储数据
+const userDataDir = path.join(process.env.APPDATA || process.env.HOME || '.', 'InstagramAutomation');
+fs.mkdirSync(userDataDir, { recursive: true });
+
+// 创建浏览器用户数据目录，保存登录状态
+const browserUserDataDir = path.join(userDataDir, 'browser-data');
+fs.mkdirSync(browserUserDataDir, { recursive: true });
+
 // 文件路径
-const ALL_DATA_FILE = path.join(__dirname, '../json/全部评论.json');
-const RESULT_FILE = path.join(__dirname, '../json/筛选结果.json');
-const KEYWORDS_FILE = path.join(__dirname, '../json/keywords.json');
+const ALL_DATA_FILE = path.join(userDataDir, "全部评论.json");
+const RESULT_FILE = path.join(userDataDir, "筛选结果.json");
 
 // 延迟函数
 function delay(ms) {
@@ -100,23 +107,15 @@ async function main(maxFollowers, maxFollowing) {
     
     try {
         // 读取评论数据
-        const commentsData = JSON.parse(fs.readFileSync(ALL_DATA_FILE, 'utf8'));
-        console.log(`📊 评论总数: ${commentsData.length}`);
-        
-        // 读取关键词配置
-        const keywordsConfig = JSON.parse(fs.readFileSync(KEYWORDS_FILE, 'utf8'));
-        const keywords = keywordsConfig.keywords || [];
-        
-        if (keywords.length === 0) {
-            console.error('❌ 关键词列表为空');
-            return { success: false, error: '关键词列表为空' };
-        }
+    const commentsData = JSON.parse(fs.readFileSync(ALL_DATA_FILE, 'utf8'));
+    console.log(`📊 评论总数: ${commentsData.length}`);
         
         // 启动浏览器
         console.log('🌐 启动浏览器...');
         const browser = await puppeteer.launch({
             headless: false,
             defaultViewport: null,
+            userDataDir: browserUserDataDir,
             args: ['--start-maximized']
         });
         
@@ -130,17 +129,7 @@ async function main(maxFollowers, maxFollowing) {
             const item = commentsData[i];
             console.log(`\n处理第 ${i + 1}/${commentsData.length} 条数据`);
             
-            // 关键词过滤
-            if (!item.text) {
-                console.log('❌ 跳过：无评论内容');
-                continue;
-            }
-            
-            const hasKeyword = keywords.some(word => item.text.includes(word));
-            if (!hasKeyword) {
-                console.log('❌ 跳过：不包含关键词');
-                continue;
-            }
+
             
             // 如果没有用户URL，跳过
             if (!item.userUrl) {
@@ -216,18 +205,24 @@ if (!maxFollowers || !maxFollowing) {
     process.exit(1);
 }
 
-// 执行主函数
-main(maxFollowers, maxFollowing)
-    .then(result => {
-        if (result.success) {
-            console.log('🎉 粉丝数量过滤任务完成！');
-            process.exit(0);
-        } else {
-            console.error('❌ 粉丝数量过滤任务失败:', result.error);
+// 导出main函数，供主程序调用
+if (require.main === module) {
+    // 直接运行时执行
+    main(maxFollowers, maxFollowing)
+        .then(result => {
+            if (result.success) {
+                console.log('🎉 粉丝数量过滤任务完成！');
+                process.exit(0);
+            } else {
+                console.error('❌ 粉丝数量过滤任务失败:', result.error);
+                process.exit(1);
+            }
+        })
+        .catch(error => {
+            console.error('❌ 任务执行出错:', error.message);
             process.exit(1);
-        }
-    })
-    .catch(error => {
-        console.error('❌ 任务执行出错:', error.message);
-        process.exit(1);
-    });
+        });
+} else {
+    // 被require时导出main函数
+    module.exports = { main };
+}

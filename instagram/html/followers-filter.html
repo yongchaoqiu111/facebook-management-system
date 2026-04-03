@@ -189,6 +189,7 @@
             
             <div style="display: flex; gap: 10px; margin-top: 20px;">
                 <button class="button btn-success" onclick="startFollowersFilter()">开始粉丝数量过滤</button>
+                <button class="button btn-danger" onclick="stopFollowersFilter()">停止过滤</button>
                 <button class="button btn-primary" onclick="saveFilterSettings()">保存设置</button>
             </div>
         </div>
@@ -228,6 +229,7 @@
                 <span id="resultCount">0</span>
             </div>
             <button class="button btn-danger" onclick="clearFilterResult()">清空过滤结果</button>
+            <button class="button btn-primary" onclick="deduplicateFilterResult()">去重过滤结果</button>
         </div>
         
         <div id="message" class="message" style="display: none;"></div>
@@ -321,10 +323,58 @@
         // 全局变量：存储定时器ID
         let statusChecker = null;
         
-        function startFollowersFilter() {
+        // 全局变量
+        let scanInterval = null;
+        let currentIndex = 0;
+        let usersData = [];
+        let isFilterStopped = false;
+        
+        // 停止过滤
+        async function stopFollowersFilter() {
+            try {
+                showMessage('正在停止过滤...', 'info');
+                
+                // 设置停止标志
+                isFilterStopped = true;
+                
+                // 调用后端API停止过滤
+                const response = await fetch('http://localhost:3003/stop-filter', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage('过滤已停止', 'success');
+                    // 重置扫描状态
+                    document.getElementById('scanStatus').textContent = '已停止';
+                    document.getElementById('scanStatus').style.color = '#dc3545';
+                } else {
+                    showMessage('停止过滤失败: ' + data.error, 'error');
+                }
+                
+            } catch (error) {
+                console.error('停止过滤失败:', error);
+                showMessage('停止过滤失败', 'error');
+            }
+        }
+
+        // 直接在前端执行过滤
+        async function startFollowersFilter() {
             // 重置扫描状态为扫描中
             document.getElementById('scanStatus').textContent = '扫描中';
             document.getElementById('scanStatus').style.color = '#ffc107';
+            
+            // 立即显示获取中...
+            document.getElementById('currentPosts').textContent = '获取中...';
+            document.getElementById('currentFollowers').textContent = '获取中...';
+            document.getElementById('currentFollowing').textContent = '获取中...';
+            
+            // 重置停止标志
+            isFilterStopped = false;
             
             showMessage('正在启动粉丝数量过滤...', 'success');
             
@@ -333,54 +383,120 @@
             const maxFollowing = document.getElementById('maxFollowing').value.trim();
             const delaySeconds = document.getElementById('delaySeconds').value.trim();
             
-            if (!delaySeconds || isNaN(delaySeconds) || parseInt(delaySeconds) <= 0) {
-                showMessage('请输入有效的间隔时间（大于0的数字）', 'error');
+            if (!maxFollowers || !maxFollowing || !delaySeconds) {
+                showMessage('请填写完整的设置', 'error');
                 return;
             }
             
-            fetch('http://localhost:3003/start-filter', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    maxFollowers,
-                    maxFollowing,
-                    delaySeconds
-                })
-            })
+            // 清除之前的定时器
+            if (scanInterval) {
+                clearInterval(scanInterval);
+            }
+            
+            // 获取用户数据
+            fetch('http://localhost:3003/get-comments')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        showMessage('粉丝数量过滤已启动，正在执行', 'success');
+                        usersData = data.data;
+                        currentIndex = 0;
+                        document.getElementById('totalUsers').textContent = usersData.length;
+                        document.getElementById('resultCount').textContent = '0';
                         
-                        // 清除之前的定时器
-                        if (statusChecker) {
-                            clearInterval(statusChecker);
-                        }
-                        
-                        // 启动定时检查状态和当前用户信息（局部刷新，不刷新整个页面）
-                        statusChecker = setInterval(() => {
-                            loadFilterStatus();
-                            loadCurrentUserInfo();
-                            // 获取当前状态
-                            fetch('http://localhost:3003/get-filter-status')
-                                .then(res => res.json())
-                                .then(statusData => {
-                                    if (statusData.success && statusData.data.status === '已完成') {
-                                        clearInterval(statusChecker);
-                                        statusChecker = null;
-                                        showMessage('粉丝数量过滤已完成！', 'success');
-                                    }
-                                });
-                        }, 1000); // 每秒刷新一次，实时显示数据
+                        // 开始逐个处理用户
+                        processNextUser(maxFollowers, maxFollowing, parseInt(delaySeconds));
                     } else {
-                        showMessage('启动粉丝数量过滤失败: ' + data.error, 'error');
+                        showMessage('获取用户数据失败: ' + data.error, 'error');
                     }
                 })
                 .catch(error => {
-                    showMessage('启动粉丝数量过滤失败: ' + error.message, 'error');
+                    showMessage('获取用户数据失败: ' + error.message, 'error');
                 });
+        }
+        
+        // 处理下一个用户
+        async function processNextUser(maxFollowers, maxFollowing, delaySeconds) {
+            // 检查是否已停止
+            if (isFilterStopped) {
+                showMessage('过滤已停止', 'info');
+                return;
+            }
+            
+            if (currentIndex >= usersData.length) {
+                // 全部处理完成
+                showMessage('粉丝数量过滤已完成！', 'success');
+                return;
+            }
+            
+            const user = usersData[currentIndex];
+            console.log(`处理用户: ${user.userUrl}`);
+            
+            // 更新当前用户信息显示为获取中
+            document.getElementById('currentPosts').textContent = '获取中...';
+            document.getElementById('currentFollowers').textContent = '获取中...';
+            document.getElementById('currentFollowing').textContent = '获取中...';
+            
+            try {
+                // 调用后端API获取用户数据（使用浏览器打开页面）
+                const response = await fetch('http://localhost:3003/get-user-info', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url: user.userUrl })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const userInfo = data.data;
+                    
+                    // 更新显示
+                    document.getElementById('currentPosts').textContent = userInfo.posts || '-';
+                    document.getElementById('currentFollowers').textContent = userInfo.followers || '-';
+                    document.getElementById('currentFollowing').textContent = userInfo.following || '-';
+                    
+                    // 检查是否符合条件（小于等于指定值）
+                    const isFollowersOk = !maxFollowers || userInfo.followers <= parseInt(maxFollowers);
+                    const isFollowingOk = !maxFollowing || userInfo.following <= parseInt(maxFollowing);
+                    
+                    if (isFollowersOk && isFollowingOk) {
+                        // 符合条件，保存结果
+                        const resultData = {
+                            ...user,
+                            posts: userInfo.posts,
+                            followers: userInfo.followers,
+                            following: userInfo.following
+                        };
+                        
+                        // 发送到后端保存
+                        await fetch('http://localhost:3003/save-filter-result', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(resultData)
+                        });
+                        
+                        // 更新结果计数
+                        const currentCount = parseInt(document.getElementById('resultCount').textContent);
+                        document.getElementById('resultCount').textContent = currentCount + 1;
+                    }
+                } else {
+                    showMessage('获取用户信息失败: ' + data.error, 'error');
+                }
+                
+                // 处理下一个用户（等待5秒让用户查看数据）
+                currentIndex++;
+                setTimeout(() => processNextUser(maxFollowers, maxFollowing, delaySeconds), 5000);
+                
+            } catch (error) {
+                console.error('处理用户失败:', error);
+                showMessage('处理用户失败: ' + error.message, 'error');
+                // 继续处理下一个
+                currentIndex++;
+                setTimeout(() => processNextUser(maxFollowers, maxFollowing, delaySeconds), delaySeconds * 1000);
+            }
         }
 
         function clearFilterResult() {
@@ -408,6 +524,30 @@
             }
         }
 
+        // 去重过滤结果
+        function deduplicateFilterResult() {
+            showMessage('正在去重过滤结果...', 'info');
+            
+            fetch('http://localhost:3003/deduplicate-filter-result', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage('过滤结果去重成功，原数量: ' + data.data.originalCount + ', 去重后: ' + data.data.deduplicatedCount, 'success');
+                    setTimeout(loadFilterStatus, 1000);
+                } else {
+                    showMessage('去重过滤结果失败: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                showMessage('去重过滤结果失败: ' + error.message, 'error');
+            });
+        }
+
         function showMessage(text, type) {
             const message = document.getElementById('message');
             message.textContent = text;
@@ -421,7 +561,11 @@
         window.onload = function() {
             loadFilterStatus();
             loadSavedSettings();
-            loadCurrentUserInfo();
+            
+            // 页面加载时不显示上一个用户的数据，只显示"-"
+            document.getElementById('currentPosts').textContent = '-';
+            document.getElementById('currentFollowers').textContent = '-';
+            document.getElementById('currentFollowing').textContent = '-';
             
             // 页面加载时就开始定时刷新数据
             if (!statusChecker) {

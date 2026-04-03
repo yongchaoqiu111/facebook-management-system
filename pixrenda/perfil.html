@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人资料 - PixRenda</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        .perfil-page {
+            padding: 4rem 0;
+        }
+        .perfil-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .perfil-avatar {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background-color: #3498db;
+            margin: 0 auto 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: white;
+        }
+        .perfil-name {
+            font-size: 2rem;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+        .perfil-email {
+            color: #666;
+            margin-bottom: 1rem;
+        }
+        .perfil-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        .stat-item {
+            text-align: center;
+            padding: 1.5rem;
+            background-color: #f8f9fa;
+            border-radius: 10px;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #3498db;
+        }
+        .stat-label {
+            color: #666;
+            margin-top: 0.5rem;
+        }
+        .perfil-tabs {
+            display: flex;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid #eee;
+        }
+        .tab {
+            padding: 1rem 2rem;
+            cursor: pointer;
+            font-weight: 500;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        .tab.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .transactions-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .transaction-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+        .transaction-date {
+            color: #666;
+        }
+        .transaction-amount {
+            font-weight: 600;
+        }
+        .transaction-amount.positive {
+            color: #27ae60;
+        }
+        .transaction-amount.negative {
+            color: #e74c3c;
+        }
+        .settings-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+        .withdraw-form {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .withdraw-amount {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #27ae60;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <nav class="navbar">
+            <div class="container">
+                <div class="logo">
+                    <a href="index.html">PixRenda</a>
+                </div>
+                <ul class="nav-links">
+                    <li><a href="index.html">首页</a></li>
+                    <li><a href="tarefas.html">任务</a></li>
+                    <li><a href="promocoes.html">促销</a></li>
+                    <li><a href="tarefa.html">任务详情</a></li>
+                    <li><a href="whatsapp.html">微信</a></li>
+                    <li><a href="suporte.html">支持</a></li>
+                    <li><a href="perfil.html">个人资料</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <main class="perfil-page">
+        <div class="container">
+            <div class="perfil-header">
+                <div class="perfil-avatar">U</div>
+                <h2 class="perfil-name">测试用户</h2>
+                <p class="perfil-email">usuario@exemplo.com</p>
+            </div>
+            
+            <div class="perfil-stats">
+                <div class="stat-item">
+                    <div class="stat-value">R$ 250,00</div>
+                    <div class="stat-label">余额</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">42</div>
+                    <div class="stat-label">已完成任务</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">R$ 1.250,00</div>
+                    <div class="stat-label">总收入</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">基础</div>
+                    <div class="stat-label">计划</div>
+                </div>
+            </div>
+            
+            <div class="perfil-tabs">
+                <div class="tab active" data-tab="transactions">交易</div>
+                <div class="tab" data-tab="settings">设置</div>
+                <div class="tab" data-tab="withdraw">提款</div>
+            </div>
+            
+            <div class="tab-content active" id="transactions">
+                <h3>交易历史</h3>
+                <div class="transactions-list">
+                    <div class="transaction-item">
+                        <div>
+                            <div>任务报酬</div>
+                            <div class="transaction-date">2024年4月12日 - 14:30</div>
+                        </div>
+                        <div class="transaction-amount positive">+R$ 15,00</div>
+                    </div>
+                    <div class="transaction-item">
+                        <div>
+                            <div>提款</div>
+                            <div class="transaction-date">2024年4月11日 - 10:15</div>
+                        </div>
+                        <div class="transaction-amount negative">-R$ 100,00</div>
+                    </div>
+                    <div class="transaction-item">
+                        <div>
+                            <div>任务报酬</div>
+                            <div class="transaction-date">2024年4月10日 - 16:45</div>
+                        </div>
+                        <div class="transaction-amount positive">+R$ 8,00</div>
+                    </div>
+                    <div class="transaction-item">
+                        <div>
+                            <div>任务报酬</div>
+                            <div class="transaction-date">2024年4月10日 - 14:20</div>
+                        </div>
+                        <div class="transaction-amount positive">+R$ 10,00</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="settings">
+                <h3>账户设置</h3>
+                <div class="settings-form">
+                    <div class="form-group">
+                        <label for="nome">全名</label>
+                        <input type="text" id="nome" value="测试用户">
+                    </div>
+                    <div class="form-group">
+                        <label for="email">邮箱</label>
+                        <input type="email" id="email" value="usuario@exemplo.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="telefone">电话</label>
+                        <input type="tel" id="telefone" value="(11) 99999-9999">
+                    </div>
+                    <div class="form-group">
+                        <label for="pix">Pix密钥</label>
+                        <input type="text" id="pix" value="usuario@exemplo.com">
+                    </div>
+                </div>
+                <button class="btn-secondary" style="margin-top: 1rem;">保存更改</button>
+            </div>
+            
+            <div class="tab-content" id="withdraw">
+                <h3>提款</h3>
+                <div class="withdraw-form">
+                    <div class="withdraw-amount">可用余额: R$ 250,00</div>
+                    <div class="form-group">
+                        <label for="valor">提款金额</label>
+                        <input type="number" id="valor" min="1" max="250" placeholder="输入金额">
+                    </div>
+                    <div class="form-group">
+                        <label for="pixSaque">Pix密钥</label>
+                        <input type="text" id="pixSaque" value="usuario@exemplo.com">
+                    </div>
+                    <button class="btn-secondary">申请提款</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>PixRenda</h3>
+                    <p>您的额外收入平台。</p>
+                </div>
+                <div class="footer-section">
+                    <h4>链接</h4>
+                    <ul>
+                        <li><a href="index.html">首页</a></li>
+                        <li><a href="tarefas.html">任务</a></li>
+                        <li><a href="suporte.html">支持</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>联系</h4>
+                    <p>邮箱: contato@pixrenda.com</p>
+                    <p>微信: (11) 99999-9999</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 PixRenda. 保留所有权利。</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetTab = tab.dataset.tab;
+                
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+                
+                tab.classList.add('active');
+                document.getElementById(targetTab).classList.add('active');
+            });
+        });
+        
+        document.querySelectorAll('button').forEach(button => {
+            button.addEventListener('click', function() {
+                alert('操作成功！');
+            });
+        });
+    </script>
+</body>
+</html>

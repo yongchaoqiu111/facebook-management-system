@@ -1,9 +1,13 @@
 const fs = require('fs');
 const path = require('path');
 
-const filePath = path.join(path.dirname(__dirname), "json", "全部评论.json");
+// 使用用户目录存储数据
+const userDataDir = path.join(process.env.APPDATA || process.env.HOME || '.', 'InstagramAutomation');
+fs.mkdirSync(userDataDir, { recursive: true });
 
-const keywordsConfigPath = path.join(path.dirname(__dirname), "json", "keywords.json");
+const filePath = path.join(userDataDir, "全部评论.json");
+
+const keywordsConfigPath = path.join(userDataDir, "keywords.json");
 let keywords = [];
 
 try {
@@ -43,8 +47,8 @@ try {
   console.log('\n筛选结果：', result);
 
   console.log('💾 正在保存筛选结果...');
-  fs.writeFileSync(path.join(path.dirname(__dirname), "json", "筛选结果.json"), JSON.stringify(result, null, 2));
-  console.log('\n✅ 已成功保存到：json/筛选结果.json');
+  fs.writeFileSync(path.join(userDataDir, "筛选结果.json"), JSON.stringify(result, null, 2));
+  console.log('\n✅ 已成功保存到：筛选结果.json');
   
 } catch (err) {
   console.error('❌ 处理失败：', err);

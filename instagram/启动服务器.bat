@@ -21,27 +21,16 @@ if not exist "node_modules" (
 
 echo.
 echo Starting Instagram Automation Server...
-echo Access URL: http://localhost:3003
+echo Access URL: http://localhost:3003/followers-filter.html
 echo.
 echo Press Ctrl+C to stop the server
 echo.
 
-REM 启动服务器（非阻塞模式）
+REM Start server in background
 start "" node node.js
 
-REM 等待服务器启动
-echo Waiting for server to start...
+REM Wait for server to start
 timeout /t 3 /nobreak >nul
 
-REM 打开浏览器
-echo Opening browser...
-start http://localhost:3003
-
-echo.
-echo Server started successfully!
-echo Browser opened to http://localhost:3003
-echo.
-echo Press Ctrl+C to stop the server
-echo.
-
-pause
+REM Open browser
+start http://localhost:3003/followers-filter.html

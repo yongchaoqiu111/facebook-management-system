@@ -1,8 +1,41 @@
 {
+  "name": "instagram-automation",
+  "version": "1.0.0",
+  "description": "Instagram自动化工具",
+  "main": "electron-main.js",
+  "scripts": {
+    "start": "node node.js",
+    "electron": "electron .",
+    "dist": "electron-builder"
+  },
+  "build": {
+    "appId": "com.instagram.automation",
+    "productName": "Instagram自动化工具",
+    "directories": {
+      "output": "."
+    },
+    "asar": false,
+    "files": [
+      "electron-main.js"
+    ],
+    "extraResources": [
+      "node.js",
+      "html/**",
+      "js/**",
+      "json/**",
+      "node_modules/**"
+    ],
+    "win": {
+      "target": "portable"
+    }
+  },
   "dependencies": {
+    "chrome-finder": "^1.0.7",
     "cors": "^2.8.5",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
     "express": "^4.18.2",
     "node-schedule": "^2.1.1",
-    "puppeteer": "^24.40.0"
+    "puppeteer": "^19.11.1"
   }
 }

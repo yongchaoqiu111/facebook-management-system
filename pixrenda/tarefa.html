@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>任务详情 - PixRenda</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        .tarefa-details {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .tarefa-header {
+            margin-bottom: 2rem;
+        }
+        .tarefa-header h2 {
+            font-size: 2rem;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+        .tarefa-recompensa {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #27ae60;
+            margin-bottom: 1rem;
+        }
+        .tarefa-descricao {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 2rem;
+        }
+        .instrucoes {
+            margin-bottom: 2rem;
+        }
+        .instrucoes h3 {
+            font-size: 1.5rem;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+        .instrucoes ol {
+            list-style: decimal;
+            padding-left: 1.5rem;
+            color: #666;
+        }
+        .instrucoes li {
+            margin-bottom: 0.5rem;
+        }
+        .comprovacao {
+            margin-bottom: 2rem;
+        }
+        .comprovacao h3 {
+            font-size: 1.5rem;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            padding: 2rem;
+            text-align: center;
+            background-color: #f8f9fa;
+            margin-bottom: 1rem;
+        }
+        .upload-area.drag-over {
+            border-color: #3498db;
+            background-color: #e3f2fd;
+        }
+        .upload-area input[type="file"] {
+            display: none;
+        }
+        .upload-btn {
+            background-color: #3498db;
+            color: white;
+            padding: 0.8rem 2rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+            display: inline-block;
+        }
+        .upload-btn:hover {
+            background-color: #2980b9;
+        }
+        .submit-btn {
+            width: 100%;
+            background-color: #27ae60;
+            color: white;
+            padding: 1rem;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .submit-btn:hover {
+            background-color: #229954;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <nav class="navbar">
+            <div class="container">
+                <div class="logo">
+                    <a href="index.html">PixRenda</a>
+                </div>
+                <ul class="nav-links">
+                    <li><a href="index.html">首页</a></li>
+                    <li><a href="tarefas.html">任务</a></li>
+                    <li><a href="promocoes.html">促销</a></li>
+                    <li><a href="tarefa.html">任务详情</a></li>
+                    <li><a href="whatsapp.html">微信</a></li>
+                    <li><a href="suporte.html">支持</a></li>
+                    <li><a href="perfil.html">个人资料</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <main class="tarefas-page">
+        <div class="container">
+            <h1 class="page-title">任务详情</h1>
+            <div class="tarefa-details">
+                <div class="tarefa-header">
+                    <h2>在社交媒体上分享帖子</h2>
+                    <div class="tarefa-recompensa">R$ 5.00</div>
+                    <div class="tarefa-descricao">在您的社交媒体上分享指定的帖子并提交截图作为证明。</div>
+                </div>
+                
+                <div class="instrucoes">
+                    <h3>说明：</h3>
+                    <ol>
+                        <li>点击下面的链接访问帖子</li>
+                        <li>在至少2个社交媒体平台上分享帖子（Facebook、Instagram、Twitter等）</li>
+                        <li>截图显示帖子已分享</li>
+                        <li>提交截图作为证明</li>
+                    </ol>
+                </div>
+                
+                <div class="post-link">
+                    <h3>帖子链接：</h3>
+                    <a href="#" class="btn-secondary" style="display: inline-block; width: auto;">访问帖子</a>
+                </div>
+                
+                <div class="comprovacao">
+                    <h3>提交您的证明：</h3>
+                    <div class="upload-area" id="uploadArea">
+                        <p>拖拽您的截图到这里或点击选择</p>
+                        <input type="file" id="fileInput" accept="image/*">
+                        <label for="fileInput" class="upload-btn">选择文件</label>
+                    </div>
+                    <button class="submit-btn">提交证明</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>PixRenda</h3>
+                    <p>您的额外收入平台。</p>
+                </div>
+                <div class="footer-section">
+                    <h4>链接</h4>
+                    <ul>
+                        <li><a href="index.html">首页</a></li>
+                        <li><a href="tarefas.html">任务</a></li>
+                        <li><a href="suporte.html">支持</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>联系</h4>
+                    <p>邮箱: contato@pixrenda.com</p>
+                    <p>微信: (11) 99999-9999</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 PixRenda. 保留所有权利。</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('drag-over');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('drag-over');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                // 这里可以添加显示所选文件的代码
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                // 这里可以添加显示所选文件的代码
+                console.log('文件已选择:', file.name);
+            }
+        });
+    </script>
+</body>
+</html>
