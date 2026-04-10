@@ -1,0 +1,583 @@
+const express = require('express');
+const { check, validationResult } = require('express-validator');
+const auth = require('../middlewares/auth');
+const RedPacket = require('../models/RedPacket');
+const User = require('../models/User');
+const Transaction = require('../models/Transaction');
+const IdGenerator = require('../services/idGenerator');
+const ChainRedPacketService = require('../services/chainRedPacketService');
+const { sendError, sendSuccess, ERROR_CODES } = require('../utils/responseHelper');
+
+const router = express.Router();
+
+router.post('/', auth, [
+  check('type', '红包类型必填').isIn(['lucky', 'normal']),
+  check('totalAmount', '总金额必填且必须大于0').isFloat({ min: 0.01 }),
+  check('count', '红包数量必填，拼手气红包最少2个').custom((value, { req }) => {
+    const count = parseInt(value);
+    if (isNaN(count) || count < 1) {
+      throw new Error('红包数量必须大于0');
+    }
+    // 拼手气红包最少2个
+    if (req.body.type === 'lucky' && count < 2) {
+      throw new Error('拼手气红包最少需要2个');
+    }
+    return true;
+  }),
+  check('roomId', '房间ID必填').not().isEmpty()
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { type, totalAmount, count, message, roomId, receiverId } = req.body;
+
+  try {
+    const user = await User.findById(req.user.id);
+    if (user.balance < totalAmount) {
+      return sendError(ERROR_CODES.INSUFFICIENT_BALANCE, res);
+    }
+
+    // 拼手气红包金额不能小于数量（每个至少0.01）
+    if (type === 'lucky' && totalAmount < count * 0.01) {
+      return res.status(400).json({ 
+        error: '拼手气红包总金额必须 >= 红包数量 × 0.01' 
+      });
+    }
+
+    let amounts = [];
+    if (type === 'lucky') {
+      amounts = generateRandomAmounts(totalAmount, count);
+    } else {
+      amounts = Array(count).fill(totalAmount / count);
+    }
+
+    // 🔥 生成 11 位纯数字红包 ID
+    const redPacketId = await IdGenerator.generateRedPacketId();
+
+    const redPacket = new RedPacket({
+      _id: redPacketId.toString(),
+      sender: req.user.id,
+      type,
+      totalAmount,
+      count,
+      message: message || '恭喜发财，大吉大利',
+      roomId,
+      amounts
+    });
+
+    await redPacket.save();
+
+    user.balance -= totalAmount;
+    await user.save();
+
+    const transaction = new Transaction({
+      userId: req.user.id,
+      type: 'redPacketSend',
+      amount: totalAmount,
+      status: 'completed'
+    });
+
+    await transaction.save();
+
+    await redPacket.populate('sender', 'username avatar');
+
+    sendSuccess(res, redPacket, '红包发送成功');
+  } catch (err) {
+    console.error(err.message);
+    sendError(ERROR_CODES.INTERNAL_ERROR, res);
+  }
+});
+
+// 加入接龙群（正式环境 - 3小时冷却）
+router.post('/chain/join', auth, [
+  check('groupId', '群组ID必填').not().isEmpty()
+], async (req, res) => {
+  const { groupId } = req.body;
+
+  try {
+    const result = await ChainRedPacketService.joinChainGroup(groupId, req.user.id);
+    
+    sendSuccess(res, {
+      group: result.group,
+      redPacket: result.redPacket,
+      canGrabAfter: result.canGrabAfter,
+      remainingBalance: result.remainingBalance,
+      message: '加入接龙群成功，3小时后可领取红包'
+    });
+  } catch (err) {
+    console.error('Join chain group error:', err);
+    sendError(ERROR_CODES.INTERNAL_ERROR, res, { message: err.message });
+  }
+});
+
+// 加入接龙群（测试环境 - 3秒冷却）
+router.post('/chain/join-test', auth, [
+  check('groupId', '群组ID必填').not().isEmpty()
+], async (req, res) => {
+  const { groupId } = req.body;
+
+  try {
+    const result = await ChainRedPacketService.joinChainGroup(groupId, req.user.id, { waitSeconds: 3 });
+    
+    sendSuccess(res, {
+      group: result.group,
+      redPacket: result.redPacket,
+      canGrabAfter: result.canGrabAfter,
+      remainingBalance: result.remainingBalance,
+      message: '加入接龙群成功，3秒后可领取红包（测试模式）'
+    });
+  } catch (err) {
+    console.error('Join chain group (test) error:', err);
+    sendError(ERROR_CODES.INTERNAL_ERROR, res, { message: err.message });
+  }
+});
+
+// 创建接龙红包
+router.post('/chain', auth, [
+  check('groupId', '群组ID必填').not().isEmpty()
+], async (req, res) => {
+  console.log('🔥 收到接龙红包请求:', req.body);
+  
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    console.log('❌ 参数验证失败:', errors.array());
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { groupId, message } = req.body;
+  console.log('📦 请求参数 - groupId:', groupId, ', message:', message);
+
+  try {
+    const Group = require('../models/Group');
+    const group = await Group.findById(groupId);
+    
+    if (!group) {
+      return sendError(ERROR_CODES.GROUP_NOT_FOUND, res);
+    }
+
+    // 检查是否是接龙群
+    if (!group.settings.isChainRedPacket) {
+      return res.status(400).json({ msg: 'This is not a chain red packet group' });
+    }
+
+    // 检查用户是否是群成员
+    const isMember = group.members.some(m => m.userId.toString() === req.user.id && !m.kickedOut);
+    if (!isMember) {
+      return res.status(403).json({ msg: 'Not a member of this group' });
+    }
+
+    // 🔥 从群组配置中读取固定参数
+    const perAmount = group.settings.redPacketPerAmount || 10;  // 单个红包金额
+    const count = group.settings.redPacketCount || 30;           // 红包数量
+    const totalAmount = perAmount * count;
+
+    const user = await User.findById(req.user.id);
+    
+    if (user.balance < totalAmount) {
+      return sendError(ERROR_CODES.INSUFFICIENT_BALANCE, res);
+    }
+
+    // 生成固定金额的红包
+    const amounts = Array(count).fill(perAmount);
+
+    // 🔥 生成 11 位纯数字红包 ID
+    const redPacketId = await IdGenerator.generateRedPacketId();
+
+    const redPacket = new RedPacket({
+      _id: redPacketId.toString(),
+      sender: req.user.id,
+      type: 'normal',
+      totalAmount,
+      count,
+      message: message || '接龙红包',
+      roomId: groupId,
+      amounts,
+      isChainRedPacket: true,
+      chainGroupId: groupId,
+      remainAmount: totalAmount,
+      remainCount: count
+    });
+
+    await redPacket.save();
+
+    // 扣除余额
+    user.balance -= totalAmount;
+    await user.save();
+
+    // 记录交易
+    const transaction = new Transaction({
+      userId: req.user.id,
+      type: 'redPacketSend',
+      amount: totalAmount,
+      status: 'completed',
+      description: '接龙红包'
+    });
+
+    await transaction.save();
+
+    await redPacket.populate('sender', 'username avatar');
+
+    // 🔥 保存为群组消息（用于历史消息查询）
+    const GroupMessage = require('../models/GroupMessage');
+    const groupMessage = new GroupMessage({
+      groupId: groupId,
+      sender: req.user.id,
+      type: 'redpacket',  // 👈 使用 redpacket 类型
+      content: message || '接龙红包',
+      redPacketId: redPacket._id,
+      clientMsgId: `rp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,  // 👈 生成唯一ID
+      metadata: {
+        totalAmount: redPacket.totalAmount,
+        count: redPacket.count,
+        perAmount: perAmount,
+        isChainRedPacket: true  // 👈 标记为接龙红包
+      }
+    });
+    await groupMessage.save();
+
+    console.log('✅ 红包创建成功，准备广播...');
+    
+    // 通过 Socket 广播红包消息
+    if (global.socketService && global.socketService.io) {
+      console.log('📡 开始广播到群组:', groupId);
+      global.socketService.io.to(`group:${groupId}`).emit('receiveMessage', {
+        id: redPacket._id,
+        type: 'redpacket',  // 👈 使用 redpacket 类型
+        sender: {
+          _id: redPacket.sender._id,
+          username: redPacket.sender.username,
+          avatar: redPacket.sender.avatar
+        },
+        data: {
+          redPacketId: redPacket._id,
+          totalAmount: redPacket.totalAmount,
+          count: redPacket.count,
+          perAmount: perAmount,
+          message: redPacket.message,
+          createdAt: redPacket.createdAt
+        },
+        groupId: groupId,
+        timestamp: Date.now()
+      });
+      console.log('✅ 广播完成！');
+    } else {
+      console.log('⚠️ Socket 服务不可用，跳过广播');
+    }
+
+    console.log('✅ 接龙红包发送成功');
+    sendSuccess(res, {
+      redPacket,
+      message: '接龙红包发送成功',
+      config: {
+        perAmount,
+        count,
+        totalAmount
+      }
+    });
+  } catch (err) {
+    console.error('Create chain red packet error:', err);
+    sendError(ERROR_CODES.INTERNAL_ERROR, res, { message: err.message });
+  }
+});
+
+router.post('/:id/open', auth, async (req, res) =>{
+  try {
+    const redPacket = await RedPacket.findById(req.params.id).populate('sender', 'username avatar');
+    if (!redPacket) {
+      return sendError(ERROR_CODES.RED_PACKET_NOT_FOUND, res);
+    }
+
+    // 检查是否是接龙红包
+    if (redPacket.isChainRedPacket) {
+      try {
+        // 🔥 根据查询参数决定是否使用 Redis（老接口用 Redis）
+        const useRedis = req.query.useRedis === 'true';
+        const result = await ChainRedPacketService.openChainRedPacket(
+          redPacket._id, 
+          req.user.id,
+          { useRedis }
+        );
+        
+        // 🔥 WebSocket 广播领取结果
+        if (global.socketService && global.socketService.io) {
+          // 1. 广播给当前用户（更新余额和累计金额）
+          global.socketService.io.to(`user:${req.user.id}`).emit('redPacketReceived', {
+            redPacketId: redPacket._id.toString(),
+            senderId: redPacket.sender.toString(),
+            receiverId: req.user.id,
+            amount: result.amount,
+            newBalance: result.newBalance,
+            totalReceived: result.totalReceived,
+            wasKicked: result.wasKicked,
+            kickReason: result.kickReason,
+            timestamp: Date.now()
+          });
+          
+          // 2. 如果被踢出，广播给群组
+          if (result.wasKicked && redPacket.chainGroupId) {
+            global.socketService.io.to(`group:${redPacket.chainGroupId}`).emit('memberKicked', {
+              userId: req.user.id,
+              reason: result.kickReason,
+              timestamp: Date.now()
+            });
+          }
+          
+          // 3. 广播红包状态更新给群组（剩余数量等）
+          if (redPacket.chainGroupId) {
+            global.socketService.io.to(`group:${redPacket.chainGroupId}`).emit('redPacketUpdated', {
+              redPacketId: redPacket._id.toString(),
+              openedCount: result.redPacket.openedCount,
+              remainCount: result.redPacket.count - result.redPacket.openedCount,
+              timestamp: Date.now()
+            });
+          }
+        }
+
+        return sendSuccess(res, {
+          redPacket: result.redPacket,
+          amount: result.amount,
+          newBalance: result.newBalance,
+          totalReceived: result.totalReceived,
+          wasKicked: result.wasKicked,
+          kickReason: result.kickReason
+        }, result.wasKicked ? '红包领取成功，但您已被踢出群' : '红包领取成功');
+      } catch (err) {
+        console.error('领接龙红包错误:', err.message);
+        
+        // 🔥 根据错误类型返回不同的状态码
+        if (err.message.includes('Cannot open your own')) {
+          return sendError(ERROR_CODES.CANNOT_OPEN_OWN, res);
+        } else if (err.message.includes('Already opened')) {
+          return sendError(ERROR_CODES.ALREADY_OPENED, res);
+        } else if (err.message.includes('exhausted')) {
+          return sendError(ERROR_CODES.RED_PACKET_EXHAUSTED, res);
+        } else if (err.message.includes('wait')) {
+          return res.status(429).json({ 
+            success: false, 
+            error: { code: 'COOLDOWN', message: err.message } 
+          });
+        } else if (err.message.includes('kicked')) {
+          return res.status(403).json({ 
+            success: false, 
+            error: { code: 'KICKED_OUT', message: err.message } 
+          });
+        } else if (err.message.includes('Not a member')) {
+          return res.status(403).json({ 
+            success: false, 
+            error: { code: 'NOT_MEMBER', message: err.message } 
+          });
+        } else if (err.message.includes('Invalid') || err.message.includes('not found')) {
+          return sendError(ERROR_CODES.RED_PACKET_NOT_FOUND, res);
+        }
+        
+        // 🔥 真正的系统错误才返回 500
+        return sendError(ERROR_CODES.INTERNAL_ERROR, res, { message: err.message });
+      }
+    }
+
+    if (redPacket.sender.toString() === req.user.id) {
+      return sendError(ERROR_CODES.CANNOT_OPEN_OWN, res);
+    }
+
+    const alreadyOpened = redPacket.openedBy.some(item => item.userId.toString() === req.user.id);
+    if (alreadyOpened) {
+      return sendError(ERROR_CODES.ALREADY_OPENED, res);
+    }
+
+    if (redPacket.openedCount >= redPacket.count) {
+      return sendError(ERROR_CODES.RED_PACKET_EXHAUSTED, res);
+    }
+
+    const amount = redPacket.amounts[redPacket.openedCount];
+
+    redPacket.openedBy.push({
+      userId: req.user.id,
+      amount,
+      openedAt: Date.now()
+    });
+    redPacket.openedCount += 1;
+
+    await redPacket.save();
+
+    const user = await User.findById(req.user.id);
+    user.balance += amount;
+    await user.save();
+
+    const transaction = new Transaction({
+      userId: req.user.id,
+      type: 'redPacketReceive',
+      amount,
+      status: 'completed'
+    });
+
+    await transaction.save();
+
+    if (global.socketService && global.socketService.io) {
+      global.socketService.io.to(`user:${req.user.id}`).emit('balanceUpdate', {
+        balance: user.balance,
+        change: amount,
+        type: 'redPacketReceive',
+        timestamp: Date.now()
+      });
+    }
+
+    sendSuccess(res, { redPacket, amount, newBalance: user.balance }, '红包领取成功');
+  } catch (err) {
+    console.error(err.message);
+    sendError(ERROR_CODES.INTERNAL_ERROR, res, { message: err.message });
+  }
+});
+
+router.get('/:roomId', auth, async (req, res) => {
+  try {
+    const redPackets = await RedPacket.find({ roomId: req.params.roomId })
+      .populate('sender', 'username avatar')
+      .populate('openedBy.userId', 'username avatar');
+
+    res.json(redPackets);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
+
+function generateRandomAmounts(totalAmount, count) {
+  // 转换为分进行计算，避免浮点数精度问题
+  const amounts = [];
+  let remainingAmount = Math.round(totalAmount * 100); // 转为分
+  let remainingCount = count;
+
+  // 每个红包最少1分（0.01元）
+  for (let i = 0; i < count - 1; i++) {
+    // 剩余金额 - 剩余红包数 + 1（保证每个红包至少1分）
+    const maxAmount = remainingAmount - remainingCount + 1;
+    const amount = Math.floor(Math.random() * maxAmount) + 1;
+    amounts.push(amount); // 先存分
+    remainingAmount -= amount;
+    remainingCount--;
+  }
+  
+  // 最后一个红包拿走剩余所有金额
+  amounts.push(remainingAmount);
+
+  // 转换回元并返回
+  return amounts.map(a => a / 100).sort((a, b) => b - a);
+}
+
+// 获取群组红包列表
+router.get('/group/:groupId', auth, async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const userId = req.user.id;
+    
+    // 检查用户是否是群成员
+    const Group = require('../models/Group');
+    const group = await Group.findById(groupId);
+    
+    if (!group) {
+      return res.status(404).json({ msg: 'Group not found' });
+    }
+    
+    const isMember = group.members.some(m => m.userId.toString() === userId);
+    if (!isMember && !group.isPublic) {
+      return res.status(403).json({ msg: 'Not a member of this group' });
+    }
+    
+    // 获取该群的红包列表（最近20个）
+    const redPackets = await RedPacket.find({ 
+      roomId: groupId,
+      type: { $in: ['normal', 'lucky'] }
+    })
+    .sort({ createdAt: -1 })
+    .limit(20)
+    .populate('sender', 'username avatar');
+    
+    // 格式化返回数据
+    const formattedPackets = redPackets.map(rp => ({
+      id: rp._id,
+      senderId: rp.sender._id,
+      senderName: rp.sender.username,
+      senderAvatar: rp.sender.avatar || '',
+      totalAmount: rp.totalAmount,
+      count: rp.count,
+      openedCount: rp.openedCount,
+      message: rp.message || '',
+      createdAt: rp.createdAt,
+      isChainRedPacket: rp.isChainRedPacket || false,
+      perAmount: rp.isChainRedPacket ? (rp.amounts && rp.amounts.length > 0 ? rp.amounts[0] : 0) : null
+    }));
+    
+    res.json({
+      success: true,
+      data: formattedPackets
+    });
+  } catch (err) {
+    console.error('Error getting group red packets:', err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+});
+
+// 🔥 获取私聊红包历史（和某个用户的所有私聊红包）
+router.get('/private/:otherUserId', auth, async (req, res) => {
+  try {
+    const currentUserId = req.user.id;
+    const otherUserId = req.params.otherUserId;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    
+    // 验证用户ID格式
+    if (!/^\d{8}$/.test(otherUserId)) {
+      return res.status(400).json({
+        success: false,
+        message: '无效的用户ID格式'
+      });
+    }
+    
+    // 查询总数
+    const total = await RedPacket.countDocuments({
+      receiverId: { $in: [currentUserId, otherUserId] },
+      sender: { $in: [currentUserId, otherUserId] }
+    });
+    
+    // 分页查询
+    const redPackets = await RedPacket.find({
+      receiverId: { $in: [currentUserId, otherUserId] },
+      sender: { $in: [currentUserId, otherUserId] }
+    })
+    .sort({ createdAt: 1 })  // 升序：从旧到新
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .lean();
+    
+    // 格式化返回数据
+    const formattedPackets = redPackets.map(rp => ({
+      _id: rp._id,
+      senderId: rp.sender,
+      receiverId: rp.receiverId,
+      type: 'redPacket',
+      redPacketId: rp._id,
+      amount: rp.totalAmount,
+      message: rp.message || '恭喜发财，大吉大利',
+      createdAt: rp.createdAt,
+      updatedAt: rp.updatedAt || rp.createdAt
+    }));
+    
+    res.json({
+      success: true,
+      data: {
+        messages: formattedPackets,
+        total,
+        page,
+        limit,
+        hasMore: page * limit < total
+      }
+    });
+  } catch (err) {
+    console.error('Error getting private red packets:', err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+});
+
+module.exports = router;

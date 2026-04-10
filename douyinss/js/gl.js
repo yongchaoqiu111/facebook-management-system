@@ -4,6 +4,9 @@ const path = require('path');
 // 你的文件名
 const filePath = path.join(path.dirname(__dirname), "json", "全部评论.json");
 
+// 获取命令行参数（类别）
+const category = process.argv[2] || 'stock';
+
 // 从配置文件读取关键词（同步读取）
 const keywordsConfigPath = path.join(path.dirname(__dirname), "json", "keywords.json");
 let keywords = [];
@@ -11,11 +14,17 @@ let keywords = [];
 try {
   console.log('🔍 正在读取关键词配置文件...');
   const keywordsConfig = JSON.parse(fs.readFileSync(keywordsConfigPath, 'utf8'));
-  keywords = keywordsConfig.keywords || [];
-  console.log('✅ 已成功加载关键词：', keywords);
+  
+  if (keywordsConfig.categories && keywordsConfig.categories[category]) {
+    keywords = keywordsConfig.categories[category];
+    console.log(`✅ 已成功加载${category}类别的关键词：`, keywords);
+  } else {
+    console.error(`❌ 未找到${category}类别的关键词`);
+    process.exit(1);
+  }
   
   if (keywords.length === 0) {
-    console.error('❌ 关键词列表为空，请先在网页中添加关键词');
+    console.error(`❌ ${category}类别的关键词列表为空，请先在网页中添加关键词`);
     process.exit(1);
   }
   

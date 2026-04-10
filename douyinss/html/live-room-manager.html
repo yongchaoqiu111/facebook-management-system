@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>直播间管理工具</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>直播间管理工具</h1>
+        
+        <!-- 动态加载导航 -->
+        <div id="nav-container"></div>
+
+        <!-- 直播间号码输入 -->
+        <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">
+            <input type="text" id="liveRoomId" placeholder="请输入抖音直播间号码，例如：721173809786" style="padding: 10px 15px; font-size: 14px; border: 1px solid #ddd; border-radius: 5px; width: 250px;">
+            <button class="button btn-primary" onclick="addLiveRoom()" style="padding: 10px 20px; font-size: 14px;">
+                ➕ 添加
+            </button>
+        </div>
+
+        <!-- 已添加直播间列表 -->
+        <div class="room-list">
+            <h3>已添加直播间列表</h3>
+            <div id="roomListContainer">
+                <!-- 直播间列表将在这里动态生成 -->
+            </div>
+        </div>
+
+        <!-- 抓取状态 -->
+        <div class="status-panel">
+            <h4>抓取状态</h4>
+            <div class="status-item">
+                <span class="status-label">当前状态:</span>
+                <span id="captureStatus" class="status-value">未运行</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">当前直播间:</span>
+                <span id="currentRoom" class="status-value">无</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">已捕获弹幕:</span>
+                <span id="capturedCount" class="status-value">0</span>
+            </div>
+        </div>
+
+        <!-- 搜索功能 -->
+        <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">
+            <input type="text" id="searchKeyword" placeholder="输入搜索关键词..." style="padding: 10px 15px; font-size: 14px; border: 1px solid #ddd; border-radius: 5px; width: 250px;">
+            <button class="button btn-primary" onclick="searchLiveRooms()" style="padding: 10px 20px; font-size: 14px;">
+                🔍 搜索直播间
+            </button>
+            <button class="button btn-success" onclick="saveSearchResults()" style="padding: 10px 20px; font-size: 14px;">
+                💾 保存搜索结果
+            </button>
+        </div>
+
+        <!-- 搜索结果显示区域 -->
+        <div style="margin-top: 20px;">
+            <h3>搜索结果</h3>
+            <div id="searchResultsContainer" style="border: 1px solid #ddd; border-radius: 5px; padding: 15px; background-color: #f9f9f9;">
+                <div style="color: #666; text-align: center;">请输入关键词搜索直播间</div>
+            </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div style="display: flex; justify-content: center; gap: 20px; margin-top: 30px;">
+            <button class="button btn-success" onclick="startBatchCapture()" style="padding: 15px 30px; font-size: 16px;">
+                🚀 开始批量抓取
+            </button>
+            <button class="button btn-danger" onclick="stopCapture()" style="padding: 15px 30px; font-size: 16px;">
+                ⏹️ 停止抓取
+            </button>
+        </div>
+
+        <!-- 消息提示 -->
+        <div id="message" class="message" style="display: none;"></div>
+        
+        <!-- 设置面板 -->
+        <div id="settingsPanel" style="margin-top: 20px; padding: 20px; border: 1px solid #ddd; border-radius: 5px; background-color: #f5f5f5; display: none;">
+            <h3>抓取设置</h3>
+            <div style="margin-bottom: 15px;">
+                <label for="keywordTimeout">关键词超时时间（秒）:</label>
+                <input type="number" id="keywordTimeout" min="30" max="3600" value="180" style="margin-left: 10px; padding: 5px; width: 80px;">
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label>选择过滤词类目:</label>
+                <select id="filterWordCategorySelect" style="width: 100%; padding: 5px; margin-top: 5px;" onchange="loadCategoryWords()">
+                    <option value="">-- 请选择类目 --</option>
+                </select>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label>选择过滤词:</label>
+                <select id="filterWordSelect" style="width: 100%; padding: 5px; margin-top: 5px;" multiple>
+                    <option value="">-- 请先选择类目 --</option>
+                </select>
+                <small style="display: block; margin-top: 5px; color: #666;">默认全选，无需按住Ctrl键</small>
+            </div>
+            <button class="button btn-primary" onclick="saveSettings()" style="margin-right: 10px;">保存设置</button>
+            <button class="button btn-secondary" onclick="toggleSettings()">关闭设置</button>
+        </div>
+        
+        <!-- 弹幕显示区域（已禁用，使用 danmaku.html） -->
+        <!-- <div class="danmaku-container" style="margin-top: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3>实时弹幕</h3>
+                <button class="button btn-secondary" onclick="toggleSettings()">⚙️ 设置</button>
+            </div>
+            <div id="danmakuDisplay" style="border: 1px solid #ddd; border-radius: 5px; padding: 15px; height: 300px; overflow-y: auto; background-color: #f9f9f9; font-family: Arial, sans-serif;">
+                <div style="color: #666; text-align: center;">等待连接...</div>
+            </div>
+        </div> -->
+    </div>
+
+    <script>
+        // 全局变量
+        let liveRooms = [];
+        let captureRunning = false;
+        let currentRoomIndex = 0;
+        let searchResults = [];
+        // let ws = null; // 已禁用 WebSocket，使用 danmaku.html
+        let lastKeywordTime = null; // 记录最后一次抓到关键词的时间
+        let roomStartTime = null; // 记录当前直播间开始抓取的时间
+        let settings = {
+            keywordTimeout: 180, // 默认180秒
+            filterWords: [] // 过滤词列表
+        };
+        
+        let filterWordCategories = {}; // 过滤词分类
+        let currentCategoryWords = []; // 当前选中类目的词
+
+        // 页面加载时执行
+        window.onload = async function() {
+            try {
+                console.log('页面加载开始');
+                loadNavigation();
+                
+                // 获取初始化数据
+                await loadInitialData();
+                
+                // initWebSocket(); // 已禁用 WebSocket，使用 danmaku.html
+                console.log('页面加载完成');
+            } catch (error) {
+                console.error('页面加载出错:', error);
+            }
+        };
+        
+        // 获取初始化数据
+        async function loadInitialData() {
+            try {
+                const response = await fetch('/api/initial-data');
+                const data = await response.json();
+                if (data.success) {
+                    console.log('已加载初始化数据:', data.data);
+                    
+                    // 加载过滤词分类
+                    filterWordCategories = data.data.filterWordCategories;
+                    loadFilterWordCategories();
+                    
+                    // 加载设置
+                    settings = data.data.settings;
+                    document.getElementById('keywordTimeout').value = settings.keywordTimeout;
+                    
+                    // 加载直播间列表
+                    liveRooms = data.data.liveRooms;
+                    updateRoomList();
+                } else {
+                    console.error('获取初始化数据失败:', data.error);
+                }
+            } catch (error) {
+                console.error('加载初始化数据出错:', error);
+            }
+        }
+
+        // 初始化WebSocket连接
+        function initWebSocket() {
+            try {
+                ws = new WebSocket('ws://localhost:3002/ws/client');
+                
+                ws.onopen = function() {
+                    console.log('WebSocket连接已建立');
+                    document.getElementById('danmakuDisplay').innerHTML = '<div style="color: #4CAF50; text-align: center;">已连接到服务器</div>';
+                };
+                
+                ws.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        
+                        // 处理连接消息
+                        if (data.type === 'connected') {
+                            console.log(`直播间 ${data.room_id} 已连接`);
+                            // 更新当前直播间状态为运行中
+                            if (liveRooms[currentRoomIndex]) {
+                                updateCaptureStatus('running', liveRooms[currentRoomIndex].id, 0);
+                                captureRunning = true;
+                            }
+                        }
+                        // 处理状态消息
+                        else if (data.type === 'status' && data.status === 'closed') {
+                            console.log(`收到直播间 ${data.room_id} 关闭消息: ${data.message}`);
+                            showMessage(`直播间 ${data.room_id} ${data.message}，切换到下一个...`, 'info');
+                            
+                            // 更新直播间状态
+                            const room = liveRooms[currentRoomIndex];
+                            if (room) {
+                                room.status = '已结束';
+                                updateRoomList();
+                            }
+                            
+                            // 立即切换到下一个直播间
+                            currentRoomIndex++;
+                            setTimeout(captureNextRoom, 1000);
+                        } else {
+                            displayDanmaku(data);
+                        }
+                    } catch (error) {
+                        console.error('解析WebSocket消息失败:', error);
+                    }
+                };
+                
+                ws.onclose = function() {
+                    console.log('WebSocket连接已关闭');
+                    document.getElementById('danmakuDisplay').innerHTML = '<div style="color: #f44336; text-align: center;">连接已关闭，正在尝试重新连接...</div>';
+                    setTimeout(initWebSocket, 5000);
+                };
+                
+                ws.onerror = function(error) {
+                    console.error('WebSocket连接错误:', error);
+                };
+                
+            } catch (error) {
+                console.error('初始化WebSocket失败:', error);
+                document.getElementById('danmakuDisplay').innerHTML = '<div style="color: #f44336; text-align: center;">连接失败，正在尝试重新连接...</div>';
+                setTimeout(initWebSocket, 5000);
+            }
+        }
+
+        // 显示弹幕
+        function displayDanmaku(data) {
+            const display = document.getElementById('danmakuDisplay');
+            let message = '';
+            
+            switch (data.type) {
+                case 'chat':
+                    message = `<div style="margin-bottom: 5px; padding: 5px; background-color: #fff; border-radius: 3px;">
+                        <strong>${data.user_name}</strong>: ${data.content}
+                        ${data.contains_keyword ? '<span style="color: #f44336; margin-left: 10px;">[关键词]</span>' : ''}
+                    </div>`;
+                    break;
+                case 'gift':
+                    message = `<div style="margin-bottom: 5px; padding: 5px; background-color: #fff3cd; border-radius: 3px; color: #856404;">
+                        🎁 ${data.user_name} 送出了 ${data.gift_name}x${data.gift_count}
+                    </div>`;
+                    break;
+                case 'like':
+                    message = `<div style="margin-bottom: 5px; padding: 5px; background-color: #d4edda; border-radius: 3px; color: #155724;">
+                        👍 ${data.user_name} 点了${data.count}个赞
+                    </div>`;
+                    break;
+                case 'member':
+                    message = `<div style="margin-bottom: 5px; padding: 5px; background-color: #cce7ff; border-radius: 3px; color: #004085;">
+                        🚶 ${data.user_name} 进入了直播间
+                    </div>`;
+                    break;
+                case 'connected':
+                    message = `<div style="margin-bottom: 5px; padding: 5px; background-color: #d1ecf1; border-radius: 3px; color: #0c5460;">
+                        🔗 ${data.message}
+                    </div>`;
+                    break;
+                default:
+                    message = `<div style="margin-bottom: 5px; padding: 5px; background-color: #f8d7da; border-radius: 3px; color: #721c24;">
+                        ${JSON.stringify(data)}
+                    </div>`;
+            }
+            
+            // 添加消息到显示区域
+            display.innerHTML += message;
+            
+            // 滚动到底部
+            display.scrollTop = display.scrollHeight;
+            
+            // 如果抓到关键词，更新最后关键词时间
+            if (data.contains_keyword) {
+                lastKeywordTime = Date.now();
+            }
+        }
+        
+        // 加载导航
+        function loadNavigation() {
+            fetch('nav.html')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('nav-container').innerHTML = data;
+                    // 设置当前页面的导航链接为活动状态
+                    const currentPage = window.location.pathname.split('/').pop();
+                    const navLinks = document.querySelectorAll('.nav-link');
+                    navLinks.forEach(link => {
+                        if (link.href.includes(currentPage)) {
+                            link.classList.add('active');
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('加载导航失败:', error);
+                });
+        }
+
+        // 显示消息
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = message;
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.display = 'block';
+
+            // 3秒后自动隐藏
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        // 添加直播间
+        function addLiveRoom() {
+            const liveRoomId = document.getElementById('liveRoomId').value.trim();
+            if (!liveRoomId) {
+                showMessage('请输入直播间号码', 'error');
+                return;
+            }
+
+            // 检查是否已存在
+            if (liveRooms.some(room => room.id === liveRoomId)) {
+                showMessage('该直播间已添加', 'error');
+                return;
+            }
+
+            const room = {
+                id: liveRoomId,
+                status: '未抓取',
+                lastCaptureTime: null
+            };
+
+            liveRooms.push(room);
+            updateRoomList();
+            document.getElementById('liveRoomId').value = '';
+            
+            // 自动保存
+            saveLiveRooms();
+            showMessage('直播间添加成功并自动保存', 'success');
+        }
+
+        // 删除直播间
+        function deleteLiveRoom(roomId) {
+            liveRooms = liveRooms.filter(room => room.id !== roomId);
+            updateRoomList();
+            
+            // 自动保存
+            saveLiveRooms();
+            showMessage('直播间删除成功并自动保存', 'success');
+        }
+
+        // 保存直播间列表
+        function saveLiveRooms() {
+            if (liveRooms.length === 0) {
+                showMessage('没有可保存的直播间', 'error');
+                return;
+            }
+
+            fetch('http://localhost:3001/api/save-live-rooms', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ rooms: liveRooms })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage('直播间列表保存成功', 'success');
+                    } else {
+                        showMessage('保存失败: ' + data.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    showMessage('保存失败: ' + error.message, 'error');
+                });
+        }
+
+        // 加载已保存的直播间
+        function loadSavedLiveRooms() {
+            fetch('http://localhost:3001/api/get-live-rooms')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log('加载到的直播间数据:', data.data);
+                        // 过滤掉空的直播间
+                        liveRooms = (data.data || []).filter(room => room && room.id);
+                        console.log('过滤后的直播间数据:', liveRooms);
+                        updateRoomList();
+                    } else {
+                        console.error('加载直播间失败', data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('加载直播间失败', error);
+                });
+        }
+
+        // 更新直播间列表显示
+        function updateRoomList() {
+            const container = document.getElementById('roomListContainer');
+            
+            if (liveRooms.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #6c757d;">暂无添加的直播间</p>';
+                return;
+            }
+
+            container.innerHTML = '';
+            
+            liveRooms.forEach((room, index) => {
+                const roomItem = document.createElement('div');
+                roomItem.className = 'room-item';
+                
+                const roomInfo = document.createElement('div');
+                roomInfo.className = 'room-info';
+                
+                const roomIdDiv = document.createElement('div');
+                roomIdDiv.className = 'room-id';
+                roomIdDiv.textContent = `直播间 ${index + 1}: ${room.id}`;
+                
+                const roomStatusDiv = document.createElement('div');
+                roomStatusDiv.className = 'room-status';
+                roomStatusDiv.textContent = `状态: ${room.status} ${room.lastCaptureTime ? '| 上次抓取: ' + room.lastCaptureTime : ''}`;
+                
+                roomInfo.appendChild(roomIdDiv);
+                roomInfo.appendChild(roomStatusDiv);
+                
+                const roomActions = document.createElement('div');
+                roomActions.className = 'room-actions';
+                
+                const captureBtn = document.createElement('button');
+                captureBtn.className = 'button btn-info';
+                captureBtn.textContent = '抓取';
+                captureBtn.onclick = () => startSingleCapture(room.id);
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'button btn-danger';
+                deleteBtn.textContent = '删除';
+                deleteBtn.onclick = () => deleteLiveRoom(room.id);
+                
+                roomActions.appendChild(captureBtn);
+                roomActions.appendChild(deleteBtn);
+                
+                roomItem.appendChild(roomInfo);
+                roomItem.appendChild(roomActions);
+                
+                container.appendChild(roomItem);
+            });
+        }
+
+        // 开始单个直播间抓取
+        function startSingleCapture(roomId) {
+            if (captureRunning) {
+                showMessage('已有抓取任务正在运行', 'error');
+                return;
+            }
+
+            captureRunning = true;
+            updateCaptureStatus('running', roomId, 0);
+
+            showMessage(`正在开始抓取直播间 ${roomId}...`, 'info');
+
+            // 调用后端API开始抓取
+            fetch('http://localhost:3001/start-room-capture', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ roomId: roomId })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage(`直播间 ${roomId} 抓取已启动`, 'success');
+                        
+                        // 不再自动停止，状态由WebSocket消息控制
+                    } else {
+                        showMessage(`抓取失败: ${data.error}`, 'error');
+                        captureRunning = false;
+                        updateCaptureStatus('stopped', '无', 0);
+                    }
+                })
+                .catch(error => {
+                    showMessage(`抓取失败: ${error.message}`, 'error');
+                    captureRunning = false;
+                    updateCaptureStatus('stopped', '无', 0);
+                });
+        }
+
+        // 开始批量抓取
+        function startBatchCapture() {
+            if (liveRooms.length === 0) {
+                showMessage('请先添加直播间', 'error');
+                return;
+            }
+
+            if (captureRunning) {
+                showMessage('已有抓取任务正在运行', 'error');
+                return;
+            }
+
+            captureRunning = true;
+            currentRoomIndex = 0;
+            
+            showMessage('开始批量抓取直播间...', 'info');
+            captureNextRoom();
+        }
+
+        // 抓取下一个直播间
+        function captureNextRoom() {
+            if (!captureRunning) {
+                updateCaptureStatus('stopped', '无', 0);
+                showMessage('抓取已停止', 'success');
+                return;
+            }
+            
+            // 如果所有直播间都已处理完
+            if (currentRoomIndex >= liveRooms.length) {
+                showMessage('所有直播间已处理完毕', 'info');
+                
+                // 尝试自动搜索新的直播间
+                const keyword = document.getElementById('searchKeyword').value.trim();
+                if (keyword) {
+                    showMessage(`正在搜索关键词: ${keyword}...`, 'info');
+                    fetch(`http://localhost:3001/api/search-live-rooms?keyword=${encodeURIComponent(keyword)}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success && data.data.length > 0) {
+                                showMessage(`搜索到 ${data.data.length} 个新直播间`, 'success');
+                                
+                                // 保存搜索结果
+                                return fetch('http://localhost:3001/api/save-search-results', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({ rooms: data.data })
+                                });
+                            } else {
+                                showMessage('未找到新的直播间', 'warning');
+                                captureRunning = false;
+                                updateCaptureStatus('stopped', '无', 0);
+                            }
+                        })
+                        .then(response => {
+                            if (response && response.ok) {
+                                return response.json();
+                            }
+                        })
+                        .then(data => {
+                            if (data && data.success) {
+                                showMessage('搜索结果已保存，替换不能进入的直播间', 'success');
+                                
+                                // 重新加载直播间列表，然后替换不能进入的直播间
+                                loadLiveRooms().then(() => {
+                                    // 找出状态为"已结束"或"抓取失败"的直播间
+                                    const failedRooms = liveRooms.filter(room => 
+                                        room.status === '已结束' || room.status === '抓取失败'
+                                    );
+                                    
+                                    if (failedRooms.length > 0) {
+                                        showMessage(`找到 ${failedRooms.length} 个不能进入的直播间，正在替换...`, 'info');
+                                        
+                                        // 用新搜索到的直播间替换失败的直播间
+                                        for (let i = 0; i< Math.min(failedRooms.length, data.data.length); i++) {
+                                            const failedRoomIndex = liveRooms.findIndex(r => r.url === failedRooms[i].url);
+                                            if (failedRoomIndex !== -1) {
+                                                liveRooms[failedRoomIndex] = {
+                                                    ...liveRooms[failedRoomIndex],
+                                                    url: data.data[i].url,
+                                                    id: data.data[i].id,
+                                                    status: '待抓取',
+                                                    lastCaptureTime: null
+                                                };
+                                            }
+                                        }
+                                        
+                                        // 保存更新后的直播间列表
+                                        saveLiveRooms().then(() =>{
+                                            showMessage('不能进入的直播间已替换，重新开始抓取', 'success');
+                                            currentRoomIndex = 0;
+                                            captureNextRoom();
+                                        });
+                                    } else {
+                                        showMessage('没有发现不能进入的直播间，重新开始抓取', 'info');
+                                        currentRoomIndex = 0;
+                                        captureNextRoom();
+                                    }
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('自动搜索失败:', error);
+                            showMessage('自动搜索失败', 'error');
+                            captureRunning = false;
+                            updateCaptureStatus('stopped', '无', 0);
+                        });
+                } else {
+                    showMessage('请输入搜索关键词以自动搜索新直播间', 'warning');
+                    captureRunning = false;
+                    updateCaptureStatus('stopped', '无', 0);
+                }
+                return;
+            }
+
+            const room = liveRooms[currentRoomIndex];
+            updateCaptureStatus('running', room.id, 0);
+            
+            showMessage(`正在抓取直播间 ${room.id}...`, 'info');
+
+            // 调用后端API开始抓取
+            console.log(`正在请求后端启动抓取: ${room.id}`);
+            fetch('http://localhost:3001/start-room-capture', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ roomId: room.id })
+            })
+                .then(response => {
+                    console.log('后端响应状态:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('后端返回数据:', data);
+                    if (data.success) {
+                        room.status = '抓取中';
+                        room.lastCaptureTime = new Date().toLocaleString();
+                        updateRoomList();
+                        
+                        // 记录当前直播间的开始时间
+                        roomStartTime = Date.now();
+                        // 重置最后关键词时间
+                        lastKeywordTime = null;
+                        
+                        // 延迟5秒后开始监控当前直播间状态，确保Python脚本有足够时间启动
+                        setTimeout(() => {
+                            monitorRoomStatus(room.id);
+                        }, 5000);
+                    } else {
+                        showMessage(`抓取直播间 ${room.id} 失败: ${data.error}`, 'error');
+                        currentRoomIndex++;
+                        setTimeout(captureNextRoom, 1000);
+                    }
+                })
+                .catch(error => {
+                    showMessage(`抓取直播间 ${room.id} 失败: ${error.message}`, 'error');
+                    room.status = '抓取失败';
+                    updateRoomList();
+                    currentRoomIndex++;
+                    setTimeout(captureNextRoom, 1000);
+                });
+        }
+        
+        // 监控直播间状态
+        function monitorRoomStatus(roomId) {
+            if (!captureRunning) return;
+            
+            const room = liveRooms[currentRoomIndex];
+            if (!room || room.id !== roomId) return;
+            
+            // 检查直播间是否仍在运行
+            fetch('http://localhost:3001/api/room-status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ roomId: roomId })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && !data.running) {
+                        // 直播间进程已结束，但我们需要判断是否满足超时条件
+                        const now = Date.now();
+                        const elapsed = lastKeywordTime ? (now - lastKeywordTime) / 1000 : (now - roomStartTime) / 1000;
+                        
+                        console.log(`监控检查: 进程已结束, 已运行 ${Math.floor(elapsed)}s, 设定超时 ${settings.keywordTimeout}s`);
+
+                        if (elapsed < settings.keywordTimeout) {
+                            // 还没到超时时间，继续等待（模拟进程还在跑，防止秒切）
+                            console.log(`进程已退出，但未满 ${settings.keywordTimeout} 秒，继续等待... (${Math.floor(elapsed)}s)`);
+                            setTimeout(() => monitorRoomStatus(roomId), 5000);
+                            return;
+                        }
+
+                        // 满足超时条件或长时间无关键词，切换到下一个
+                        const reason = lastKeywordTime ? '长时间未抓到关键词' : '抓取进程结束且已满超时设定';
+                        showMessage(`直播间 ${roomId} ${reason}，切换到下一个...`, 'info');
+                        room.status = reason.includes('关键词') ? '未抓到关键词' : '已完成';
+                        updateRoomList();
+                        currentRoomIndex++;
+                        setTimeout(captureNextRoom, 1000);
+                    } else if (data.success && data.running) {
+                        // 进程还在运行，检查是否长时间没有抓到关键词
+                        const now = Date.now();
+                        if (lastKeywordTime && (now - lastKeywordTime > settings.keywordTimeout * 1000)) {
+                            // 长时间没有抓到关键词，强制切换到下一个直播间
+                            showMessage(`直播间 ${roomId} 超过 ${settings.keywordTimeout} 秒未抓到关键词，切换到下一个...`, 'info');
+                            room.status = '未抓到关键词';
+                            updateRoomList();
+                            currentRoomIndex++;
+                            setTimeout(captureNextRoom, 1000);
+                        } else {
+                            // 继续监控
+                            setTimeout(() => monitorRoomStatus(roomId), 5000);
+                        }
+                    } else {
+                        // API 调用失败，继续重试
+                        console.error('API 返回异常:', data);
+                        setTimeout(() => monitorRoomStatus(roomId), 5000);
+                    }
+                })
+                .catch(error => {
+                    console.error('监控直播间状态失败:', error);
+                    // 出错时继续监控，不立即切换
+                    setTimeout(() => monitorRoomStatus(roomId), 5000);
+                });
+        }
+
+        // 搜索直播间
+        function searchLiveRooms() {
+            const keyword = document.getElementById('searchKeyword').value.trim();
+            if (!keyword) {
+                showMessage('请输入搜索关键词', 'error');
+                return;
+            }
+            
+            showMessage(`正在搜索关键词: ${keyword}...`, 'info');
+            
+            fetch(`http://localhost:3001/api/search-live-rooms?keyword=${encodeURIComponent(keyword)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        searchResults = data.data;
+                        if (searchResults.length > 0) {
+                            showMessage(`搜索完成，找到 ${searchResults.length} 个直播间`, 'success');
+                            
+                            // 在控制台显示搜索结果
+                            console.log('搜索结果:', searchResults);
+                            
+                            // 渲染搜索结果
+                            renderSearchResults();
+                        } else {
+                            showMessage('未找到匹配的直播间', 'warning');
+                            // 清空搜索结果显示
+                            document.getElementById('searchResultsContainer').innerHTML = '<div style="color: #666; text-align: center;">未找到匹配的直播间</div>';
+                        }
+                    } else {
+                        showMessage(`搜索失败: ${data.error}`, 'error');
+                    }
+                })
+                .catch(error => {
+                    showMessage(`搜索失败: ${error.message}`, 'error');
+                });
+        }
+        
+        // 渲染搜索结果
+        function renderSearchResults() {
+            const container = document.getElementById('searchResultsContainer');
+            
+            if (searchResults.length === 0) {
+                container.innerHTML = '<div style="color: #666; text-align: center;">请输入关键词搜索直播间</div>';
+                return;
+            }
+
+            container.innerHTML = '';
+            
+            searchResults.forEach((room, index) => {
+                const roomItem = document.createElement('div');
+                roomItem.style.marginBottom = '10px';
+                roomItem.style.padding = '10px';
+                roomItem.style.border = '1px solid #ddd';
+                roomItem.style.borderRadius = '5px';
+                roomItem.style.backgroundColor = '#fff';
+                
+                const roomInfo = document.createElement('div');
+                roomInfo.style.display = 'flex';
+                roomInfo.style.justifyContent = 'space-between';
+                roomInfo.style.alignItems = 'center';
+                
+                const roomDetails = document.createElement('div');
+                roomDetails.innerHTML = `
+                    <div><strong>直播间 ${index + 1}</strong></div>
+                    <div>ID: ${room.id}</div>
+                    <div>标题: ${room.title}</div>
+                `;
+                
+                const roomActions = document.createElement('div');
+                roomActions.style.display = 'flex';
+                roomActions.style.gap = '10px';
+                
+                const addBtn = document.createElement('button');
+                addBtn.className = 'button btn-primary';
+                addBtn.textContent = '添加';
+                addBtn.onclick = () => addSingleSearchResult(room);
+                
+                roomActions.appendChild(addBtn);
+                
+                roomInfo.appendChild(roomDetails);
+                roomInfo.appendChild(roomActions);
+                
+                roomItem.appendChild(roomInfo);
+                container.appendChild(roomItem);
+            });
+        }
+        
+        // 添加单个搜索结果到直播间列表
+        function addSingleSearchResult(room) {
+            // 检查是否已存在
+            if (liveRooms.some(r => r.id === room.id)) {
+                showMessage('该直播间已添加', 'error');
+                return;
+            }
+
+            const newRoom = {
+                id: room.id,
+                status: '未抓取',
+                lastCaptureTime: null
+            };
+
+            liveRooms.push(newRoom);
+            updateRoomList();
+            
+            // 自动保存
+            saveLiveRooms();
+            showMessage('直播间添加成功并自动保存', 'success');
+        }
+        
+        // 加载直播间列表
+        function loadLiveRooms() {
+            loadSavedLiveRooms(); // 调用已有的加载函数从后端获取数据
+        }
+        
+        // 保存搜索结果
+        function saveSearchResults() {
+            if (searchResults.length === 0) {
+                showMessage('请先搜索直播间', 'error');
+                return;
+            }
+            
+            showMessage('正在保存搜索结果...', 'info');
+            
+            fetch('http://localhost:3001/api/save-search-results', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ rooms: searchResults })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage(data.message, 'success');
+                        loadLiveRooms(); // 重新加载直播间列表
+                    } else {
+                        showMessage(`保存失败: ${data.error}`, 'error');
+                    }
+                })
+                .catch(error => {
+                    showMessage(`保存失败: ${error.message}`, 'error');
+                });
+        }
+        
+        // 停止抓取
+        function stopCapture() {
+            console.log('用户点击了停止按钮');
+            captureRunning = false;
+            updateCaptureStatus('stopped', '无', 0);
+            showMessage('正在强制终止所有后台进程...', 'info');
+
+            // 发送停止指令给后端
+            fetch('http://localhost:3001/api/stop-task', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ taskId: 'task-1775298006539' })
+            }).then(() => {
+                console.log('停止指令已送达后端');
+            });
+        }
+
+        // 更新抓取状态显示
+        function updateCaptureStatus(status, roomId, count) {
+            document.getElementById('captureStatus').textContent = status === 'running' ? '运行中' : '已停止';
+            document.getElementById('currentRoom').textContent = roomId;
+            document.getElementById('capturedCount').textContent = count;
+
+            // 根据状态更新颜色
+            const statusElement = document.getElementById('captureStatus');
+            if (status === 'running') {
+                statusElement.style.color = '#28a745'; // 绿色
+            } else {
+                statusElement.style.color = '#6c757d'; // 灰色
+            }
+        }
+        
+        // 切换设置面板显示/隐藏
+        function toggleSettings() {
+            const panel = document.getElementById('settingsPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        // 保存设置
+        async function saveSettings() {
+            const timeoutInput = document.getElementById('keywordTimeout');
+            const timeout = parseInt(timeoutInput.value);
+            
+            if (isNaN(timeout) || timeout < 30 || timeout > 3600) {
+                showMessage('请输入30-3600之间的有效秒数', 'error');
+                return;
+            }
+            
+            // 获取选中的过滤词
+            const wordSelect = document.getElementById('filterWordSelect');
+            const selectedWords = Array.from(wordSelect.options)
+                .filter(option => option.selected)
+                .map(option => option.value);
+            
+            settings.keywordTimeout = timeout;
+            settings.filterWords = selectedWords;
+            
+            try {
+                // 保存到后端
+                const response = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(settings)
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showMessage('设置已保存', 'success');
+                } else {
+                    showMessage(`保存设置失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage('保存设置出错: ' + error.message, 'error');
+            }
+        }
+        
+        // 加载过滤词分类到下拉框
+        function loadFilterWordCategories() {
+            const categorySelect = document.getElementById('filterWordCategorySelect');
+            categorySelect.innerHTML = '<option value="">-- 请选择类目 --</option>';
+            
+            Object.keys(filterWordCategories).forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                categorySelect.appendChild(option);
+            });
+        }
+        
+        // 加载选中类目的词
+        function loadCategoryWords() {
+            const categorySelect = document.getElementById('filterWordCategorySelect');
+            const wordSelect = document.getElementById('filterWordSelect');
+            const selectedCategory = categorySelect.value;
+            
+            wordSelect.innerHTML = '';
+            
+            if (selectedCategory && filterWordCategories[selectedCategory]) {
+                currentCategoryWords = filterWordCategories[selectedCategory];
+                
+                currentCategoryWords.forEach(word => {
+                    const option = document.createElement('option');
+                    option.value = word;
+                    option.textContent = word;
+                    // 默认全选所有关键词
+                    option.selected = true;
+                    wordSelect.appendChild(option);
+                });
+            } else {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = '-- 请先选择类目 --';
+                wordSelect.appendChild(option);
+            }
+        }
+        
+
+        
+
+    </script>
+</body>
+</html>

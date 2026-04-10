@@ -2,6 +2,9 @@ const puppeteer = require('puppeteer');
 const WebSocket = require('ws');
 const fs = require('fs');
 const path = require('path');
+const http = require('http');
+const url = require('url');
+const querystring = require('querystring');
 
 class DouyinBrowserAutomation {
     constructor() {
@@ -457,6 +460,31 @@ class DouyinBrowserAutomation {
 
     saveDanmakuToFile(danmaku) {
         try {
+            // 读取关键词文件
+            let keywords = [];
+            const keywordsFile = path.join(__dirname, '..', 'keywords.json');
+            if (fs.existsSync(keywordsFile)) {
+                const keywordsContent = fs.readFileSync(keywordsFile, 'utf8');
+                keywords = JSON.parse(keywordsContent);
+            }
+
+            // 如果有关键词，进行过滤
+            if (keywords.length > 0) {
+                const content = danmaku.content.toLowerCase();
+                const nickname = danmaku.user.nickname.toLowerCase();
+                
+                // 检查内容或昵称是否包含关键词
+                const containsKeyword = keywords.some(keyword => {
+                    const keywordLower = keyword.toLowerCase();
+                    return content.includes(keywordLower) || nickname.includes(keywordLower);
+                });
+                
+                if (!containsKeyword) {
+                    console.log(`❌ 弹幕不包含关键词，跳过保存: ${danmaku.user.nickname}: ${danmaku.content}`);
+                    return;
+                }
+            }
+
             // 读取现有数据
             let existingData = [];
             if (fs.existsSync(this.outputFile)) {
@@ -504,20 +532,132 @@ class DouyinBrowserAutomation {
     }
 }
 
+// HTTP服务器
+class HttpServer {
+    constructor() {
+        this.server = null;
+        this.automation = new DouyinBrowserAutomation();
+        this.isRunning = false;
+    }
+    
+    start() {
+        this.server = http.createServer((req, res) => {
+            const parsedUrl = url.parse(req.url);
+            const pathname = parsedUrl.pathname;
+            
+            // 处理静态文件
+            if (pathname === '/' || pathname === '/index.html') {
+                const filePath = path.join(__dirname, 'index.html');
+                fs.readFile(filePath, (err, data) => {
+                    if (err) {
+                        res.writeHead(404);
+                        res.end('Not Found');
+                        return;
+                    }
+                    res.writeHead(200, { 'Content-Type': 'text/html' });
+                    res.end(data);
+                });
+            }
+            
+            // 保存关键词
+            else if (pathname === '/save-keywords' && req.method === 'POST') {
+                let body = '';
+                req.on('data', chunk => {
+                    body += chunk.toString();
+                });
+                req.on('end', () => {
+                    try {
+                        const keywords = JSON.parse(body);
+                        const keywordsFile = path.join(__dirname, '..', 'keywords.json');
+                        fs.writeFileSync(keywordsFile, JSON.stringify(keywords, null, 2));
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: true }));
+                    } catch (error) {
+                        res.writeHead(500, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, message: error.message }));
+                    }
+                });
+            }
+            
+            // 启动抓取
+            else if (pathname === '/start-capture' && req.method === 'POST') {
+                let body = '';
+                req.on('data', chunk => {
+                    body += chunk.toString();
+                });
+                req.on('end', () => {
+                    try {
+                        const { liveUrl, keywords } = JSON.parse(body);
+                        
+                        if (this.isRunning) {
+                            res.writeHead(400, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify({ success: false, message: '抓取已在运行中' }));
+                            return;
+                        }
+                        
+                        this.isRunning = true;
+                        this.automation.start(liveUrl, keywords).catch(error => {
+                            console.error('启动失败:', error);
+                            this.isRunning = false;
+                        });
+                        
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: true }));
+                    } catch (error) {
+                        res.writeHead(500, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, message: error.message }));
+                    }
+                });
+            }
+            
+            // 停止抓取
+            else if (pathname === '/stop-capture' && req.method === 'POST') {
+                if (this.isRunning) {
+                    this.automation.stop().then(() => {
+                        this.isRunning = false;
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: true }));
+                    }).catch(error => {
+                        res.writeHead(500, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, message: error.message }));
+                    });
+                } else {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, message: '抓取未运行' }));
+                }
+            }
+            
+            else {
+                res.writeHead(404);
+                res.end('Not Found');
+            }
+        });
+        
+        this.server.listen(3001, () => {
+            console.log('✅ HTTP服务器已启动');
+            console.log('📝 访问 http://localhost:3001 打开管理页面');
+            console.log('🔗 默认直播间: https://live.douyin.com/77994347272');
+        });
+    }
+    
+    stop() {
+        if (this.server) {
+            this.server.close();
+            console.log('✅ HTTP服务器已停止');
+        }
+        if (this.isRunning) {
+            this.automation.stop();
+        }
+    }
+}
+
 // 运行示例
 if (require.main === module) {
-    const automation = new DouyinBrowserAutomation();
-    const roomUrl = process.argv[2] || 'https://live.douyin.com/85101249452';
-    const keywords = process.argv.slice(3); // 从第4个参数开始作为关键词
+    const server = new HttpServer();
+    server.start();
     
-    console.log(`启动参数:`);
-    console.log(`- 直播间: ${roomUrl}`);
-    console.log(`- 关键词: ${keywords.length > 0 ? keywords.join(', ') : '无关键词'}`);
-    
-    automation.start(roomUrl, keywords).catch(console.error);
-    
-    process.on('SIGINT', async () => {
-        await automation.stop();
+    process.on('SIGINT', () => {
+        server.stop();
         process.exit(0);
     });
 }
