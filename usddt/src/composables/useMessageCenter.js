@@ -514,13 +514,18 @@ export function useMessageCenter() {
       recordBalanceChange(messageType, message)
     }
 
-    // 5. 持久化到 IndexedDB
-    try {
-      console.log('💾 [调试] 准备保存消息:', message)
-      await saveMessages([message])
-      console.log(`💾 [MessageCenter] 已保存到 IndexedDB: ${conversationId}`)
-    } catch (error) {
-      console.error('❌ [MessageCenter] 保存失败:', error)
+    // 5. 持久化到 IndexedDB（公开群不保存）
+    const isPublicGroup = conversationId.startsWith('group_1000001') // 六合天下群ID
+    if (!isPublicGroup) {
+      try {
+        console.log('💾 [调试] 准备保存消息:', message)
+        await saveMessages([message])
+        console.log(`💾 [MessageCenter] 已保存到 IndexedDB: ${conversationId}`)
+      } catch (error) {
+        console.error('❌ [MessageCenter] 保存失败:', error)
+      }
+    } else {
+      console.log('ℹ️ [MessageCenter] 公开群，跳过 IndexedDB 保存')
     }
 
     // 6. ✅ 如果是自己发送的私聊红包，触发发送成功回调

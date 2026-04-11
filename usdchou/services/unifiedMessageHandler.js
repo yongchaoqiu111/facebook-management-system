@@ -176,26 +176,37 @@ class UnifiedMessageHandler {
       },
       timestamp: Date.now()
     };
+    
+    logger.info(`📢 [红包] 广播数据:`, JSON.stringify(broadcastData));
 
     if (groupId) {
-      // 保存到 GroupMessage
-      try {
-        const groupMsg = new GroupMessage({
-          groupId,
-          sender: senderId,
-          type: 'redpacket',
-          content: content.message || '红包',
-          redPacketId: redPacketId,
-          clientMsgId: msgId,
-          metadata: {
-            amount: content.amount,
-            count: content.count
-          }
-        });
-        await groupMsg.save();
-        logger.info(`✅ [红包] 已保存到数据库`);
-      } catch (err) {
-        logger.error('保存红包消息失败:', err);
+      // ✅ 公开群不保存到数据库（只在 IndexedDB 存储）
+      const Group = require('../models/Group');
+      const group = await Group.findById(groupId);
+      const isPublicGroup = group?.isPublic;
+      
+      if (!isPublicGroup) {
+        // 保存到 GroupMessage
+        try {
+          const groupMsg = new GroupMessage({
+            groupId,
+            sender: senderId,
+            type: 'redpacket',
+            content: content.message || '红包',
+            redPacketId: redPacketId,
+            clientMsgId: msgId,
+            metadata: {
+              amount: content.amount,
+              count: content.count
+            }
+          });
+          await groupMsg.save();
+          logger.info(`✅ [红包] 已保存到数据库`);
+        } catch (err) {
+          logger.error('保存红包消息失败:', err);
+        }
+      } else {
+        logger.info(`ℹ️ [红包] 公开群，跳过数据库保存`);
       }
       
       // 广播给群组

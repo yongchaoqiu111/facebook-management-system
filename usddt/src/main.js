@@ -19,6 +19,7 @@ import ChainGroupChat from './views/ChainGroupChat/index.vue' // 🐉 接龙群�
 import MyInvitations from './views/MyInvitations.vue'
 import IncomeCenter from './views/IncomeCenter.vue'
 import ContactDetail from './views/ContactDetail.vue' // 👤 联系人详情
+import AdminRecharge from './views/AdminRecharge.vue' // 💰 管理员充值
 
 // 路由配置
 const routes = [
@@ -36,7 +37,8 @@ const routes = [
   { path: '/my-invitations', component: MyInvitations },
   { path: '/income-center', component: IncomeCenter },
   { path: '/contact/:id', component: ContactDetail }, // 👤 联系人详情
-  { path: '/chat/:id', component: PrivateChat } // 📱 私聊
+  { path: '/chat/:id', component: PrivateChat }, // 📱 私聊
+  { path: '/admin/recharge', component: AdminRecharge } // 💰 管理员充值
 ]
 
 const router = createRouter({

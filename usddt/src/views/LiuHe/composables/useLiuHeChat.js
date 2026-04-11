@@ -3,6 +3,9 @@ import axios from 'axios'
 import { initSocket, joinGroup, onGroupMessage, onGroupRedPacket } from '@/socket'
 import { saveMessages, getMessagesByChatId } from '@/utils/chatStorage'
 
+// ✅ API 基础 URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
+
 const LIUHE_GROUP_ID = '69d4ac8...' // 六合天下群ID
 
 /**
@@ -67,7 +70,7 @@ export function useLiuHeChat() {
     
     // 请求后端
     try {
-      const response = await axios.get('http://localhost:5000/api/lottery/latest', {
+      const response = await axios.get(`${API_BASE_URL}/lottery/latest`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       })
       

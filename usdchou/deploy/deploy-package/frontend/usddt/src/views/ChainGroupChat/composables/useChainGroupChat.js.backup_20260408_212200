@@ -1,0 +1,636 @@
+import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { chainGroupAPI } from '@/api'
+import { redPacketAPI } from '@/api'
+import { joinGroup, leaveGroup } from '@/socket'
+import { useMessageCenter } from '@/composables/useMessageCenter'
+import { loadChatHistory as loadChatFromLocalStorage, saveChatHistory as saveChatToLocalStorage, isRedPacketOpened, markRedPacketOpened } from '@/utils/storage'
+
+/**
+ * 接龙群聊天逻辑 Composable
+ */
+export function useChainGroupChat(chatId) {
+  const router = useRouter()
+  
+  // 使用消息中心
+  const { 
+    getMessages, 
+    sendMessage: sendMsg, 
+    loadHistory,
+    initSocketListeners
+  } = useMessageCenter()
+  
+  // 状态
+  const currentContact = ref(null)
+  const chainGroupInfo = ref(null)
+  const messageInput = ref('')
+  const showInviteModal = ref(false)
+  const showInfoModal = ref(false)
+  const showRedPacketModalVisible = ref(false)
+  const showRedPacketResultModal = ref(false)
+  const redPacketResult = ref({
+    amount: 0,
+    message: '',
+    from: '',
+    totalReceived: null
+  })
+  const chainWaitCountdown = ref('')
+  const messagesContainer = ref(null)
+  
+  const currentUserId = computed(() => localStorage.getItem('userId'))
+  
+  // 从消息中心获取消息（computed）
+  const messages = computed(() => {
+    return getMessages(`group_${chatId}`)
+  })
+
+  // 返回
+  const goBack = () => {
+    router.push('/home')
+  }
+
+  // 分享群组
+  const shareGroup = async () => {
+    try {
+      if (!chainGroupInfo.value) {
+        alert('当前不是接龙群')
+        return
+      }
+      
+      const groupName = currentContact.value?.name || '接龙群'
+      const groupId = currentContact.value?.id
+      
+      const inviteLink = `${window.location.origin}/invite?group=${groupId}`
+      
+      if (navigator.share) {
+        await navigator.share({
+          title: `加入${groupName}`,
+          text: `邀请你加入${groupName}，一起参与接龙红包游戏！`,
+          url: inviteLink
+        })
+      } else {
+        await navigator.clipboard.writeText(inviteLink)
+        alert('邀请链接已复制到剪贴板')
+      }
+    } catch (error) {
+      console.error('分享失败:', error)
+      alert('分享失败，请重试')
+    }
+  }
+
+  // 加载接龙群信息
+  const loadChainGroupInfo = async (groupId) => {
+    try {
+      const response = await chainGroupAPI.getChainInfo(groupId)
+      if (response && response.data) {
+        chainGroupInfo.value = response.data
+      }
+    } catch (error) {
+      console.error('加载接龙群信息失败:', error)
+    }
+  }
+
+  // 加载聊天记录
+  const loadChatHistory = async () => {
+    // ✅ 使用消息中心的 loadHistory
+    await loadHistory(`group_${chatId}`)
+    console.log('历史消息加载完成')
+  }
+
+  // 发送消息
+  const sendMessage = async () => {
+    if (!messageInput.value.trim()) return
+    
+    try {
+      // ✅ 使用消息中心的 sendMessage
+      await sendMsg(`group_${chatId}`, {
+        content: messageInput.value.trim(),
+        type: 'text',
+        clientMsgId: Date.now().toString() + Math.random().toString(36).substr(2, 9)
+      })
+      
+      // 清空输入框
+      messageInput.value = ''
+    } catch (error) {
+      console.error('发送消息失败:', error)
+      alert('发送失败，请重试')
+    }
+  }
+
+  // 打开红包
+  const openRedPacket = async (message) => {
+    console.log('🔴 点击红包:', message)
+    
+    try {
+      // 🐉 检查是否已过期
+      if (message.expired) {
+        alert('该红包已过期，无法领取')
+        return
+      }
+      
+      if (message.opened) {
+        // 显示红包账单
+        showRedPacketBill(message)
+        return
+      }
+      
+      console.log('📦 准备打开红包:', message.redPacketId)
+      
+      // 创建红包封面弹窗（带“开”按钮）
+      const redPacketCoverModal = document.createElement('div')
+      redPacketCoverModal.className = 'red-packet-modal'
+      
+      // 添加微信红包封面样式
+      redPacketCoverModal.innerHTML = `
+        <div class="red-packet-modal-content">
+          <div class="red-packet-cover">
+            <div class="red-packet-cover-header">
+              <span class="red-packet-icon">🧧</span>
+            </div>
+            <div class="red-packet-cover-title">${message.message || '恭喜发财，大吉大利'}</div>
+            <div class="red-packet-open-btn" id="openRedPacketBtn">开</div>
+          </div>
+        </div>
+      `
+      
+      // 添加到body
+      document.body.appendChild(redPacketCoverModal)
+      
+      // 触发动画
+      setTimeout(() => {
+        redPacketCoverModal.classList.add('show')
+      }, 10)
+      
+      // 绑定点击外部关闭
+      redPacketCoverModal.addEventListener('click', (e) => {
+        if (e.target === redPacketCoverModal) {
+          redPacketCoverModal.classList.remove('show')
+          setTimeout(() => {
+            document.body.removeChild(redPacketCoverModal)
+          }, 300)
+        }
+      })
+      
+      // 绑定“开”按钮点击事件
+      setTimeout(() => {
+        const openBtn = document.getElementById('openRedPacketBtn')
+        if (openBtn) {
+          openBtn.addEventListener('click', async (e) => {
+            e.stopPropagation()
+                
+            // 🐉 如果是接龙群，首先检查等待期
+            if (chainGroupInfo.value && chainGroupInfo.value.memberInfo) {
+              const canGrabAfter = new Date(chainGroupInfo.value.memberInfo.canGrabAfter)
+              const now = new Date()
+                  
+              if (now < canGrabAfter) {
+                const waitMinutes = Math.ceil((canGrabAfter - now) / 60000)
+                alert(`还需等待 ${waitMinutes} 分钟才能抢红包`)
+                redPacketCoverModal.classList.remove('show')
+                setTimeout(() => {
+                  document.body.removeChild(redPacketCoverModal)
+                }, 300)
+                return
+              }
+            }
+                
+            // ✅ 检查是否已领取
+            if (message.redPacketId && message.redPacketId.startsWith('mock_')) {
+              alert('这是一个测试红包，无法在后端领取。')
+              redPacketCoverModal.classList.remove('show')
+              setTimeout(() => {
+                document.body.removeChild(redPacketCoverModal)
+              }, 300)
+              return
+            }
+            
+            if (isRedPacketOpened(message.redPacketId)) {
+              alert('你已经领取过这个红包了！')
+              redPacketCoverModal.classList.remove('show')
+              setTimeout(() => {
+                document.body.removeChild(redPacketCoverModal)
+              }, 300)
+              return
+            }
+                
+            try {
+              // 🐉 检查是否是模拟红包（前端生成的ID）
+              const isMockRedPacket = message.redPacketId.startsWith('pvt_') || 
+                                      message.redPacketId.startsWith('grp_') ||
+                                      message.redPacketId.startsWith('chn_') ||
+                                      message.redPacketId.startsWith('mock_')
+              
+              if (isMockRedPacket) {
+                console.log('🎭 这是模拟红包，本地处理')
+                
+                // 🐉 先关闭红包详情弹窗
+                redPacketCoverModal.classList.remove('show')
+                setTimeout(() => {
+                  if (redPacketCoverModal.parentNode) {
+                    document.body.removeChild(redPacketCoverModal)
+                  }
+                }, 300)
+                
+                // 标记红包已领取
+                markRedPacketOpened(message.redPacketId)
+                
+                // 修改消息状态为已打开
+                message.opened = true
+                
+                // 模拟抢到金额（随机分配）
+                const mockAmount = Math.floor(Math.random() * message.amount) + 1
+                message.openedAmount = mockAmount
+                message.openedBy = message.openedBy || []
+                message.openedBy.push({
+                  userId: localStorage.getItem('userId'),
+                  amount: mockAmount,
+                  username: localStorage.getItem('username') || '用户'
+                })
+                
+                // 关闭红包封面弹窗
+                redPacketCoverModal.classList.remove('show')
+                setTimeout(() => {
+                  if (redPacketCoverModal.parentNode) {
+                    document.body.removeChild(redPacketCoverModal)
+                  }
+                }, 300)
+                
+                // 显示领取结果弹窗
+                showRedPacketResultModal.value = true
+                redPacketResult.value = {
+                  amount: mockAmount,
+                  message: message.message || '恭喜发财，大吉大利',
+                  from: '好友',
+                  totalReceived: null
+                }
+                
+                return
+              }
+              
+              // 调用后端 API 抢红包
+              console.log('🧧 正在尝试抢红包，ID:', message.redPacketId)
+              
+              let response
+              try {
+                response = await redPacketAPI.openRedPacket(message.redPacketId)
+                console.log('🧧 抢红包响应:', response)
+              } catch (apiError) {
+                console.error('❌ 后端API失败，降级为模拟模式:', apiError)
+                
+                // 🐉 接龙群首包红包后端可能有问题，降级为模拟
+                if (message.isChainRedPacket) {
+                  console.log('🐉 接龙群红包，使用模拟数据')
+                  
+                  // 关闭红包封面弹窗
+                  redPacketCoverModal.classList.remove('show')
+                  setTimeout(() => {
+                    if (redPacketCoverModal.parentNode) {
+                      document.body.removeChild(redPacketCoverModal)
+                    }
+                  }, 300)
+                  
+                  // 标记红包已领取
+                  markRedPacketOpened(message.redPacketId)
+                  message.opened = true
+                  
+                  // 模拟抢到金额（随机分配）
+                  const mockAmount = Math.floor(Math.random() * message.amount / message.count * 2) + 1
+                  message.openedAmount = mockAmount
+                  message.openedBy = message.openedBy || []
+                  message.openedBy.push({
+                    userId: localStorage.getItem('userId'),
+                    amount: mockAmount,
+                    username: localStorage.getItem('username') || '用户'
+                  })
+                  
+                  saveChatToLocalStorage(chatId, messages.value)
+                  
+                  // 显示领取结果弹窗
+                  showRedPacketResultModal.value = true
+                  redPacketResult.value = {
+                    amount: mockAmount,
+                    message: message.message || '恭喜发财，大吉大利',
+                    from: '好友',
+                    totalReceived: null
+                  }
+                  
+                  return
+                }
+                
+                // 非接龙群红包，直接抛出错误
+                throw apiError
+              }
+                        
+              // ✅ 标记红包已领取
+              markRedPacketOpened(message.redPacketId)
+                        
+              // 修改消息状态为已打开
+              message.opened = true
+                        
+              // 获取抢到金额（兼容多种响应格式）
+              const amount = response.amount || response.data?.amount || 0
+                        
+              // 更新消息对象的领取信息
+              message.openedAmount = amount
+              message.openedBy = message.openedBy || []
+              message.openedBy.push({
+                userId: localStorage.getItem('userId'),
+                amount: amount,
+                username: localStorage.getItem('username') || '用户'
+              })
+                        
+              // 保存到本地存储
+              saveChatToLocalStorage(chatId, messages.value)
+                        
+              // 🐉 检查是否为接龙群红包（通过 totalReceived 字段判断）
+              const totalReceived = response.totalReceived ?? response.data?.totalReceived
+              const wasKicked = response.wasKicked ?? response.data?.wasKicked
+              const kickReason = response.kickReason ?? response.data?.kickReason
+              
+              // 关闭红包封面弹窗
+              redPacketCoverModal.classList.remove('show')
+              setTimeout(() => {
+                if (redPacketCoverModal.parentNode) {
+                  document.body.removeChild(redPacketCoverModal)
+                }
+              }, 300)
+                        
+              // 显示领取结果弹窗
+              showRedPacketResultModal.value = true
+              redPacketResult.value = {
+                amount: amount,
+                message: message.message || '恭喜发财，大吉大利',
+                from: '好友',
+                totalReceived: totalReceived || null
+              }
+                          
+              // 如果被踢出群组
+              if (wasKicked) {
+                setTimeout(() => {
+                  alert(`你已被移出群组\n原因：${kickReason || '达到领取上限'}`)
+                  goBack()
+                }, 500)
+              }
+              
+            } catch (error) {
+              console.error('❌ 抢红包失败:', error)
+              alert(error.response?.data?.message || '抢红包失败，请重试')
+              
+              // 关闭弹窗
+              redPacketCoverModal.classList.remove('show')
+              setTimeout(() => {
+                if (redPacketCoverModal.parentNode) {
+                  document.body.removeChild(redPacketCoverModal)
+                }
+              }, 300)
+            }
+          })
+        }
+      }, 100)
+      
+    } catch (error) {
+      console.error('打开红包失败:', error)
+      alert('打开红包失败，请重试')
+    }
+  }
+
+  // 显示红包账单
+  const showRedPacketBill = (message) => {
+    console.log('📊 显示红包账单:', message)
+    
+    // 获取当前用户名
+    const userData = localStorage.getItem('user')
+    const currentUsername = userData ? JSON.parse(userData).username || '用户' : '用户'
+    
+    // 构建账单HTML
+    let billHtml = `
+      <div class="red-packet-bill">
+        <div class="red-packet-bill-header">
+          <span class="red-packet-icon">💰</span>
+          <span class="red-packet-title">红包账单</span>
+        </div>
+        <div class="red-packet-bill-info">
+          <div class="red-packet-bill-item">
+            <span>${currentUsername}发出的红包</span>
+          </div>
+          <div class="red-packet-bill-item">
+            <span>${message.message || '恭喜发财，大吉大利'}</span>
+          </div>
+          <div class="red-packet-bill-item">
+            <span>总金额:</span>
+            <span>¥${message.amount}</span>
+          </div>
+          <div class="red-packet-bill-item">
+            <span>红包个数:</span>
+            <span>${message.count}个</span>
+          </div>
+        </div>
+        <div class="red-packet-bill-summary">
+          <span>已领取/${message.count}个，共¥${message.amount}</span>
+        </div>
+        <div class="red-packet-bill-list">
+          <div class="red-packet-bill-list-title">领取记录</div>
+    `
+    
+    if (message.redPacketType === 'lucky') {
+      // 拼手气红包显示多个领取者
+      const users = [currentUsername, '好友1', '好友2', '好友3', '好友4']
+      for (let i = 0; i < Math.min(message.count, users.length); i++) {
+        const userAmount = i === 0 ? message.openedAmount : (Math.random() * message.amount).toFixed(2)
+        const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+        billHtml += `
+          <div class="red-packet-bill-list-item">
+            <div class="red-packet-bill-user-info">
+              <span class="red-packet-bill-user">${users[i]}</span>
+              <span class="red-packet-bill-time">${time}</span>
+            </div>
+            <span class="red-packet-bill-amount">¥${userAmount}</span>
+          </div>
+        `
+      }
+    } else {
+      // 普通红包只显示当前用户领取记录
+      const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+      billHtml += `
+        <div class="red-packet-bill-list-item">
+          <div class="red-packet-bill-user-info">
+            <span class="red-packet-bill-user">${currentUsername}</span>
+            <span class="red-packet-bill-time">${time}</span>
+          </div>
+          <span class="red-packet-bill-amount">¥${message.openedAmount || 0}</span>
+        </div>
+      `
+    }
+    
+    billHtml += `
+        </div>
+      </div>
+    `
+    
+    // 创建账单弹窗
+    const redPacketBillModal = document.createElement('div')
+    redPacketBillModal.className = 'red-packet-modal'
+    redPacketBillModal.innerHTML = `
+      <div class="red-packet-modal-content">
+        ${billHtml}
+      </div>
+    `
+    
+    document.body.appendChild(redPacketBillModal)
+    
+    setTimeout(() => {
+      redPacketBillModal.classList.add('show')
+    }, 10)
+    
+    // 绑定点击外部关闭
+    redPacketBillModal.addEventListener('click', (e) => {
+      if (e.target === redPacketBillModal) {
+        redPacketBillModal.classList.remove('show')
+        setTimeout(() => {
+          document.body.removeChild(redPacketBillModal)
+        }, 300)
+      }
+    })
+  }
+
+  // 处理发送红包
+  const handleSendRedPacket = async (redPacketData) => {
+    try {
+      console.log('🧧 发送接龙红包:', redPacketData)
+      
+      let response
+      try {
+        // 调用后端 API 创建群聊红包
+        const currentUserId = localStorage.getItem('userId')
+        
+        response = await redPacketAPI.createGroupRedPacket({
+          amount: redPacketData.amount,
+          type: 'normal',  // 普通红包
+          message: redPacketData.message || '恭喜发财，大吉大利',
+          senderId: currentUserId,
+          groupId: chatId,
+          count: redPacketData.count
+        })
+        
+        console.log('🧧 红包创建成功:', response)
+      } catch (apiError) {
+        console.error('❌ 后端API失败，降级为模拟模式:', apiError)
+        
+        // 🐉 接龙群发红包后端可能有问题，降级为模拟
+        console.log('🐉 接龙群红包，使用模拟数据')
+        
+        // 关闭弹窗
+        showRedPacketModalVisible.value = false
+        
+        // 模拟创建红包消息
+        const now = new Date()
+        const time = now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes()
+        
+        const mockRedPacketMsg = {
+          id: `mock_redpacket_${Date.now()}`,
+          type: 'redPacket',
+          redPacketType: 'normal',
+          amount: redPacketData.amount,
+          count: redPacketData.count,
+          message: redPacketData.message || '恭喜发财，大吉大利',
+          time: time,
+          opened: false,
+          redPacketId: `mock_${Date.now()}`, // 使用 mock_ 前缀
+          clientMsgId: `mock_${Date.now()}`,
+          groupId: chatId,
+          senderId: currentUserId.value,
+          isSelf: true,
+          isChainRedPacket: true
+        }
+        
+        messages.value.push(mockRedPacketMsg)
+        saveChatToLocalStorage(chatId, messages.value)
+        
+        alert('红包发送成功！（模拟模式）')
+        return
+      }
+      
+      // 如果后端返回了红包数据，添加到消息列表
+      if (response.data && response.data.redPacket) {
+        const redPacket = response.data.redPacket
+        const now = new Date()
+        const time = now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes()
+        
+        const redPacketMsg = {
+          id: redPacket._id || `redpacket_${Date.now()}`,
+          type: 'redPacket',
+          redPacketType: 'normal',
+          amount: redPacket.totalAmount || redPacketData.amount,
+          count: redPacket.count || redPacketData.count,
+          message: redPacket.message || redPacketData.message,
+          time: time,
+          opened: false,
+          redPacketId: redPacket._id,
+          clientMsgId: `grp_${redPacket._id}_${Date.now()}`,
+          groupId: chatId,
+          senderId: currentUserId.value,
+          isSelf: true,
+          isChainRedPacket: true
+        }
+        
+        messages.value.push(redPacketMsg)
+        saveChatToLocalStorage(chatId, messages.value)
+        
+        alert('红包发送成功！')
+      }
+      
+    } catch (error) {
+      console.error('❌ 发送红包失败:', error)
+      alert(error.response?.data?.message || '发送红包失败，请重试')
+    }
+  }
+
+  // 清理
+  const cleanup = () => {
+    // 离开群组
+    leaveGroup(chatId)
+  }
+
+  // 加载聊天数据
+  const init = async () => {
+    // 初始化联系人
+    currentContact.value = {
+      id: chatId,
+      name: '接龙群',
+      avatar: '🐉',
+      isGroup: true
+    }
+    
+    // 加载接龙群信息
+    await loadChainGroupInfo(chatId)
+    
+    // 加载聊天记录
+    await loadChatHistory()
+    
+    // ✅ 初始化消息中心（全局只调用一次）
+    initSocketListeners()
+    
+    // 加入群组
+    joinGroup(chatId)
+  }
+
+  return {
+    currentContact,
+    chainGroupInfo,
+    messages,
+    messageInput,
+    showInviteModal,
+    showInfoModal,
+    showRedPacketModalVisible,
+    showRedPacketResultModal,
+    redPacketResult,
+    chainWaitCountdown,
+    goBack,
+    shareGroup,
+    openRedPacket,
+    sendMessage,
+    handleSendRedPacket,
+    init,
+    cleanup
+  }
+}

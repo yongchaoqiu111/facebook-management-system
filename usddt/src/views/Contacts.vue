@@ -4,43 +4,31 @@
     <header class="header">
       <h1>联系人</h1>
       <div class="header-actions">
-        <input 
-          type="text" 
-          class="header-search-input" 
-          v-model="searchKeyword"
-          placeholder="🔍 搜索..."
-        >
         <button class="action-btn" @click="showAddFriendModal">+</button>
       </div>
     </header>
 
+    <!-- 搜索框 -->
+    <div class="search-section">
+      <input 
+        type="text" 
+        class="search-input" 
+        v-model="searchKeyword"
+        placeholder="搜索"
+        style="text-align: center;"
+      >
+    </div>
+
     <!-- 内容区域 -->
     <main class="content">
-      <!-- 所有联系人 -->
-      <div class="contacts-section">
-        <div class="section-header">所有联系人 ({{ filteredContacts.length }})</div>
-        <div 
-          v-for="contact in filteredContacts" 
-          :key="contact.id"
-          class="contact-item"
-          @click="goToChat(contact)"
-        >
-          <div class="contact-avatar">{{ contact.avatar }}</div>
-          <div class="contact-info">
-            <div class="contact-name">{{ contact.name }}</div>
-            <div class="contact-id">{{ contact.id }}</div>
-          </div>
-          <div class="contact-right">
-            <div :class="['contact-status', contact.status]"></div>
-            <span v-if="contact.unreadCount > 0" class="unread-badge">
-              {{ contact.unreadCount > 99 ? '99+' : contact.unreadCount }}
-            </span>
-          </div>
-        </div>
-        <div v-if="filteredContacts.length === 0" class="empty-tip">
-          {{ searchKeyword ? '未找到匹配的好友' : '暂无好友' }}
-        </div>
+      <!-- 可能想认识的人 -->
+      <div class="maybe-know-section" @click="showAddFriendModal">
+        <span class="maybe-know-text">可能想认识的人</span>
+        <span class="maybe-know-arrow">›</span>
       </div>
+      
+      <!-- 白色分隔条 -->
+      <div class="section-divider"></div>
 
       <!-- 好友请求 -->
       <div class="contacts-section" v-if="friendRequests.length > 0">
@@ -58,23 +46,6 @@
           <div class="request-actions">
             <button class="accept-btn" @click="acceptFriendRequest(request)">接受</button>
             <button class="reject-btn" @click="rejectFriendRequest(request)">拒绝</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 群组 -->
-      <div class="contacts-section">
-        <div class="section-header">群组</div>
-        <div 
-          v-for="group in groups" 
-          :key="group.id"
-          class="contact-item"
-          @click="goToChat(group)"
-        >
-          <div class="contact-avatar">{{ group.avatar }}</div>
-          <div class="contact-info">
-            <div class="contact-name">{{ group.name }}</div>
-            <div class="contact-id">{{ group.members }}人</div>
           </div>
         </div>
       </div>
@@ -149,6 +120,7 @@ import { useRouter } from 'vue-router'
 import { friendAPI, chatAPI } from '../api'
 import Toast from '../components/Toast.vue'
 import { getSocket } from '../socket'
+import { useFriendStore } from '../stores/friendStore'
 
 const router = useRouter()
 const toastRef = ref(null)
@@ -161,10 +133,13 @@ const loading = ref(true)
 // ✅ 搜索关键词
 const searchKeyword = ref('')
 
+// ✅ 使用全局好友 Store
+const friendStore = useFriendStore()
+const friendRequests = computed(() => friendStore.friendRequests)
+
 // 联系人数据
 const allContacts = ref([])
 const groups = ref([])
-const friendRequests = ref([])
 
 // ✅ 过滤后的联系人列表
 const filteredContacts = computed(() => {
@@ -422,6 +397,15 @@ onMounted(() => {
     })
   }
   
+  // ✅ 监听页面可见性变化（切换回页面时刷新好友请求）
+  const handleVisibilityChange = () => {
+    if (!document.hidden) {
+      console.log('👁️ [Contacts] 页面可见，刷新好友请求')
+      fetchFriendRequests()
+    }
+  }
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+  
   // ✅ 监听 localStorage 变化（当其他标签页收到好友请求时）
   const handleStorageChange = (e) => {
     if (e.key === 'friendRequestUpdated') {
@@ -433,6 +417,7 @@ onMounted(() => {
   window.addEventListener('storage', handleStorageChange)
   
   // 保存清理函数
+  window.__contactsVisibilityHandler = handleVisibilityChange
   window.__contactsStorageHandler = handleStorageChange
 })
 
@@ -444,6 +429,12 @@ onUnmounted(() => {
   if (window.__contactsStorageHandler) {
     window.removeEventListener('storage', window.__contactsStorageHandler)
     delete window.__contactsStorageHandler
+  }
+  
+  // ✅ 清理可见性监听器
+  if (window.__contactsVisibilityHandler) {
+    document.removeEventListener('visibilitychange', window.__contactsVisibilityHandler)
+    delete window.__contactsVisibilityHandler
   }
 })
 
@@ -599,10 +590,17 @@ onMounted(() => {
   flex-direction: column;
 }
 
+/* 内容区域 */
+.content {
+  flex: 1;
+  overflow-y: auto;
+  /* ✅ 防止底部导航遮挡：底部导航高度(70px) + 安全区 */
+  padding-bottom: calc(20px + 70px + env(safe-area-inset-bottom));
+}
+
 /* 头部导航 */
 .header {
   background: white;
-  border-bottom: 1px solid #e0e0e0;
   padding: 15px 20px;
   display: flex;
   justify-content: space-between;
@@ -613,38 +611,76 @@ onMounted(() => {
 }
 
 .header h1 {
-  color: #667eea;
+  color: #333;
   font-size: 1.5rem;
+  font-weight: 600;
 }
 
 .header-actions {
   display: flex;
   gap: 10px;
   align-items: center;
-  flex: 1;
-  justify-content: flex-end;
 }
 
-/* ✅ 头部搜索框 */
-.header-search-input {
-  flex: 1;
-  max-width: 300px;
-  padding: 8px 16px;
-  border: 2px solid #e0e0e0;
-  border-radius: 20px;
+/* 搜索框区域 */
+.search-section {
+  background: transparent;
+  padding: 10px 20px 15px;
+  position: sticky;
+  top: 58px; /* header height */
+  z-index: 99;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 8px;
   font-size: 1rem;
   outline: none;
-  transition: all 0.3s;
-  background: white;
+  background: transparent;
+  color: #333;
 }
 
-.header-search-input:focus {
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
-}
-
-.header-search-input::placeholder {
+.search-input::placeholder {
   color: #999;
+}
+
+.search-input:focus {
+  background: transparent;
+}
+
+/* 可能想认识的人 */
+.maybe-know-section {
+  background: transparent;
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.maybe-know-section:hover {
+  background: #f9f9f9;
+}
+
+.maybe-know-text {
+  color: #999;
+  font-size: 1rem;
+}
+
+.maybe-know-arrow {
+  color: #999;
+  font-size: 1.2rem;
+}
+
+/* 白色分隔条 */
+.section-divider {
+  height: 8px;
+  background: white;
+  width: 100%;
+  flex-shrink: 0;
 }
 
 .action-btn {
@@ -691,7 +727,7 @@ onMounted(() => {
   background: white;
   border-radius: 10px;
   padding: 15px;
-  margin: 0 20px 10px;
+  margin: 0 0.5% 10px;
   display: flex;
   align-items: center;
   gap: 15px;
@@ -768,10 +804,13 @@ onMounted(() => {
   background: white;
   border-top: 1px solid #e0e0e0;
   padding: 15px 10px;
+  padding-bottom: calc(15px + env(safe-area-inset-bottom));
   display: flex;
   justify-content: space-around;
-  position: sticky;
+  position: fixed;
   bottom: 0;
+  left: 0;
+  right: 0;
   z-index: 100;
 }
 

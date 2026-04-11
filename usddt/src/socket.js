@@ -17,7 +17,11 @@ export const initSocket = () => {
     
     console.log('🔑 [Socket] 使用 token 连接:', token.substring(0, 20) + '...')
     
-    socket = io('http://localhost:5000', {
+    // ✅ 使用环境变量配置 WebSocket 地址
+    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3000'
+    console.log('🔌 [Socket] 连接地址:', wsUrl)
+    
+    socket = io(wsUrl, {
       transports: ['websocket'],
       reconnection: true,
       reconnectionAttempts: 5,

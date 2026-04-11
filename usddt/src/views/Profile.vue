@@ -24,20 +24,6 @@
             <button class="share-btn" @click="showShareModal = true">分享我的ID</button>
             <button class="edit-profile-btn" @click="showEditModal = true">编辑资料</button>
           </div>
-          <div class="profile-stats">
-            <div class="stat-item">
-              <div class="stat-number">{{ user.friends }}</div>
-              <div class="stat-label">好友</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-number">{{ user.groups }}</div>
-              <div class="stat-label">群组</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-number">{{ user.messages }}</div>
-              <div class="stat-label">消息</div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -286,6 +272,14 @@ const logout = async () => {
   flex-direction: column;
 }
 
+/* 内容区域 */
+.content {
+  flex: 1;
+  overflow-y: auto;
+  /* ✅ 防止底部导航遮挡：底部导航高度(70px) + 安全区 */
+  padding-bottom: calc(20px + 70px + env(safe-area-inset-bottom));
+}
+
 /* 头部导航 */
 .header {
   background: white;
@@ -495,10 +489,13 @@ const logout = async () => {
   background: white;
   border-top: 1px solid #e0e0e0;
   padding: 15px 10px;
+  padding-bottom: calc(15px + env(safe-area-inset-bottom));
   display: flex;
   justify-content: space-around;
-  position: sticky;
+  position: fixed;
   bottom: 0;
+  left: 0;
+  right: 0;
   z-index: 100;
 }
 

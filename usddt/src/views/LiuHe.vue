@@ -1,8 +1,13 @@
 <template>
   <div class="chat-container">
+    <!-- ✅ 顶部退出按钮（固定漂浮） -->
+    <button class="floating-exit-btn" @click="goBack" title="退出聊天">
+      ← 退出
+    </button>
+
     <!-- 聊天头部 -->
     <div class="chat-header">
-      <button class="action-btn back-btn" @click="goBack">←</button>
+      <button class="action-btn back-btn" @click="goBack" style="opacity: 0; pointer-events: none;">←</button>
       <div class="chat-title">
         <div class="chat-avatar">👥</div>
         <div class="chat-name">{{ currentContact?.name || '六合天下' }}</div>
@@ -82,21 +87,31 @@
       </template>
     </div>
 
-    <!-- 底部输入框 -->
-    <div class="chat-input">
-      <div class="chat-tools">
-        <button class="tool-btn" @click="handleSendRedPacket">🧧</button>
+    <!-- ✅ 底部 Footer（只包含输入框） -->
+    <footer class="chat-footer">
+      <!-- 输入框区域 -->
+      <div class="chat-input">
+        <div class="input-container">
+          <input 
+            type="text" 
+            v-model="messageInput" 
+            placeholder="输入消息..." 
+            class="message-input"
+            @keyup.enter="sendMessage"
+            @focus="handleInputFocus"
+          />
+          <button class="send-btn" @click="sendMessage">发送</button>
+        </div>
       </div>
-      <div class="input-container">
-        <input 
-          type="text" 
-          v-model="messageInput" 
-          placeholder="输入消息..." 
-          class="message-input"
-          @keyup.enter="sendMessage"
-        />
-        <button class="send-btn" @click="sendMessage">发送</button>
-      </div>
+    </footer>
+
+    <!-- ✅ 底部工具栏（透明，在 footer 外面） -->
+    <div class="toolbar">
+      <button class="tool-icon" @click="handleSendRedPacket" title="红包">🧧</button>
+      <button class="tool-icon" title="图片">🖼️</button>
+      <button class="tool-icon" title="拍照">📷</button>
+      <button class="tool-icon" title="表情">😎</button>
+      <button class="tool-icon" title="更多">➕</button>
     </div>
 
     <!-- 开奖直播卡片 -->
@@ -545,6 +560,17 @@ const calculateExpectedPayout = (record) => {
   const netPayout = grossPayout - platformFee
   
   return netPayout
+}
+
+// ✅ iOS 键盘适配：输入框聚焦时滚动
+const handleInputFocus = (e) => {
+  setTimeout(() => {
+    e.target.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest',
+      inline: 'nearest'
+    })
+  }, 300)
 }
 
 // 加载账单数据
@@ -1050,8 +1076,14 @@ const loadChatHistory = async () => {
   }
 }
 
-// 保存聊天记录到 IndexedDB
+// 保存聊天记录到 IndexedDB（公开群不保存）
 const saveChatToStorage = async (groupId, messages) => {
+  // ✅ 六合天下是公开群，不保存到 IndexedDB
+  if (groupId === '1000001') {
+    console.log('ℹ️ [LiuHe] 公开群，跳过 IndexedDB 保存')
+    return
+  }
+  
   try {
     // 批量保存消息（不清理，保留所有历史记录）
     await saveMessages(messages)
@@ -1450,9 +1482,39 @@ onUnmounted(() => {
 <style scoped>
 /* 聊天容器样式 */
 .chat-container {
-  height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: visible;
+  position: relative;
+}
+
+/* ✅ 顶部退出按钮样式 */
+.floating-exit-btn {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.floating-exit-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+  transform: scale(1.05);
+}
+
+.floating-exit-btn:active {
+  transform: scale(0.95);
 }
 
 /* 成功提示Toast */
@@ -1636,6 +1698,7 @@ onUnmounted(() => {
 .chat-messages {
   flex: 1;
   padding: 16px 16px;
+  padding-bottom: calc(16px + 180px + env(safe-area-inset-bottom)); /* ✅ 输入框+工具栏+安全区 */
   overflow-y: auto;
   background: #f5f7fa;
 }
@@ -2055,42 +2118,93 @@ onUnmounted(() => {
   50% { opacity: 0.5; }
 }
 
-/* 底部导航 */
-.bottom-nav {
+/* ✅ 底部 Footer 容器（白色背景） */
+.chat-footer {
   background: white;
-  border-top: 1px solid #e0e0e0;
-  padding: 15px 10px;
-  display: flex;
-  justify-content: space-around;
-  position: sticky;
-  bottom: 0;
-  z-index: 100;
+  flex-shrink: 0;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
 }
 
-.nav-item {
+.chat-input {
+  display: flex;
+  padding: 12px;
+  background: white;
+  align-items: center;
+}
+
+.input-container {
   flex: 1;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
+  gap: 8px;
+}
+
+.message-input {
+  flex: 1;
+  padding: 10px 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 20px;
+  font-size: 16px;
+  outline: none;
+}
+
+.message-input:focus {
+  border-color: #1890ff;
+}
+
+.send-btn {
+  padding: 10px 24px;
+  min-width: 70px;
+  background: #1890ff;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  font-size: 15px;
+  font-weight: bold;
   cursor: pointer;
-  color: #666;
-  transition: color 0.3s ease;
+  transition: background-color 0.3s;
 }
 
-.nav-item.active {
-  color: #ff6b6b;
+.send-btn:hover {
+  background: #40a9ff;
 }
 
-.nav-icon {
-  font-size: 1.3rem;
+/* ✅ 底部工具栏（透明背景，在 footer 外面） */
+.toolbar {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 8px;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  background: transparent; /* ✅ 完全透明 */
+  flex-shrink: 0;
 }
 
-.nav-label {
-  font-size: 0.7rem;
+.tool-icon {
+  background: rgba(255, 255, 255, 0.8); /* ✅ 半透明白色背景 */
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 12px;
+  border-radius: 50%;
+  transition: all 0.2s;
+  min-width: 48px;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  backdrop-filter: blur(10px); /* ✅ 毛玻璃效果 */
 }
 
-/* 投注面板 */
+.tool-icon:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: scale(1.1);
+}
+
+.tool-icon:active {
+  background: rgba(240, 240, 240, 0.9);
+  transform: scale(0.95);
+}
 .bet-panel-overlay {
   position: fixed;
   top: 0;
@@ -2470,5 +2584,27 @@ onUnmounted(() => {
 
 .send-btn:hover {
   background: #40a9ff;
+}
+
+/* 投注面板 */
+.bet-panel-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+}
+
+.bet-panel {
+  background: white;
+  border-radius: 20px 20px 0 0;
+  padding: 20px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
 }
 </style>

@@ -1,13 +1,9 @@
 <template>
   <div class="chat-container">
-    <!-- 头部 -->
-    <div class="chat-header">
-      <button class="back-btn" @click="goBack">←</button>
-      <div class="chat-title">
-        <div class="avatar">👤</div>
-        <div class="name">{{ contact?.name || '好友' }}</div>
-      </div>
-    </div>
+    <!-- ✅ 顶部退出按钮（固定漂浮） -->
+    <button class="floating-exit-btn" @click="goBack" title="退出聊天">
+      ← 退出
+    </button>
 
     <!-- 消息列表 -->
     <div class="messages" ref="messagesContainer">
@@ -55,15 +51,27 @@
       </div>
     </div>
 
-    <!-- 输入框 -->
-    <div class="input-area">
-      <button class="redpacket-btn" @click="showRedPacketModal = true" title="发红包">🧧</button>
-      <input 
-        v-model="messageInput" 
-        placeholder="输入消息..."
-        @keyup.enter="sendMessage"
-      />
-      <button @click="sendMessage">发送</button>
+    <!-- ✅ 底部 Footer（只包含输入框） -->
+    <footer class="chat-footer">
+      <!-- 输入框区域 -->
+      <div class="input-area">
+        <input 
+          v-model="messageInput" 
+          placeholder="输入消息..."
+          @keyup.enter="sendMessage"
+          @focus="handleInputFocus"
+        />
+        <button @click="sendMessage">发送</button>
+      </div>
+    </footer>
+    
+    <!-- ✅ 底部工具栏（透明，在 footer 外面） -->
+    <div class="toolbar">
+      <button class="tool-icon" @click="showRedPacketModal = true" title="红包">🧧</button>
+      <button class="tool-icon" title="图片">🖼️</button>
+      <button class="tool-icon" title="拍照">📷</button>
+      <button class="tool-icon" title="表情">😎</button>
+      <button class="tool-icon" title="更多">➕</button>
     </div>
     
     <!-- 红包弹窗 -->
@@ -152,6 +160,10 @@ const route = useRoute()
 const router = useRouter()
 const chatId = route.params.id
 
+const navigate = (path) => {
+  router.push(path)
+}
+
 // 红包相关状态
 const showRedPacketModal = ref(false)
 const redPacketAmount = ref(10)
@@ -223,6 +235,17 @@ const isSender = computed(() => {
   if (!currentRedPacket.value) return false
   return String(currentRedPacket.value.senderId) === String(currentUserId.value)
 })
+
+// ✅ iOS 键盘适配：输入框聚焦时滚动
+const handleInputFocus = (e) => {
+  setTimeout(() => {
+    e.target.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest',
+      inline: 'nearest'
+    })
+  }, 300)
+}
 
 // 返回
 const goBack = () => {

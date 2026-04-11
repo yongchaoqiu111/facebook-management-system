@@ -1,9 +1,39 @@
 /* 私聊页面样式 */
 .chat-container {
-  height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
   background: #f5f7fa;
+  overflow: visible;
+  position: relative;
+}
+
+/* ✅ 顶部退出按钮样式 */
+.floating-exit-btn {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.floating-exit-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+  transform: scale(1.05);
+}
+
+.floating-exit-btn:active {
+  transform: scale(0.95);
 }
 
 .chat-header {
@@ -62,8 +92,13 @@
 .messages {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 16px;
+  padding-bottom: calc(16px + 180px + env(safe-area-inset-bottom)); /* ✅ 输入框+工具栏+安全区 */
   background: #f5f7fa;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  min-height: 0;
 }
 
 /* 空状态 */
@@ -240,10 +275,12 @@
 .input-area {
   display: flex;
   padding: 12px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
   background: white;
   border-top: 1px solid #e8e8e8;
   gap: 8px;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .redpacket-btn {
@@ -265,6 +302,7 @@
   border: 1px solid #d9d9d9;
   border-radius: 20px;
   outline: none;
+  font-size: 16px; /* 防止 iOS 自动缩放 */
 }
 
 .input-area input:focus {
@@ -283,6 +321,172 @@
 
 .input-area button:hover:not(:disabled) {
   background: #40a9ff;
+}
+
+.input-area button:disabled {
+  background: #d9d9d9;
+  cursor: not-allowed;
+}
+
+/* 输入框包裹器 */
+.input-wrapper {
+  background: white;
+  flex-shrink: 0;
+}
+
+/* 底部工具栏 */
+.toolbar {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 8px;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  background: #f5f5f5;
+  border-top: 1px solid #e8e8e8;
+}
+
+.tool-icon {
+  background: white;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 12px;
+  border-radius: 50%;
+  transition: all 0.2s;
+  min-width: 48px;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.tool-icon:hover {
+  background: #e8e8e8;
+  transform: scale(1.1);
+}
+
+.tool-icon:active {
+  background: #d9d9d9;
+  transform: scale(0.95);
+}
+
+/* ✅ 底部 Footer 容器（白色背景） */
+.chat-footer {
+  background: white;
+  flex-shrink: 0;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.input-area {
+  display: flex;
+  padding: 12px;
+  background: white;
+  align-items: center;
+  gap: 8px;
+}
+
+.input-area input {
+  flex: 1;
+  padding: 10px 16px;
+  border: 1px solid #d9d9d9;
+  border-radius: 20px;
+  outline: none;
+  font-size: 16px;
+}
+
+.input-area input:focus {
+  border-color: #1890ff;
+}
+
+.input-area button {
+  padding: 10px 24px;
+  min-width: 70px;
+  background: #1890ff;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  transition: background 0.2s;
+}
+
+.input-area button:hover {
+  background: #40a9ff;
+}
+
+/* ✅ 底部工具栏（透明背景，在 footer 外面） */
+.toolbar {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 8px;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  background: transparent; /* ✅ 完全透明 */
+  flex-shrink: 0;
+}
+
+.tool-icon {
+  background: rgba(255, 255, 255, 0.8); /* ✅ 半透明白色背景 */
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 12px;
+  border-radius: 50%;
+  transition: all 0.2s;
+  min-width: 48px;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  backdrop-filter: blur(10px); /* ✅ 毛玻璃效果 */
+}
+
+.tool-icon:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: scale(1.1);
+}
+
+.tool-icon:active {
+  background: rgba(240, 240, 240, 0.9);
+  transform: scale(0.95);
+}
+
+/* 底部工具栏 */
+.toolbar {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 12px 8px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  background: #f5f5f5;
+  border-top: 1px solid #e8e8e8;
+}
+
+.tool-icon {
+  background: white;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 12px;
+  border-radius: 8px;
+  transition: all 0.2s;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tool-icon:hover {
+  background: #e8e8e8;
+  transform: scale(1.1);
+}
+
+.tool-icon:active {
+  background: #d9d9d9;
 }
 
 .input-area button:disabled {

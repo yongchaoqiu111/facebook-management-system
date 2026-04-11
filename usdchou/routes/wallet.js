@@ -317,4 +317,72 @@ router.post('/check-deposit', auth, async (req, res) => {
   }
 });
 
+// 🔥 管理员调整用户余额（充值/扣款）- 无需登录
+router.post('/admin/adjust-balance', [
+  check('userId', '用户ID是必需的').not().isEmpty(),
+  check('amount', '金额是必需的').isNumeric(),
+  check('type', '类型必须是recharge或deduct').isIn(['recharge', 'deduct']),
+  check('reason', '原因不能为空').not().isEmpty()
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return sendError(ERROR_CODES.VALIDATION_ERROR, res, { data: errors.array() });
+  }
+
+  const { userId, amount, type, reason } = req.body;
+
+  try {
+    // TODO: 添加管理员权限验证
+    // if (!req.user.isAdmin) {
+    //   return sendError(ERROR_CODES.NOT_AUTHORIZED, res);
+    // }
+
+    const targetUser = await User.findById(userId);
+    if (!targetUser) {
+      return sendError(ERROR_CODES.USER_NOT_FOUND, res, { message: '用户不存在' });
+    }
+
+    const adjustAmount = parseFloat(amount);
+    if (adjustAmount <= 0) {
+      return sendError(ERROR_CODES.BAD_REQUEST, res, { message: '金额必须大于0' });
+    }
+
+    // 调整余额
+    if (type === 'recharge') {
+      targetUser.balance += adjustAmount;
+    } else if (type === 'deduct') {
+      if (targetUser.balance < adjustAmount) {
+        return sendError(ERROR_CODES.BALANCE_INSUFFICIENT, res, { 
+          message: `用户余额不足，当前余额: ${targetUser.balance} USDT` 
+        });
+      }
+      targetUser.balance -= adjustAmount;
+    }
+
+    await targetUser.save();
+
+    // 记录交易
+    const transaction = new Transaction({
+      userId: userId,
+      type: type === 'recharge' ? 'admin_recharge' : 'admin_deduct',
+      amount: adjustAmount,
+      status: 'completed',
+      note: reason
+    });
+
+    await transaction.save();
+
+    logger.info(`管理员调整余额: 用户 ${userId}, 类型: ${type}, 金额: ${adjustAmount}, 原因: ${reason}`);
+
+    sendSuccess(res, { 
+      userId: targetUser._id,
+      balance: targetUser.balance,
+      transaction 
+    }, type === 'recharge' ? '充值成功' : '扣款成功');
+  } catch (err) {
+    logger.error('Admin adjust balance error:', err);
+    sendError(ERROR_CODES.INTERNAL_ERROR, res);
+  }
+});
+
 module.exports = router;

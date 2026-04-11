@@ -552,6 +552,14 @@ onMounted(async () => {
   background: #f5f7fa;
 }
 
+/* 内容区域 */
+.content {
+  flex: 1;
+  overflow-y: auto;
+  /* ✅ 防止底部导航遮挡：底部导航高度(70px) + 安全区 */
+  padding-bottom: calc(20px + 70px + env(safe-area-inset-bottom));
+}
+
 /* 头部导航 */
 .header {
   background: white;
@@ -762,10 +770,13 @@ onMounted(async () => {
   background: white;
   border-top: 1px solid #e0e0e0;
   padding: 15px 10px;
+  padding-bottom: calc(15px + env(safe-area-inset-bottom));
   display: flex;
   justify-content: space-around;
-  position: sticky;
+  position: fixed;
   bottom: 0;
+  left: 0;
+  right: 0;
   z-index: 100;
 }
 
@@ -895,7 +906,7 @@ onMounted(async () => {
   position: absolute;
   right: 15px;
   font-size: 1rem;
-  opacity: 0.6;
+  opacity: 0;  /* ✅ 完全透明，隐藏复制图标 */
 }
 
 .address-note {

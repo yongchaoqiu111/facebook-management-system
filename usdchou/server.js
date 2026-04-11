@@ -2,6 +2,10 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
+
+// 加载环境变量
+dotenv.config();
+
 const http = require('http');
 const { Server } = require('socket.io');
 const fs = require('fs');
@@ -46,7 +50,14 @@ databaseBackup.startScheduledBackup();
 // 保留 io 变量用于向后兼容
 const io = socketService.io;
 
-app.use(cors());
+// ✅ 配置 CORS（允许跨域请求）
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:3000', 'http://47.239.86.249', 'https://yourdomain.com'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 200
+}));
 app.use(express.json());
 
 if (!fs.existsSync('logs')) {
@@ -245,11 +256,11 @@ io.on('connection', (socket) => {
   });
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   logger.info(`Server running on port ${PORT}`);
-  logger.info(`Health check available at http://localhost:${PORT}/health`);
+  logger.info(`Health check available at http://0.0.0.0:${PORT}/health`);
 });
 
 setInterval(async () => {

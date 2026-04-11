@@ -390,6 +390,7 @@ onUnmounted(() => {
   background: white;
   border-top: 1px solid #e0e0e0;
   padding: 15px 10px;
+  padding-bottom: calc(15px + env(safe-area-inset-bottom));
   display: flex;
   justify-content: space-around;
   position: sticky;

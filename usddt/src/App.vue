@@ -22,6 +22,7 @@ import { initSocket, getSocket, joinGroup } from './socket'
 import { saveMessages, parseMessage } from './utils/chatStorage'
 import { triggerMessageUpdate } from './utils/messageBus'
 import { useMessageCenter } from './composables/useMessageCenter'
+import { useFriendStore } from './stores/friendStore'
 import axios from 'axios'
 import { chatAPI } from './api'
 import LoadingOverlay from './components/LoadingOverlay.vue'
@@ -248,10 +249,20 @@ onMounted(async () => {
     console.log('📨 [全局监听] 数据类型:', typeof data)
     console.log('📨 [全局监听] 数据详情:', JSON.stringify(data, null, 2))
     
+    // ✅ 更新全局 Store（所有页面共享）
+    const friendStore = useFriendStore()
+    const newRequest = {
+      id: data._id || data.id,
+      name: data.fromUser?.username || data.sender?.username || '有人',
+      avatar: data.fromUser?.avatar || data.sender?.avatar || '👤',
+      message: data.message || '请求添加你为好友'
+    }
+    friendStore.addFriendRequest(newRequest)
+    
     // 显示浏览器通知
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification('新的好友请求', {
-        body: data.fromUser?.username || data.sender?.username || '有人想加你好友',
+        body: newRequest.name,
         icon: '/favicon.ico'
       })
     } else if ('Notification' in window && Notification.permission !== 'denied') {
@@ -259,17 +270,21 @@ onMounted(async () => {
       Notification.requestPermission().then(permission => {
         if (permission === 'granted') {
           new Notification('新的好友请求', {
-            body: data.fromUser?.username || data.sender?.username || '有人想加你好友',
+            body: newRequest.name,
             icon: '/favicon.ico'
           })
         }
       })
     }
     
-    // 如果当前在 Contacts 页面，触发刷新
-    // 通过 localStorage 标记，Contacts 页面可以轮询检查
+    // 显示 Toast 提示
+    if (globalToast.value) {
+      globalToast.value.info(`${newRequest.name} 请求添加你为好友`)
+    }
+    
+    // ✅ 写入 localStorage（兼容旧版本）
     localStorage.setItem('friendRequestUpdated', Date.now().toString())
-    console.log('✅ [全局监听] 已设置 localStorage 标记')
+    console.log('✅ [全局监听] 已更新全局 Store 和 localStorage')
   })
   
   socket.on('friendRequestSent', (data) => {
@@ -464,6 +479,20 @@ onMounted(async () => {
     if (!msgData.receiverId && msgData.sender?.userId) {
       msgData.receiverId = currentUserId
     }
+    
+    // ✅ 添加 sender 信息（后端 redPacketSent 事件没有返回 sender）
+    if (!msgData.sender) {
+      msgData.sender = {
+        userId: currentUserId,
+        username: localStorage.getItem('username') || '我',
+        avatar: localStorage.getItem('avatar') || '😊'
+      }
+    }
+    
+    // ✅ 添加 senderId
+    if (!msgData.senderId) {
+      msgData.senderId = currentUserId
+    }
 
     // ✅ 统一使用 useMessageCenter 的 handleIncomingMessage 处理
     const messageCenter = useMessageCenter()
@@ -515,6 +544,18 @@ onUnmounted(() => {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  /* 防止双击缩放 */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  /* 防止 iOS 缩放 */
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {

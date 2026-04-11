@@ -88,18 +88,24 @@ const getPacketTitle = (msg) => {
 watch(() => props.messages.length, () => {
   setTimeout(() => {
     if (container.value) {
-      container.value.scrollTop = container.value.scrollHeight
+      container.value.scrollTo({
+        top: container.value.scrollHeight,
+        behavior: 'smooth'
+      })
     }
-  }, 100)
+  }, 200)  // 增加延迟到 200ms，确保 DOM 渲染完成
 })
 </script>
 
 <style scoped>
+/* ✅ 消息容器：固定高度，内部滚动 */
 .messages-container {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 16px;
-  background: #f5f7fa;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
 }
 
 /* 消息项 */

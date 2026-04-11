@@ -30,15 +30,13 @@
       发消息
     </button>
 
-    <!-- 音视频通话按钮 -->
-    <button class="action-btn call-btn" @click="startCall">
-      音视频通话
-    </button>
-
     <!-- 删除好友按钮 -->
     <button class="action-btn delete-btn" @click="confirmDelete">
-      删除好友
+    删除好友
     </button>
+
+ 
+    
   </div>
 </template>
 
@@ -134,6 +132,10 @@ const deleteFriend = () => {
   setTimeout(() => {
     showToast('删除好友请求超时，请检查网络连接', 'warning', 3000)
   }, 10000)
+}
+
+const navigateTo = (path) => {
+  router.push(path)
 }
 </script>
 
@@ -247,6 +249,7 @@ const deleteFriend = () => {
 .message-btn {
   background: #007aff;
   color: #fff;
+  margin-top: 30vh;
 }
 
 .call-btn {
@@ -264,5 +267,53 @@ const deleteFriend = () => {
 
 .action-btn:active {
   opacity: 0.7;
+}
+
+/* 底部导航 */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  display: flex;
+  justify-content: space-around;
+  padding: 8px 0;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  border-top: 1px solid #e5e5e5;
+  z-index: 1000;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 4px 12px;
+  transition: all 0.2s;
+}
+
+.nav-item:hover {
+  transform: scale(1.05);
+}
+
+.nav-item:active {
+  transform: scale(0.95);
+}
+
+.nav-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.nav-label {
+  font-size: 12px;
+  color: #666;
+}
+
+.nav-item.active .nav-label {
+  color: #007aff;
+  font-weight: 500;
 }
 </style>

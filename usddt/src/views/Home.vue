@@ -2,7 +2,7 @@
   <div class="home-container">
     <!-- 头部导航 -->
     <header class="header">
-      <h1>新华通讯</h1>
+      <h1>消息</h1>
       <div class="header-actions">
         <button class="action-btn" @click="navigate('/create-chain-group')" title="创建接龙群">+</button>
       </div>
@@ -29,20 +29,7 @@
             <div class="contact-time">›</div>
           </div>
           
-          <!-- 🔥 固定卡片1：群主方 -->
-          <div 
-            class="contact-item"
-            @click="openChat({ id: '10000000', name: '群主方', avatar: '👑' })"
-          >
-            <div class="contact-avatar">👑</div>
-            <div class="contact-info">
-              <div class="contact-name">群主方</div>
-              <div class="contact-preview">暂无消息</div>
-            </div>
-            <div class="contact-time"></div>
-          </div>
-          
-          <!-- 🔥 固定卡片2：六合天下 -->
+          <!-- 🔥 固定卡片1：六合天下 -->
           <div 
             class="contact-item group-item"
             @click="showChainGroupConfirm({ id: '1000001', name: '六合天下', avatar: '🎲' })"
@@ -950,6 +937,14 @@ const createGroup = async () => {
   flex-direction: column;
 }
 
+/* 内容区域 */
+.content {
+  flex: 1;
+  overflow-y: auto;
+  /* ✅ 防止底部被遮挡（虽然 Home 没有底部导航，但保持统一） */
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
+}
+
 /* 头部导航 */
 .header {
   background: white;
@@ -1018,7 +1013,7 @@ const createGroup = async () => {
   background: white;
   border-radius: 10px;
   padding: 15px;
-  margin: 0 20px 10px;
+  margin: 0 0.5% 10px;
   display: flex;
   align-items: center;
   gap: 15px;
@@ -1076,10 +1071,13 @@ const createGroup = async () => {
   background: white;
   border-top: 1px solid #e0e0e0;
   padding: 15px 10px;
+  padding-bottom: calc(15px + env(safe-area-inset-bottom));
   display: flex;
   justify-content: space-around;
-  position: sticky;
+  position: fixed;
   bottom: 0;
+  left: 0;
+  right: 0;
   z-index: 100;
 }
 

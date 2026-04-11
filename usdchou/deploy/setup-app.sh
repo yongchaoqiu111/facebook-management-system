@@ -33,7 +33,7 @@ npm install --production
 if [ ! -f .env ]; then
     echo "创建 .env 配置文件..."
     cat > .env << EOF
-PORT=5000
+PORT=3000
 MONGODB_URI=mongodb://localhost:27017/usdchou
 JWT_SECRET=usdchou_secret_key_$(date +%s)
 NODE_ENV=production
@@ -93,7 +93,7 @@ server {
     
     # 后端 API 代理
     location /api/ {
-        proxy_pass http://localhost:5000;
+        proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -106,7 +106,7 @@ server {
     
     # WebSocket 支持
     location /socket.io/ {
-        proxy_pass http://localhost:5000;
+        proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";

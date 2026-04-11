@@ -1,5 +1,10 @@
 <template>
   <div class="chat-container">
+    <!-- ✅ 顶部退出按钮（固定漂浮） -->
+    <button class="floating-exit-btn" @click="goBack" title="退出聊天">
+      ← 退出
+    </button>
+
     <!-- 聊天头部 -->
     <ChatHeader 
       :contact="currentContact"
@@ -16,14 +21,7 @@
       :wait-countdown="chainWaitCountdown"
     />
     
-    <!-- ✅ 调试信息：显示原始数据 -->
-    <div style="background: #fff3cd; padding: 10px; margin: 10px; border-radius: 8px; font-size: 12px;">
-      <div><strong>🔍 调试信息：</strong></div>
-      <div>chainGroupInfo: {{ JSON.stringify(chainGroupInfo) }}</div>
-      <div>memberInfo: {{ JSON.stringify(chainGroupInfo?.memberInfo) }}</div>
-      <div>totalReceived: {{ chainGroupInfo?.memberInfo?.totalReceived }}</div>
-      <div>kickThreshold: {{ chainGroupInfo?.kickThreshold }}</div>
-    </div>
+
 
     <!-- 消息列表 -->
     <MessageList
@@ -259,6 +257,11 @@ onMounted(() => {
   unsubscribeMyRedPacketResult = messageCenter.onMyRedPacketResult((data) => {
     console.log('🎉 我抢到了红包:', data)
     showMyResult(data)
+    
+    // 🔄 刷新接龙群信息（更新 totalReceived）
+    if (chatId) {
+      loadChainGroupInfo(chatId)
+    }
   })
   
   // ✅ 监听被踢出群组事件（由 MessageCenter 触发）
@@ -395,16 +398,48 @@ async function handleSendRedPacket(redPacketData) {
 
 <style scoped>
 .chat-container {
-  height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
   background: #f5f5f5;
+  overflow: visible;
+  position: relative;
 }
 
+/* ✅ 顶部退出按钮样式 */
+.floating-exit-btn {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.floating-exit-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+  transform: scale(1.05);
+}
+
+.floating-exit-btn:active {
+  transform: scale(0.95);
+}
+
+/* ✅ 消息列表容器（由 MessageList 组件内部管理滚动） */
 .chat-messages {
   flex: 1;
-  overflow-y: auto;
-  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;  /* ✅ 禁止外层滚动 */
 }
 </style>
 

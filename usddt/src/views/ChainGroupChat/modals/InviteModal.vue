@@ -55,6 +55,9 @@
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 
+// ✅ API 基础 URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
+
 const props = defineProps({
   groupId: {
     type: String,
@@ -72,7 +75,7 @@ const sending = ref(false)
 const loadFriends = async () => {
   try {
     const token = localStorage.getItem('token')
-    const response = await axios.get('http://localhost:5000/api/friends', {
+    const response = await axios.get(`${API_BASE_URL}/friends`, {
       headers: { Authorization: `Bearer ${token}` }
     })
     friends.value = response.data.data || []
@@ -98,7 +101,7 @@ const sendInvitations = async () => {
   sending.value = true
   try {
     const token = localStorage.getItem('token')
-    await axios.post('http://localhost:5000/api/chain-groups/invite', {
+    await axios.post(`${API_BASE_URL}/chain-groups/invite`, {
       groupId: props.groupId,
       inviteeIds: selectedFriends.value,
       expireDays: 7

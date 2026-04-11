@@ -1,23 +1,251 @@
-请建立并严格执行一套基于“虚拟员工”架构的分布式任务分配与开发工作流。具体配置、规范及执行流程如下：
+最终可用代码（完美解决 iPhone 底部导航被遮挡）
+1. 先给 index.html 加这句（必须）
+html
+预览
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+2. 你的底部导航 Vue 组件（直接复制）
+vue
+<template>
+  <!-- 底部导航外层包装 -->
+  <div class="nav-wrapper">
+    <!-- 你的底部导航 -->
+    <div class="bottom-nav">
+      <div>HOME</div>
+      <div>Contacts</div>
+      <div>Wallet</div>
+      <div>Profile</div>
+    </div>
+  </div>
+</template>
 
-1. **团队结构与目录映射**：
-   - **前端团队（3人）**：分别对应目录 ​D:\weibo\usddt\1\​、​D:\weibo\usddt\2\​、​D:\weibo\usddt\3\​。
-   - **后端团队（2人）**：分别对应目录 ​D:\weibo\usdchou\1\​、​D:\weibo\usdchou\2\​。
-   - **指令载体**：每个员工目录下必须维护一个名为 `task.md` 的文件，作为该虚拟员工的专属任务指令板与进度记录表。
+<script setup>
+// 不用写任何 JS！纯 CSS 就能解决
+</script>
 
-2. **核心开发规范（需同步给所有虚拟员工）**：
-   - **通用标准**：所有员工需严格遵循项目现有的 API 接口文档（参考 ​API_接口文档.md​）与技术标准。
-   - **前端规范**：
-     - 技术栈：Vue 3 + Vite + Pinia + Socket.IO。
-     - 架构原则：坚持“少监听器、统一数据源”。优先使用 Pinia 进行全局状态管理，严禁在组件间使用复杂的 Event Bus 或冗余的 Watcher，确保数据流向清晰。
-   - **后端规范**：
-     - 技术栈：Express + Socket.IO + MongoDB + Redis。
-     - 架构原则：重点保障系统安全性（如严格的 JWT 校验、输入参数过滤）与高并发处理能力（如利用 Redis 缓存热点数据、使用异步队列处理耗时任务）。
+<style scoped>
+/*  wrapper 负责占位 + 安全区 */
+.nav-wrapper {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  background: #fff;
+  /* 核心：自动适配 iPhone 底部横条 */
+  padding-bottom: env(safe-area-inset-bottom);
+  box-sizing: border-box;
+  box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
+}
 
-3. **工作流执行步骤**：
-   - **第一步：分析与拆解**。接收我的需求后，首先分析技术难点与依赖关系，将其拆解为具体的前端（UI/交互/状态）或后端（接口/数据库/逻辑）子任务。
-   - **第二步：备份提醒与分配**。在指派任务前，**必须**明确提醒对应的虚拟员工：“在执行任何修改前，请先对相关文件或目录进行备份”。随后根据任务属性与复杂度，指派给最合适的虚拟员工。
-   - **第三步：写入指令**。将详细的执行步骤、关键代码片段、调试要求及规范约束写入对应员工目录下的 `task.md` 文件中。内容应包含：任务目标、涉及文件、具体修改点、备份检查项。
-   - **第四步：反馈待命**。指令写入完成后，仅回复“任务已分配”，等待我手动触发后续的执行或检查动作，不要自动开始编码。
+/* 导航内容 */
+.bottom-nav {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  height: 50px; /* 导航高度 */
+}
+</style>
+3. 最关键：解决 “键盘弹起挡住底部导航”
+iPhone 键盘弹起时，fixed 底部导航会被键盘盖住，这是系统行为，我们只需要加一句 CSS 就能解决：
+css
+/* 全局 CSS 加这个 */
+body {
+  height: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+4. 如果你页面有输入框（防止键盘挡住导航）
+加一个超级简单的 Vue 指令即可，自动让底部导航在键盘弹出时隐藏：
+vue
+<input 
+  type="text" 
+  @focus="showNav = false" 
+  @blur="showNav = true" 
+>
 
-请确认你已完全理解此工作流及开发规范，并准备好接收第一个任务。
+<div v-if="showNav" class="nav-wrapper">...</div>
+
+<script setup>
+import { ref } from 'vue'
+const showNav = ref(true)
+</script>
+为什么你之前会被挡住？（3 个原因）
+没加 safe-area-inset-bottom → 被 iPhone 底部横条挡住
+没加 viewport-fit=cover → 被浏览器边缘挡住
+iOS 键盘不会压缩视口 → 直接盖住 fixed 元素
+你现在复制这 3 样东西，100% 解决
+index.html 的 viewport
+我给的 .nav-wrapper 样式
+全局 body 样式
+iPhone 所有机型、Safari / Chrome / 微信浏览器 全部完美适配！
+
+
+
+在 Vue 3 + iPhone 场景下，底部固定输入框被键盘挡住，核心原因是：iOS Safari 键盘弹出时，不会压缩视口（window.innerHeight 不变），而是直接覆盖在页面上，导致 fixed 在底部的输入框被遮住。
+下面给你 4 套可直接复制的 Vue 3 方案（从简单到稳定），优先用 方案 1 + 方案 4 组合。
+方案 1：focus 延迟 + scrollIntoView（最常用、最简单）
+原理：输入框聚焦后，延迟 300ms 等键盘动画完成，再把输入框滚到可视区。
+vue
+<template>
+  <div class="page">
+    <!-- 内容区 -->
+    <div class="content" />
+
+    <!-- 底部输入框 -->
+    <div class="footer-input">
+      <input
+        type="text"
+        placeholder="输入消息"
+        @focus="handleFocus"
+        @blur="handleBlur"
+      />
+    </div>
+  </div>
+</template>
+
+<script setup>
+const handleFocus = (e) => {
+  // 延迟 300ms 等键盘弹出
+  setTimeout(() => {
+    e.target.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest', // 就近滚动，不强行顶到顶部
+      inline: 'nearest'
+    })
+  }, 300)
+}
+
+const handleBlur = () => {
+  // 可选：键盘收起时复位滚动
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+</script>
+
+<style scoped>
+.page {
+  height: 100%;
+}
+.content {
+  height: calc(100% - 60px);
+  overflow-y: auto;
+}
+.footer-input {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 60px;
+  background: #fff;
+  padding: 10px 16px;
+  box-sizing: border-box;
+  /* 适配 iPhone 底部横条 */
+  padding-bottom: calc(10px + env(safe-area-inset-bottom));
+}
+input {
+  width: 100%;
+  height: 40px;
+  border-radius: 20px;
+  border: 1px solid #eee;
+  padding: 0 12px;
+}
+</style>
+方案 2：监听 visualViewport（iOS 最精准）
+原理：用 window.visualViewport 监听键盘高度，动态给 body 加下内边距，把页面顶上去。
+vue
+<script setup>
+import { onMounted, onUnmounted } from 'vue'
+
+onMounted(() => {
+  const visualViewport = window.visualViewport
+  if (!visualViewport) return
+
+  const handleResize = () => {
+    const offset = visualViewport.offsetTop || 0
+    // 键盘高度 = 原始高度 - 当前可视高度
+    const keyboardHeight = window.innerHeight - visualViewport.height
+    document.body.style.paddingBottom = `${keyboardHeight + offset}px`
+  }
+
+  visualViewport.addEventListener('resize', handleResize)
+  visualViewport.addEventListener('scroll', handleResize)
+
+  onUnmounted(() => {
+    visualViewport.removeEventListener('resize', handleResize)
+    visualViewport.removeEventListener('scroll', handleResize)
+    document.body.style.paddingBottom = ''
+  })
+})
+</script>
+方案 3：fixed 底部 + 动态 bottom（聊天页常用）
+原理：把固定 bottom:0 改成动态 bottom，键盘弹出时抬高输入框。
+vue
+<template>
+  <div class="footer-input" :style="{ bottom: keyboardHeight + 'px' }">
+    <input type="text" @focus="handleFocus" @blur="handleBlur" />
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+const keyboardHeight = ref(0)
+
+const handleFocus = () => {
+  setTimeout(() => {
+    // 估算 iPhone 键盘高度（可根据机型微调）
+    keyboardHeight.value = /iPhone/.test(navigator.userAgent) ? 280 : 240
+  }, 300)
+}
+
+const handleBlur = () => {
+  keyboardHeight.value = 0
+}
+</script>
+
+<style>
+.footer-input {
+  position: fixed;
+  left: 0;
+  width: 100%;
+  transition: bottom 0.2s ease; /* 平滑动画 */
+}
+</style>
+方案 4：HTML 根配置（必须加）
+1）viewport meta（防止页面放大、兼容安全区）
+html
+预览
+<!-- index.html -->
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0,
+  maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+>
+2）CSS 全局适配 iPhone 安全区
+css
+/* style.css */
+body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  /* 兼容底部横条 */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+常见坑与避坑
+不要用 100vh
+iOS 键盘弹出时 100vh 不变，会导致布局错乱。
+css
+/* ❌ 坏 */
+.page { height: 100vh; }
+/* ✅ 好 */
+html, body { height: 100%; }
+.page { height: 100%; }
+fixed 父级不要有 transform
+父元素有 transform 会让 fixed 相对于父级而非视口。
+scrollIntoView 必须延迟
+直接在 focus 调用会被键盘动画覆盖，必须 setTimeout 300ms。
+推荐组合（最稳）
+页面加 方案 4（viewport + safe-area）
+输入框用 方案 1（focus 延迟 scrollIntoView）
+聊天 / 长列表页再加 方案 2（visualViewport 监听）

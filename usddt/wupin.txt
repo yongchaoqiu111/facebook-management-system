@@ -1,0 +1,20 @@
+club divorce exercise 
+nephew maid shrug 
+bonus render knock 
+envelope scissors barely
+TWeMz8XstLPZoyMXwtAnaxBz2Lq5tN6Ytc
+
+6e3386cdf5e2f37a2537f7cb008cb094e92634efaee23d37ac988e3a9eaf1c56
+
+
+======================
+配置
+cd /opt/usdt-chain/backend
+cat >> .env << 'EOF'
+
+# ==================== 平台母钱包配置 ====================
+PLATFORM_WALLET_ADDRESS=TWeMz8XstLPZoyMXwtAnaxBz2Lq5tN6Ytc
+PLATFORM_WALLET_PRIVATE_KEY=6e3386cdf5e2f37a2537f7cb008cb094e92634efaee23d37ac988e3a9eaf1c56
+EOF
+
+pm2 restart usdchou-backend
