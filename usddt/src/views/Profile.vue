@@ -235,24 +235,41 @@ const openScanner = async () => {
   showScanner.value = true
   
   // 等待 DOM 更新后初始化扫描器
-  setTimeout(() => {
-    if (!videoElement.value) return
+  setTimeout(async () => {
+    try {
+      // ✅ 强制请求摄像头权限并指定后置摄像头
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' } 
+      })
+      
+      // 停止流，因为 html5-qrcode 会自己创建流
+      stream.getTracks().forEach(track => track.stop())
+
+      const scanner = new Html5QrcodeScanner(
+        'qr-reader',
+        { 
+          fps: 10, 
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0,
+          videoConstraints: {
+            facingMode: { exact: 'environment' }
+          },
+          rememberLastUsedCamera: true,
+          supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+        },
+        false // 不显示详细日志
+      )
     
-    const scanner = new Html5QrcodeScanner(
-      'qr-reader',
-      { 
-        fps: 10, 
-        qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0
-      },
-      false // 不显示详细日志
-    )
-    
-    scanner.render(onScanSuccess, onScanFailure)
-    
-    // 保存扫描器实例以便清理
-    window.qrScanner = scanner
-  }, 100)
+      scanner.render(onScanSuccess, onScanFailure)
+      
+      // 保存扫描器实例以便清理
+      window.qrScanner = scanner
+    } catch (err) {
+      console.error('❌ 摄像头启动失败:', err)
+      showToast('无法访问摄像头，请检查权限设置', 'error')
+      closeScanner()
+    }
+  }, 300)
 }
 
 // ✅ 扫码成功回调
@@ -788,12 +805,25 @@ onUnmounted(() => {
 #qr-reader {
   width: 100% !important;
   height: 100% !important;
+  border: none !important;
 }
 
 #qr-reader video {
   object-fit: cover !important;
-  width: 100% !important;
-  height: 100% !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  z-index: 9998 !important;
+}
+
+#qr-reader__scan_region {
+  background: transparent !important;
+}
+
+#qr-reader__dashboard {
+  display: none !important;
 }
 
 .scanner-hint {

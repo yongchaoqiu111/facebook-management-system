@@ -4,8 +4,10 @@
 
 const PrivateMessageHandler = require('./privateMessageHandler');
 const GroupMessageHandler = require('./groupMessageHandler');
+const CallHandler = require('./callHandler');
 
 module.exports = {
   PrivateMessageHandler,
-  GroupMessageHandler
+  GroupMessageHandler,
+  CallHandler
 };

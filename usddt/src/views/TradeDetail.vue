@@ -93,10 +93,29 @@
           </div>
         </div>
         
-        <div class="balance-info">
-          <div class="balance-item">
-            <span class="balance-label">可用余额</span>
-            <span class="balance-value">${{ userBalance.toFixed(2) }}</span>
+        <!-- 我的交易记录 -->
+        <div class="my-trades-section">
+          <div class="section-title">我的交易记录</div>
+          <div class="my-trades-list">
+            <div 
+              v-for="(trade, index) in myTrades" 
+              :key="index"
+              class="my-trade-item"
+            >
+              <div class="my-trade-left">
+                <span :class="['trade-type-badge', trade.type]">
+                  {{ trade.type === 'buy' ? '+' : '-' }}
+                </span>
+                <span class="trade-time">{{ trade.time }}</span>
+              </div>
+              <div class="my-trade-right">
+                <span class="trade-amount">{{ trade.amount }} {{ symbol }}</span>
+                <span class="trade-price">${{ trade.price }}</span>
+              </div>
+            </div>
+            <div v-if="myTrades.length === 0" class="empty-trades">
+              暂无交易记录
+            </div>
           </div>
         </div>
       </div>
@@ -106,6 +125,43 @@
     <div class="action-section">
       <button class="buy-btn" @click="handleBuy">买入</button>
       <button class="sell-btn" @click="handleSell">卖出</button>
+    </div>
+
+    <!-- 添加好友弹窗 -->
+    <div class="add-friend-modal" v-if="showAddFriendModal" @click.self="showAddFriendModal = false">
+      <div class="add-friend-content">
+        <div class="modal-header">
+          <h3>添加好友</h3>
+          <button class="close-btn" @click="showAddFriendModal = false">✕</button>
+        </div>
+        <div class="search-section">
+          <input 
+            v-model="searchFriendId" 
+            type="text" 
+            placeholder="请输入好友ID"
+            class="search-input"
+            @keyup.enter="searchFriend"
+          />
+        </div>
+        <div class="friend-search-results">
+          <div 
+            v-for="friend in searchResults" 
+            :key="friend.id"
+            class="friend-result-item"
+            @click="addFriend(friend.id)"
+          >
+            <div class="friend-avatar">{{ friend.username?.charAt(0) || '?' }}</div>
+            <div class="friend-info">
+              <div class="friend-name">{{ friend.username }}</div>
+              <div class="friend-id">ID: {{ friend.id }}</div>
+            </div>
+            <button class="add-btn">添加</button>
+          </div>
+          <div v-if="searchResults.length === 0 && searchFriendId" class="no-results">
+            未找到该用户
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 交易弹窗 -->
@@ -136,9 +192,14 @@
             <span>${{ estimatedAmount.toFixed(2) }}</span>
           </div>
 
-          <div class="balance-info">
+          <div class="balance-info" v-if="tradeType === 'buy'">
             <span>可用余额:</span>
             <span>${{ userBalance.toFixed(2) }}</span>
+          </div>
+
+          <div class="balance-info" v-else>
+            <span>持有数量:</span>
+            <span>{{ currentHolding.toFixed(4) }} {{ symbol }}</span>
           </div>
 
           <button 
@@ -161,6 +222,8 @@ import { useMarketStore } from '@/stores/marketStore'
 import { useUserStore } from '@/stores/userStore'
 import { showToast } from '@/utils/toast'
 import { createChart, CandlestickSeries } from 'lightweight-charts'
+import { getSocket } from '@/socket'
+import { getTradeRecords } from '@/utils/chatStorage'
 
 const route = useRoute()
 const router = useRouter()
@@ -173,12 +236,18 @@ const showTradeModal = ref(false)
 const tradeType = ref('buy')
 const tradeAmount = ref(0)
 
+const socket = getSocket()
+
 // ✅ 使用 store 中的余额
 const userBalance = computed(() => userStore.balance)
+const userId = computed(() => userStore.userInfo?.id || '')
 const chartRef = ref(null)
 const chart = ref(null)
 const candlestickSeries = ref(null)
 const activeTab = ref('chart')
+
+// ✅ 我的交易记录（IndexedDB）
+const myTrades = ref([])
 
 const tabs = [
   { id: 'chart', name: '图表' },
@@ -218,6 +287,77 @@ const currentHolding = computed(() => {
   return marketStore.holdings?.[symbol.value] || 0
 })
 
+// ✅ 加载我的交易记录
+const loadMyTrades = async () => {
+  if (!userId.value) return
+  
+  try {
+    const trades = await getTradeRecords(userId.value, 50)
+    // 筛选当前币种的交易
+    myTrades.value = trades
+      .filter(t => t.symbol === symbol.value)
+      .slice(0, 5) // 只展示5条
+      .map(t => ({
+        time: new Date(t.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        type: t.type,
+        amount: t.amount.toFixed(4),
+        price: t.price.toFixed(2)
+      }))
+  } catch (error) {
+    console.error('❌ [TradeDetail] 加载交易记录失败:', error)
+  }
+}
+
+// 搜索好友
+const searchFriend = () => {
+  if (!searchFriendId.value.trim()) {
+    showToast('请输入好友ID', 'warning')
+    return
+  }
+  
+  showToast('🔍 搜索中...', 'info')
+  
+  socket.emit('searchUser', { userId: searchFriendId.value.trim() }, (response) => {
+    if (response && response.success && response.data) {
+      searchResults.value = Array.isArray(response.data) ? response.data : [response.data]
+    } else {
+      searchResults.value = []
+      showToast(response?.message || '未找到该用户', 'warning')
+    }
+  })
+}
+
+// 添加好友
+const addFriend = (friendId) => {
+  if (!friendId) {
+    showToast('好友ID无效', 'error')
+    return
+  }
+  
+  showToast('📨 发送好友请求...', 'info')
+  
+  socket.emit('addFriend', { friendId, message: '来自交易详情页' }, (response) => {
+    if (response && response.success) {
+      showToast('✅ 好友请求已发送', 'success')
+      showAddFriendModal.value = false
+      searchFriendId.value = ''
+      searchResults.value = []
+    } else {
+      showToast(response?.message || '添加失败', 'error')
+    }
+  })
+}
+
+// 监听搜索输入
+watch(searchFriendId, (newVal) => {
+  if (newVal.trim()) {
+    searchFriend()
+  } else {
+    searchResults.value = []
+  }
+})
+
+// 指示器样式
 const indicatorStyle = computed(() => {
   const index = tabs.findIndex(tab => tab.id === activeTab.value)
   return {
@@ -227,8 +367,11 @@ const indicatorStyle = computed(() => {
   }
 })
 
-// 模拟最近交易记录
-const recentTrades = computed(() => {
+// ✅ 真实交易记录（初始为空，通过WebSocket实时更新）
+const recentTrades = ref([])
+
+// 模拟历史数据（用于页面首次加载）
+const generateMockTrades = () => {
   const trades = []
   const basePrice = coinData.value?.price || 100
   const now = new Date()
@@ -249,7 +392,7 @@ const recentTrades = computed(() => {
   }
   
   return trades
-})
+}
 
 const switchTab = (tabId) => {
   activeTab.value = tabId
@@ -471,17 +614,60 @@ const executeTrade = async () => {
     return
   }
   
-  showToast(`${tradeType.value === 'buy' ? '买入' : '卖出'}请求已发送`, 'info')
+  showToast('⏳ 交易处理中...', 'info')
   
   closeTradeModal()
 }
 
 onMounted(() => {
   initChart()
+  
+  // 初始化模拟数据
+  recentTrades.value = generateMockTrades()
+  
+  // 加载我的交易记录
+  loadMyTrades()
+  
+  // 监听交易成功
+  socket.on('tradeExecuted', (data) => {
+    // 只处理当前币种的交易
+    if (data.symbol === symbol.value) {
+      showToast(`✅ ${data.type === 'buy' ? '买入' : '卖出'}成功: ${data.amount} ${data.symbol}`, 'success')
+      
+      // ✅ 添加到最新成交列表
+      const now = new Date()
+      const newTrade = {
+        time: now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        price: data.price.toFixed(2),
+        amount: data.amount.toFixed(2),
+        type: data.type
+      }
+      
+      // 插入到列表顶部
+      recentTrades.value.unshift(newTrade)
+      
+      // 保持最多50条记录
+      if (recentTrades.value.length > 50) {
+        recentTrades.value = recentTrades.value.slice(0, 50)
+      }
+      
+      // ✅ 刷新我的交易记录
+      loadMyTrades()
+    }
+  })
+  
+  // 监听交易失败
+  socket.on('tradeError', (data) => {
+    showToast(`❌ ${data.message}`, 'error')
+  })
 })
 
 onUnmounted(() => {
   chart.value?.remove()
+  
+  // 移除监听器
+  socket.off('tradeExecuted')
+  socket.off('tradeError')
 })
 
 // 监听当前币种的价格变化，实时更新K线
@@ -896,6 +1082,283 @@ watch(() => coinData.value?.price, (newPrice) => {
   font-size: 20px;
   font-weight: 600;
   color: #1f2937;
+}
+
+/* 我的交易记录样式 */
+.my-trades-section {
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  margin-top: 16px;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.my-trades-list {
+  max-height: 240px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #e5e7eb transparent;
+}
+
+.my-trades-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.my-trades-list::-webkit-scrollbar-thumb {
+  background-color: #e5e7eb;
+  border-radius: 2px;
+}
+
+.my-trade-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.my-trade-item:last-child {
+  border-bottom: none;
+}
+
+.my-trade-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trade-type-badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+}
+
+.trade-type-badge.buy {
+  background-color: #10b981;
+}
+
+.trade-type-badge.sell {
+  background-color: #ef4444;
+}
+
+.trade-time {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.my-trade-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.trade-amount {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.trade-price {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.empty-trades {
+  text-align: center;
+  padding: 24px;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+/* 添加好友弹窗样式 */
+.add-friend-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 16px;
+}
+
+.add-friend-content {
+  background: #fff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 400px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.search-section {
+  padding: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.search-input:focus {
+  border-color: #667eea;
+}
+
+.friend-search-results {
+  padding: 8px 16px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.friend-result-item {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.friend-result-item:active {
+  background-color: #f9fafb;
+}
+
+.friend-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.friend-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.friend-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f2937;
+  margin-bottom: 2px;
+}
+
+.friend-id {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.add-btn {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.add-btn:active {
+  transform: scale(0.95);
+  opacity: 0.9;
+}
+
+.no-results {
+  text-align: center;
+  padding: 24px;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+/* 搜索好友输入框 */
+.search-friend-section {
+  margin-top: 16px;
+}
+
+.search-row {
+  display: flex;
+  gap: 10px;
+}
+
+.search-friend-input {
+  flex: 1;
+  padding: 12px 14px;
+  border: 2px dashed #d1d5db;
+  border-radius: 10px;
+  background: #fafafa;
+  font-size: 15px;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.search-friend-input:hover {
+  border-color: #667eea;
+  background: #f5f3ff;
+}
+
+.search-friend-input:focus {
+  outline: none;
+  border-color: #667eea;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.add-friend-btn {
+  flex-shrink: 0;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.add-friend-btn:hover {
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  transform: translateY(-1px);
+}
+
+.add-friend-btn:active {
+  transform: scale(0.96);
 }
 
 .chart-container {

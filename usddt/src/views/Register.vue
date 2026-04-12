@@ -64,9 +64,13 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { userAPI } from '../api'
+import { useUserStore } from '@/stores/userStore'
+import { useFriendStore } from '@/stores/friendStore'
 import { showToast } from '@/utils/toast'  // 🆕 导入 Toast
 
 const router = useRouter()
+const userStore = useUserStore()
+const friendStore = useFriendStore()
 const username = ref('')
 const phone = ref('')
 const password = ref('')
@@ -141,6 +145,7 @@ const handleRegister = async () => {
       // 🆕 保存好友ID数组
       if (response.user.friendIds && Array.isArray(response.user.friendIds)) {
         localStorage.setItem('friendIds', JSON.stringify(response.user.friendIds))
+        friendStore.setFriendIds(response.user.friendIds) // 🆕 同步更新 friendStore
         console.log('👥 好友ID数组已保存:', response.user.friendIds)
       }
       

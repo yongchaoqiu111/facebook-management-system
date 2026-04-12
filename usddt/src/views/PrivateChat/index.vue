@@ -71,11 +71,11 @@
     
     <!-- ✅ 底部工具栏（透明，在 footer 外面） -->
     <div class="toolbar">
+      <button class="tool-icon" @click="startVoiceCall" title="语音通话">📞</button>
+      <button class="tool-icon" @click="startVideoCall" title="视频通话">📹</button>
       <button class="tool-icon" @click="showRedPacketModal = true" title="红包">🧧</button>
       <button class="tool-icon" title="图片">🖼️</button>
-      <button class="tool-icon" title="拍照">📷</button>
       <button class="tool-icon" title="表情">😎</button>
-      <button class="tool-icon" title="更多">➕</button>
     </div>
     
     <!-- 红包弹窗 -->
@@ -192,12 +192,46 @@ const toastRef = ref(null)
 
 // ✅ 订阅红包领取结果回调（统一事件监听）
 let unsubscribeMyRedPacketResult = null
-let unsubscribeBalanceUpdated = null  // ✅ 新增：监听余额变动（type=7）
-let unsubscribePrivateRedPacketSent = null  // ✅ 订阅私聊红包发送成功
 
 // ✅ 红包发送成功弹窗
 const showSendSuccessModal = ref(false)
 const sendSuccessData = ref({ amount: 0, to: '' })
+
+// 📞 音视频通话相关
+const startVoiceCall = () => {
+  console.log('📞 [PrivateChat] 发起语音通话')
+  const callId = generateCallId()
+  router.push({
+    path: '/call',
+    query: {
+      callId,
+      callerId: chatId,
+      callerName: contact.value.name,
+      callerAvatar: contact.value.avatar,
+      type: 'audio'
+    }
+  })
+}
+
+const startVideoCall = () => {
+  console.log('📹 [PrivateChat] 发起视频通话')
+  const callId = generateCallId()
+  router.push({
+    path: '/call',
+    query: {
+      callId,
+      callerId: chatId,
+      callerName: contact.value.name,
+      callerAvatar: contact.value.avatar,
+      type: 'video'
+    }
+  })
+}
+
+// 生成唯一通话 ID
+const generateCallId = () => {
+  return `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+}
 
 // ✅ 从 WebSocket 获取好友信息
 const socket = getSocket()
@@ -227,8 +261,7 @@ const {
   loadHistory,
   initSocketListeners,
   userBalance,
-  onMyRedPacketResult,  // ✅ 订阅红包领取结果
-  onPrivateRedPacketSent  // ✅ 订阅私聊红包发送成功
+  onMyRedPacketResult  // ✅ 订阅红包领取结果（本地弹窗用）
 } = useMessageCenter()
 
 const currentUserId = computed(() => localStorage.getItem('userId'))
@@ -572,56 +605,6 @@ onMounted(async () => {
     }, 3000)
   })
   
-  // ✅ 订阅私聊红包发送成功回调
-  unsubscribePrivateRedPacketSent = onPrivateRedPacketSent((data) => {
-    console.log('📤 [PrivateChat] 私聊红包发送成功:', data)
-    
-    // 显示发送成功弹窗
-    sendSuccessData.value = {
-      amount: data.amount,
-      to: contact.value.name || '好友'
-    }
-    showSendSuccessModal.value = true
-  })
-  
-  // ✅ 监听 balanceUpdated 事件（type=7 私聊红包收入）
-  if (socket) {
-    const handleBalanceUpdate = (data) => {
-      console.log('💰 [PrivateChat] 收到余额变动:', data)
-      
-      // ✅ type=7 表示私聊红包收入
-      if (data.type === 7) {
-        console.log('🧧 [PrivateChat] 私聊红包领取成功，金额:', data.amount)
-        
-        // 更新弹窗显示
-        if (currentRedPacket.value) {
-          currentRedPacket.value.opened = true
-          currentRedPacket.value.openedAmount = data.amount
-          
-          // 保存到 IndexedDB
-          saveMessages([currentRedPacket.value]).then(() => {
-            console.log('✅ 已更新红包状态到 IndexedDB')
-          })
-        }
-        
-        openedAmount.value = data.amount
-        opening.value = false
-        
-        // 3秒后自动关闭弹窗
-        setTimeout(() => {
-          closeRedPacketModal()
-        }, 3000)
-      }
-    }
-    
-    socket.on('balanceUpdated', handleBalanceUpdate)
-    
-    // 保存取消订阅函数
-    unsubscribeBalanceUpdated = () => {
-      socket.off('balanceUpdated', handleBalanceUpdate)
-    }
-  }
-  
   // 加载历史消息
   await loadHistory(chatId)
   
@@ -640,18 +623,6 @@ onUnmounted(() => {
   if (unsubscribeMyRedPacketResult) {
     unsubscribeMyRedPacketResult()
     unsubscribeMyRedPacketResult = null
-  }
-  
-  // ✅ 取消订阅余额变动回调
-  if (unsubscribeBalanceUpdated) {
-    unsubscribeBalanceUpdated()
-    unsubscribeBalanceUpdated = null
-  }
-  
-  // ✅ 取消订阅私聊红包发送成功回调
-  if (unsubscribePrivateRedPacketSent) {
-    unsubscribePrivateRedPacketSent()
-    unsubscribePrivateRedPacketSent = null
   }
 })
 </script>

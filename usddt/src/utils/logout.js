@@ -20,7 +20,9 @@ function clearLocalStorage() {
     'friendIds',
     'balances',
     'cryptoHoldings',
-    'userBalance'
+    'userBalance',
+    'walletInfo',  // 🆕 钱包信息
+    'depositAddress'  // 🆕 充值地址
   ]
   
   keysToRemove.forEach(key => {

@@ -1,5 +1,5 @@
 import { ref, reactive, computed } from 'vue'
-import { initSocket, getSocket, onGroupMessage, onGroupRedPacket, sendGroupMessage, onRedPacketReceived, onRedPacketUpdated } from '@/socket'
+import { initSocket, getSocket, onGroupMessage, onGroupRedPacket, sendGroupMessage, onRedPacketReceived, onRedPacketUpdated, onReceiveRedPacket, onPrivateRedPacketSent } from '@/socket'
 import { chainGroupAPI, redPacketAPI, chatAPI } from '@/api'
 import { saveMessages, getMessagesByChatId, saveBalanceChange, getUserBalanceChanges } from '@/utils/chatStorage'
 
@@ -438,6 +438,112 @@ export function useMessageCenter() {
       }
     })
     
+    // ✅ 监听私聊红包发送成功（发给发送方）
+    onPrivateRedPacketSent(async (data) => {
+      console.log('📤 [MessageCenter] 私聊红包发送成功:', data)
+      
+      const currentUserId = localStorage.getItem('userId')
+      const receiverId = data.receiverId
+      
+      if (!currentUserId || !receiverId) {
+        console.warn('⚠️ 私聊红包缺少必要字段:', data)
+        return
+      }
+      
+      // 构造红包消息
+      const now = new Date()
+      const time = now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes()
+      
+      const redPacketMessage = {
+        id: `pr_${Date.now()}`,
+        type: 'redPacket',
+        redPacketType: 'private',
+        amount: data.amount,
+        count: 1,
+        message: data.message || '恭喜发财，大吉大利',
+        opened: false,
+        expired: false,
+        redPacketId: data.redPacketId,
+        clientMsgId: data.redPacketId,
+        receiverId: receiverId,
+        chatId: receiverId,
+        timestamp: data.timestamp || Date.now(),
+        senderId: currentUserId,
+        isSelf: true,
+        time: time
+      }
+      
+      console.log('📦 [MessageCenter] 格式化后的私聊红包消息:', redPacketMessage)
+      
+      // 添加到对话
+      const conversationId = receiverId
+      addMessageToConversation(conversationId, redPacketMessage)
+      
+      // 保存到 IndexedDB
+      try {
+        await saveMessages([redPacketMessage])
+        console.log('💾 [MessageCenter] 私聊红包已保存到 IndexedDB')
+      } catch (error) {
+        console.error('❌ [MessageCenter] 保存私聊红包失败:', error)
+      }
+      
+      // 触发发送成功回调（显示成功弹窗）
+      redPacketCallbacks.onPrivateRedPacketSent.forEach(cb => cb({
+        amount: data.amount,
+        receiverId: receiverId,
+        redPacketId: data.redPacketId
+      }))
+    })
+    
+    // ✅ 监听接收私聊红包（发给接收方）
+    onReceiveRedPacket(async (data) => {
+      console.log('📥 [MessageCenter] 收到私聊红包:', data)
+      
+      const currentUserId = localStorage.getItem('userId')
+      const senderId = data.sender?.userId || data.senderId
+      
+      if (!senderId) {
+        console.warn('⚠️ 接收红包缺少 senderId:', data)
+        return
+      }
+      
+      // 构造红包消息
+      const now = new Date()
+      const time = now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes()
+      
+      const redPacketMessage = {
+        id: `pr_${Date.now()}`,
+        type: 'redPacket',
+        redPacketType: data.type || 'private',
+        amount: data.amount,
+        count: data.count || 1,
+        message: data.message || '恭喜发财，大吉大利',
+        opened: false,
+        expired: false,
+        redPacketId: data.redPacketId,
+        clientMsgId: data.redPacketId,
+        chatId: senderId,
+        timestamp: data.timestamp || Date.now(),
+        senderId: senderId,
+        isSelf: false,
+        time: time
+      }
+      
+      console.log('📦 [MessageCenter] 格式化后的接收红包消息:', redPacketMessage)
+      
+      // 添加到对话（conversationId = 对方ID）
+      const conversationId = senderId
+      addMessageToConversation(conversationId, redPacketMessage)
+      
+      // 保存到 IndexedDB
+      try {
+        await saveMessages([redPacketMessage])
+        console.log('💾 [MessageCenter] 接收红包已保存到 IndexedDB')
+      } catch (error) {
+        console.error('❌ [MessageCenter] 保存接收红包失败:', error)
+      }
+    })
+    
     // ✅ 监听红包领取结果（发给当前用户）
     onRedPacketReceived((data) => {
       console.log('🎉 [MessageCenter] 我领取了红包:', data)
@@ -526,16 +632,6 @@ export function useMessageCenter() {
       }
     } else {
       console.log('ℹ️ [MessageCenter] 公开群，跳过 IndexedDB 保存')
-    }
-
-    // 6. ✅ 如果是自己发送的私聊红包，触发发送成功回调
-    if (messageType === 'privateRedPacket' && message.isSelf) {
-      console.log('📤 [MessageCenter] 私聊红包发送成功，通知页面')
-      redPacketCallbacks.onPrivateRedPacketSent.forEach(cb => cb({
-        amount: message.amount,
-        receiverId: message.receiverId,
-        redPacketId: message.redPacketId
-      }))
     }
 
     console.log(`✅ 消息已处理: ${conversationId}`, message)
@@ -813,6 +909,9 @@ export function useMessageCenter() {
     
     const description = typeDescriptions[data.type] || `其他(${data.type})`
     
+    // ✅ 防御性处理：确保 timestamp 有效
+    const ts = data.timestamp ? (typeof data.timestamp === 'number' ? data.timestamp * 1000 : Date.parse(data.timestamp)) : Date.now()
+    
     // 记录到账单列表
     const balanceRecord = {
       id: `balance_${Date.now()}`,
@@ -822,7 +921,7 @@ export function useMessageCenter() {
       reason: description,
       newBalance: data.newBalance,
       groupId: data.groupId,
-      timestamp: new Date(data.timestamp * 1000).toISOString()
+      timestamp: new Date(ts).toISOString()
     }
     
     balanceChanges.value.push(balanceRecord)

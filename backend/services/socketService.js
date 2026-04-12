@@ -8,7 +8,7 @@ const Group = require('../models/Group');
 const messageCache = require('./messageCache');
 const redisClient = require('../config/redis');
 const logger = require('../config/logger');
-const { PrivateMessageHandler, GroupMessageHandler } = require('./socketHandlers');
+const { PrivateMessageHandler, GroupMessageHandler, CallHandler } = require('./socketHandlers');
 const UnifiedMessageHandler = require('./unifiedMessageHandler');
 
 class SocketService {
@@ -30,6 +30,7 @@ class SocketService {
     this.privateMessageHandler = new PrivateMessageHandler(this);
     this.groupMessageHandler = new GroupMessageHandler(this);
     this.unifiedMessageHandler = new UnifiedMessageHandler(this);
+    this.callHandler = new CallHandler(this);
 
     this.initialize();
   }
@@ -197,7 +198,29 @@ class SocketService {
         logger.info(`📤 已推送好友列表给用户 ${userId}: ${friends.length} 个`);
       } catch (err) {
         logger.error('❌ 获取好友列表失败:', err);
+        socket.emit('errorMessage', { msg: '获取好友列表失败' });
       }
+    });
+
+    // 📞 WebRTC 通话信令
+    socket.on('call:start', async (data) => {
+      await this.callHandler.handleCallStart(socket, userId, data);
+    });
+
+    socket.on('call:accept', async (data) => {
+      await this.callHandler.handleCallAccept(socket, userId, data);
+    });
+
+    socket.on('call:reject', async (data) => {
+      await this.callHandler.handleCallReject(socket, userId, data);
+    });
+
+    socket.on('call:hangup', async (data) => {
+      await this.callHandler.handleCallHangup(socket, userId, data);
+    });
+
+    socket.on('call:ice-candidate', async (data) => {
+      await this.callHandler.handleIceCandidate(socket, userId, data);
     });
 
     // 🔥 创建六合红包

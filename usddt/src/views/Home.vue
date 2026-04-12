@@ -2,6 +2,22 @@
   <div class="home-container">
     <!-- 内容区域 -->
     <main class="content">
+      <!-- 搜索框 -->
+      <div class="search-section">
+        <div class="search-row">
+          <input 
+            type="text" 
+            class="search-input" 
+            v-model="searchKeyword"
+            placeholder="搜索"
+            style="text-align: center;"
+          >
+          <button class="add-group-btn" @click="navigate('/create-chain-group')">
+            +
+          </button>
+        </div>
+      </div>
+      
       <!-- 消息列表 -->
       <div class="contacts-container">
         <!-- 🌟 群组列表 -->
@@ -125,14 +141,14 @@
       </div>
     </div>
     
-    <!-- 🐉 接龙群确认弹窗 -->
-    <div v-if="showChainConfirmModal && selectedChainGroup" class="modal-overlay" @click="showChainConfirmModal = false">
-      <div class="modal-content chain-confirm-modal" @click.stop>
-        <div class="modal-header">
+    <!-- 🐉 接龙群确认卡片 - 底部弹出 -->
+    <div v-if="showChainConfirmModal && selectedChainGroup" class="chain-modal-overlay" @click="showChainConfirmModal = false">
+      <div class="chain-modal-content" @click.stop>
+        <div class="chain-modal-header">
           <h3>🐉 加入接龙群</h3>
-          <button class="close-btn" @click="showChainConfirmModal = false; selectedChainGroup = null">✕</button>
+          <button class="chain-close-btn" @click="showChainConfirmModal = false; selectedChainGroup = null">✕</button>
         </div>
-        <div class="modal-body">
+        <div class="chain-modal-body">
           <div class="group-summary">
             <div class="group-name-large">{{ selectedChainGroup.name }}</div>
           </div>
@@ -175,7 +191,7 @@
             </ul>
           </div>
         </div>
-        <div class="modal-footer">
+        <div class="chain-modal-footer">
           <button class="btn-cancel" @click="showChainConfirmModal = false; selectedChainGroup = null">取消</button>
           <button class="btn-confirm" @click="confirmJoinChainGroup" :disabled="joiningChain">
             {{ joiningChain ? '处理中...' : '我同意并加入' }}
@@ -945,6 +961,62 @@ const createGroup = async () => {
   padding-bottom: calc(20px + env(safe-area-inset-bottom));
 }
 
+/* 搜索框 */
+.search-section {
+  padding: 10px 20px 15px;
+}
+
+.search-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.search-input {
+  flex: 1;
+  width: auto;
+  padding: 12px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fafafa;
+  font-size: 15px;
+  color: #6b7280;
+  text-align: center;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.search-input:focus {
+  border-color: #667eea;
+  background: #ffffff;
+}
+
+.add-group-btn {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  font-size: 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.add-group-btn:hover {
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  transform: translateY(-1px);
+}
+
+.add-group-btn:active {
+  transform: scale(0.96);
+}
+
 /* 头部导航 */
 .header {
   background: white;
@@ -1353,6 +1425,76 @@ const createGroup = async () => {
   border-top: 1px solid #e0e0e0;
   display: flex;
   gap: 12px;
+}
+
+/* 🐉 接龙群确认卡片 - 底部弹出样式 */
+.chain-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+}
+
+.chain-modal-content {
+  background: white;
+  border-radius: 24px 24px 0 0;
+  max-width: 100%;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease-out;
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.chain-modal-header {
+  padding: 20px;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 10;
+}
+
+.chain-modal-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.chain-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #999;
+  padding: 4px;
+  line-height: 1;
+}
+
+.chain-close-btn:active {
+  color: #666;
+}
+
+.chain-modal-body {
+  padding: 20px;
 }
 
 .btn-cancel, .btn-confirm {

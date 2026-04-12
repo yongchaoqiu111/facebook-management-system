@@ -102,6 +102,7 @@ const receiptRoutes = require('./routes/receipts');
 const liuheRoutes = require('./routes/liuhe');
 const lotteryRoutes = require('./routes/lottery');
 const chainGroupsRoutes = require('./routes/chainGroups');
+const macroRoutes = require('./routes/macro');
 const messageCache = require('./services/messageCache');
 
 app.use('/api/auth', authRoutes);
@@ -117,6 +118,7 @@ app.use('/api/receipts', receiptRoutes);
 app.use('/api/liuhe', liuheRoutes);
 app.use('/api/lottery', lotteryRoutes);
 app.use('/api/chain-groups', chainGroupsRoutes);
+app.use('/api/macro', macroRoutes);
 
 // 📡 联调监控页面
 app.get('/chat-monitor', (req, res) => {

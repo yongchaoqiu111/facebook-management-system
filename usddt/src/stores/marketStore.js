@@ -118,6 +118,28 @@ export const useMarketStore = defineStore('market', () => {
         })
         // 本地持久化
         localStorage.setItem('cryptoHoldings', JSON.stringify(holdings.value))
+        
+        // 🆕 同步更新 balances 对象（各币种余额）
+        const balancesKeyMap = {
+          'BTC': 'btcBalance',
+          'ETH': 'ethBalance',
+          'BNB': 'bnbBalance',
+          'SOL': 'solBalance',
+          'XRP': 'xrpBalance'
+        }
+        
+        const cachedBalances = JSON.parse(localStorage.getItem('balances') || '{}')
+        const updatedBalances = { ...cachedBalances }
+        
+        Object.entries(data.holdings).forEach(([symbol, amount]) => {
+          const key = balancesKeyMap[symbol.toUpperCase()]
+          if (key) {
+            updatedBalances[key] = amount
+          }
+        })
+        
+        localStorage.setItem('balances', JSON.stringify(updatedBalances))
+        console.log('✅ [marketStore] balances 已更新:', updatedBalances)
       }
     })
     

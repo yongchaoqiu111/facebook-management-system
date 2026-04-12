@@ -223,6 +223,13 @@ export const onRedPacketExceeded = (callback) => {
   }
 }
 
+// 监听私聊红包发送成功（发给发送方）
+export const onPrivateRedPacketSent = (callback) => {
+  if (socket) {
+    socket.on('redPacketSent', callback)
+  }
+}
+
 
 
 // 监听用户输入
@@ -357,6 +364,97 @@ export const onFriendRemoved = (callback) => {
 export const onFriendListUpdated = (callback) => {
   if (socket) {
     socket.on('friendListUpdated', callback)
+  }
+}
+
+// 📞 WebRTC 音视频通话信令
+
+// 发起通话
+export const startCall = (data) => {
+  if (socket) {
+    console.log('📞 [Socket] 发起通话:', data)
+    socket.emit('call:start', data)
+  } else {
+    console.error('❌ Socket未连接，无法发起通话')
+  }
+}
+
+// 接听通话
+export const acceptCall = (data) => {
+  if (socket) {
+    console.log('📞 [Socket] 接听通话:', data)
+    socket.emit('call:accept', data)
+  } else {
+    console.error('❌ Socket未连接，无法接听通话')
+  }
+}
+
+// 拒绝通话
+export const rejectCall = (data) => {
+  if (socket) {
+    console.log('📞 [Socket] 拒绝通话:', data)
+    socket.emit('call:reject', data)
+  } else {
+    console.error('❌ Socket未连接，无法拒绝通话')
+  }
+}
+
+// 挂断通话
+export const hangupCall = (data) => {
+  if (socket) {
+    console.log('📞 [Socket] 挂断通话:', data)
+    socket.emit('call:hangup', data)
+  } else {
+    console.error('❌ Socket未连接，无法挂断通话')
+  }
+}
+
+// 发送 ICE 候选
+export const sendIceCandidate = (data) => {
+  if (socket) {
+    socket.emit('call:ice-candidate', data)
+  }
+}
+
+// 监听来电
+export const onIncomingCall = (callback) => {
+  if (socket) {
+    socket.on('call:incoming', callback)
+  }
+}
+
+// 监听通话被接受
+export const onCallAccepted = (callback) => {
+  if (socket) {
+    socket.on('call:accepted', callback)
+  }
+}
+
+// 监听通话被拒绝
+export const onCallRejected = (callback) => {
+  if (socket) {
+    socket.on('call:rejected', callback)
+  }
+}
+
+// 监听通话挂断
+export const onCallHangup = (callback) => {
+  if (socket) {
+    socket.on('call:hangup', callback)
+  }
+}
+
+// 监听 ICE 候选
+export const onIceCandidate = (callback) => {
+  if (socket) {
+    socket.on('call:ice-candidate', callback)
+  }
+}
+
+// 监听通话错误
+export const onCallError = (callback) => {
+  if (socket) {
+    socket.on('call:error', callback)
   }
 }
 

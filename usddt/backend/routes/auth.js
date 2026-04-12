@@ -130,7 +130,7 @@ router.post('/register', [
         }
       };
 
-      jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' }, (err, token) => {
+      jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' }, async (err, token) => {
         if (err) throw err;
         
         // ✅ 注册成功，释放 Redis 锁
@@ -138,16 +138,45 @@ router.post('/register', [
           console.error('Failed to release register lock:', lockErr);
         });
         
-        sendSuccess(res, { 
-          token, 
-          user: { 
-            id: user.id,
-            userId: user.userId,
-            username: user.username, 
-            phone: user.phone, 
-            balance: user.balance 
-          } 
-        }, '注册成功');
+        try {
+          // 🚀 获取好友ID列表（新注册用户通常为空）
+          const Friend = require('../models/Friend');
+          const friends = await Friend.find({
+            $or: [
+              { user1: user.id, status: 'accepted' },
+              { user2: user.id, status: 'accepted' }
+            ]
+          });
+          
+          // 提取好友ID（排除自己）
+          const friendIds = friends.map(f => f.user1 === user.id ? f.user2 : f.user1);
+          
+          sendSuccess(res, { 
+            token, 
+            user: { 
+              id: user.id,
+              userId: user.userId,
+              username: user.username, 
+              phone: user.phone, 
+              balance: user.balance,
+              friendIds: friendIds // 🆕 返回好友ID列表
+            } 
+          }, '注册成功');
+        } catch (dbErr) {
+          console.error('❌ 获取好友列表失败:', dbErr.message);
+          // 即使获取好友失败，也返回注册成功
+          sendSuccess(res, { 
+            token, 
+            user: { 
+              id: user.id,
+              userId: user.userId,
+              username: user.username, 
+              phone: user.phone, 
+              balance: user.balance,
+              friendIds: []
+            } 
+          }, '注册成功');
+        }
       });
     } catch (err) {
       // ❌ 发生错误，释放 Redis 锁
@@ -214,33 +243,65 @@ router.post('/login', [
       }
     };
 
-    jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' }, (err, token) => {
+    jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' }, async (err, token) => {
       if (err) throw err;
       
-      // 🚀 处理多币种持仓数据
-      const holdings = {};
-      if (user.cryptoHoldings && user.cryptoHoldings instanceof Map) {
-        for (const [symbol, amount] of user.cryptoHoldings.entries()) {
-          holdings[symbol] = parseFloat(amount.toFixed(8));
+      try {
+        // 🚀 获取好友ID列表
+        const Friend = require('../models/Friend');
+        const friends = await Friend.find({
+          $or: [
+            { user1: user.id, status: 'accepted' },
+            { user2: user.id, status: 'accepted' }
+          ]
+        });
+        
+        // 提取好友ID（排除自己）
+        const friendIds = friends.map(f => f.user1 === user.id ? f.user2 : f.user1);
+        
+        // 🚀 处理多币种持仓数据
+        const holdings = {};
+        if (user.cryptoHoldings && user.cryptoHoldings instanceof Map) {
+          for (const [symbol, amount] of user.cryptoHoldings.entries()) {
+            holdings[symbol] = parseFloat(amount.toFixed(8));
+          }
+        } else if (user.cryptoHoldings && typeof user.cryptoHoldings === 'object') {
+          // 兼容普通对象的情况
+          Object.assign(holdings, user.cryptoHoldings);
         }
-      } else if (user.cryptoHoldings && typeof user.cryptoHoldings === 'object') {
-        // 兼容普通对象的情况
-        Object.assign(holdings, user.cryptoHoldings);
-      }
 
-      sendSuccess(res, { 
-        token, 
-        user: { 
-          id: user.id,
-          userId: user.userId,
-          username: user.username, 
-          phone: user.phone,
-          avatar: user.avatar,
-          balance: user.balance,
-          depositAddress: user.depositAddress,
-          cryptoHoldings: holdings // 🆕 返回所有币种的持仓余额
-        } 
-      }, '登录成功');
+        sendSuccess(res, { 
+          token, 
+          user: { 
+            id: user.id,
+            userId: user.userId,
+            username: user.username, 
+            phone: user.phone,
+            avatar: user.avatar,
+            balance: user.balance,
+            depositAddress: user.depositAddress,
+            cryptoHoldings: holdings, // 🆕 返回所有币种的持仓余额
+            friendIds: friendIds // 🆕 返回好友ID列表
+          } 
+        }, '登录成功');
+      } catch (dbErr) {
+        console.error('❌ 获取好友列表失败:', dbErr.message);
+        // 即使获取好友失败，也返回登录成功
+        sendSuccess(res, { 
+          token, 
+          user: { 
+            id: user.id,
+            userId: user.userId,
+            username: user.username, 
+            phone: user.phone,
+            avatar: user.avatar,
+            balance: user.balance,
+            depositAddress: user.depositAddress,
+            cryptoHoldings: {},
+            friendIds: []
+          } 
+        }, '登录成功');
+      }
     });
   } catch (err) {
     console.error(err.message);

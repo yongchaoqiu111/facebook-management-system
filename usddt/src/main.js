@@ -25,6 +25,7 @@ import ContactDetail from './views/ContactDetail.vue' // 👤 联系人详情
 import AdminRecharge from './views/AdminRecharge.vue' // 💰 管理员充值
 import Market from './views/Market.vue' // 📈 实时行情
 import TradeDetail from './views/TradeDetail.vue' // 📊 交易详情
+import Call from './views/Call.vue' // 📞 音视频通话
 
 // 路由配置
 const routes = [
@@ -45,7 +46,8 @@ const routes = [
   { path: '/chat/:id', component: PrivateChat }, // 📱 私聊
   { path: '/admin/recharge', component: AdminRecharge }, // 💰 管理员充值
   { path: '/market', component: Market }, // 📈 实时行情
-  { path: '/market/coin/:symbol', component: TradeDetail } // 📊 交易详情
+  { path: '/market/coin/:symbol', component: TradeDetail }, // 📊 交易详情
+  { path: '/call', component: Call } // 📞 音视频通话
 ]
 
 const router = createRouter({

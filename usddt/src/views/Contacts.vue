@@ -2,13 +2,15 @@
   <div class="contacts-container">
     <!-- 搜索框 -->
     <div class="search-section">
-      <input 
-        type="text" 
-        class="search-input" 
-        v-model="searchKeyword"
-        placeholder="搜索"
-        style="text-align: center;"
-      >
+      <div class="search-row">
+        <input 
+          type="text" 
+          class="search-input" 
+          v-model="searchKeyword"
+          placeholder="搜索"
+          style="text-align: center;"
+        >
+      </div>
     </div>
 
     <!-- 内容区域 -->
@@ -189,20 +191,37 @@ const fetchContacts = async () => {
     console.log('👥 [Contacts] 好友ID数组:', friendIds)
     
     if (friendIds.length > 0) {
+      // ✅ 确保所有 friendId 都是字符串（过滤无效数据）
+      const validFriendIds = friendIds
+        .filter(id => id)  // 过滤空值
+        .map(id => {
+          // 如果是对象，提取 id 或 _id 或 userId 字段
+          if (typeof id === 'object' && id !== null) {
+            return String(id.id || id._id || id.userId || '')
+          }
+          return String(id)
+        })
+        .filter(id => id.length > 0)  // 过滤空字符串
+      
+      console.log('✅ [Contacts] 清洗后的好友ID:', validFriendIds)
+      
       // 🆕 根据 ID 数组构建联系人列表（需要从 Store 或 API 获取详情）
-      const friends = friendIds.map(friendId => {
+      const friends = validFriendIds.map(friendId => {
+        // ✅ 确保 friendId 是字符串
+        const idStr = String(friendId)
+        
         // 尝试从 friendStore 获取详情
-        const detail = friendStore.getFriendDetail(friendId)
+        const detail = friendStore.getFriendDetail(idStr)
         
         // ✅ 从 localStorage 读取备注
         const cachedFriends = JSON.parse(localStorage.getItem('friendDetails') || '{}')
-        const remark = cachedFriends[friendId]?.remark
+        const remark = cachedFriends[idStr]?.remark
         
         return {
-          id: friendId,
-          name: remark || detail?.username || `用户${friendId.slice(-4)}`,
+          id: idStr,
+          name: remark || detail?.username || `用户${idStr.slice(-4)}`,
           avatar: detail?.avatar || '👤',
-          status: friendStore.onlineStatus[friendId] ? 'online' : 'offline',
+          status: friendStore.onlineStatus[idStr] ? 'online' : 'offline',
           unreadCount: 0
         }
       })
@@ -213,7 +232,7 @@ const fetchContacts = async () => {
       console.log('✅ [Contacts] 好友详情:', friends)
       
       // 🆕 批量获取缺失的好友详情
-      await friendStore.fetchFriendDetails(friendIds, async (ids) => {
+      await friendStore.fetchFriendDetails(validFriendIds, async (ids) => {
         // TODO: 调用 API 获取用户详情
         console.log('🌐 获取好友详情:', ids)
         return [] // 暂时返回空，后续实现
@@ -222,14 +241,17 @@ const fetchContacts = async () => {
       // 重新渲染（详情更新后）
       setTimeout(() => {
         const cachedFriends = JSON.parse(localStorage.getItem('friendDetails') || '{}')
-        const updatedFriends = friendIds.map(friendId => {
-          const detail = friendStore.getFriendDetail(friendId)
-          const remark = cachedFriends[friendId]?.remark
+        const updatedFriends = validFriendIds.map(friendId => {
+          // ✅ 确保 friendId 是字符串
+          const idStr = String(friendId)
+          
+          const detail = friendStore.getFriendDetail(idStr)
+          const remark = cachedFriends[idStr]?.remark
           return {
-            id: friendId,
-            name: remark || detail?.username || `用户${friendId.slice(-4)}`,
+            id: idStr,
+            name: remark || detail?.username || `用户${idStr.slice(-4)}`,
             avatar: detail?.avatar || '👤',
-            status: friendStore.onlineStatus[friendId] ? 'online' : 'offline',
+            status: friendStore.onlineStatus[idStr] ? 'online' : 'offline',
             unreadCount: 0
           }
         })
@@ -621,8 +643,15 @@ const rejectFriendRequest = async (request) => {
   z-index: 99;
 }
 
+.search-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
 .search-input {
-  width: 100%;
+  flex: 1;
+  width: auto;
   padding: 12px 16px;
   border: none;
   border-radius: 8px;
@@ -638,6 +667,32 @@ const rejectFriendRequest = async (request) => {
 
 .search-input:focus {
   background: transparent;
+}
+
+.add-friend-btn {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  font-size: 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.add-friend-btn:hover {
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  transform: translateY(-1px);
+}
+
+.add-friend-btn:active {
+  transform: scale(0.96);
 }
 
 /* 可能想认识的人 */

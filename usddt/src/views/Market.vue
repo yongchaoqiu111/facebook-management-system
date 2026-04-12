@@ -101,7 +101,7 @@
       >
         <div class="coin-left">
           <span class="star" :class="{ active: coin.starred }" @click.stop="toggleStar(coin)">★</span>
-          <div class="coin-icon" :style="{ background: getCoinColor(coin.symbol) }">
+          <div class="coin-icon" :style="{ background: getCoinColor(coin.symbol) }" @click.stop="showTradeModal(coin)">
             {{ getCoinIcon(coin.symbol) }}
           </div>
           <div class="coin-info">
@@ -118,7 +118,7 @@
       </div>
     </div>
 
-    <!-- 交易弹窗 -->
+    <!-- 交易弹窗 - 底部弹出 -->
     <div class="trade-modal" v-if="showModal" @click.self="closeModal">
       <div class="modal-content">
         <div class="modal-header">
@@ -188,9 +188,14 @@
             <span>${{ estimatedAmount.toFixed(2) }}</span>
           </div>
 
-          <div class="balance-info">
+          <div class="balance-info" v-if="tradeType === 'buy'">
             <span>可用余额:</span>
             <span>${{ userBalance.toFixed(2) }}</span>
+          </div>
+
+          <div class="balance-info" v-else>
+            <span>持有数量:</span>
+            <span>{{ currentHolding.toFixed(4) }} {{ selectedCoin?.symbol }}</span>
           </div>
 
           <button 
@@ -210,11 +215,13 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMarketStore } from '@/stores/marketStore'
+import { useUserStore } from '@/stores/userStore'
 import { showToast } from '@/utils/toast'
 import { macroAPI } from '@/api'
 
 const router = useRouter()
 const marketStore = useMarketStore()
+const userStore = useUserStore()
 const { marketData, holdings, initWebSocketListener, updateHolding, getTotalHoldingValue, executeTrade: executeTradeViaWS } = marketStore
 
 // 宏观数据
@@ -230,11 +237,18 @@ const macroData = ref({
 // 加载状态
 const loading = ref(false)
 
-const userBalance = ref(parseFloat(localStorage.getItem('userBalance') || '10000'))
+// ✅ 使用 userStore 的余额（响应式）
+const userBalance = computed(() => userStore.balance)
 const showModal = ref(false)
 const selectedCoin = ref(null)
 const tradeType = ref('buy')
 const tradeAmount = ref(0)
+
+// ✅ 持仓数量
+const currentHolding = computed(() => {
+  if (!selectedCoin.value) return 0
+  return marketStore.holdings?.[selectedCoin.value.symbol] || 0
+})
 
 const totalHoldingValue = computed(() => getTotalHoldingValue.value)
 const estimatedAmount = computed(() => {
@@ -264,17 +278,47 @@ const getCoinColor = (symbol) => {
   return colors[symbol] || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
 }
 
-// 获取宏观数据
+// 获取宏观数据（带缓存，12小时内不重复请求）
 const fetchMacroData = async () => {
   loading.value = true
   try {
+    // 1. 检查本地缓存
+    const cached = localStorage.getItem('macroData')
+    const cachedTime = localStorage.getItem('macroDataTime')
+    
+    if (cached && cachedTime) {
+      const timeDiff = Date.now() - parseInt(cachedTime)
+      const twelveHours = 12 * 60 * 60 * 1000 // 12小时
+      
+      // 缓存未过期（<12小时）
+      if (timeDiff < twelveHours) {
+        macroData.value = JSON.parse(cached)
+        console.log('📦 [Market] 使用缓存的宏观数据，剩余时间:', Math.floor((twelveHours - timeDiff) / 1000 / 60), '分钟')
+        loading.value = false
+        return
+      } else {
+        console.log('⏰ [Market] 缓存已过期，重新请求')
+      }
+    }
+    
+    // 2. 请求 API
     const response = await macroAPI.getMacroData()
     if (response) {
       macroData.value = response
-      console.log('📊 [Market] 宏观数据已加载:', macroData.value)
+      
+      // 3. 保存到本地缓存
+      localStorage.setItem('macroData', JSON.stringify(response))
+      localStorage.setItem('macroDataTime', Date.now().toString())
+      console.log('✅ [Market] 宏观数据已缓存')
     }
   } catch (error) {
     console.error('❌ [Market] 获取宏观数据失败:', error)
+    // 请求失败时使用缓存（如果有）
+    const cached = localStorage.getItem('macroData')
+    if (cached) {
+      macroData.value = JSON.parse(cached)
+      console.log('📦 [Market] 使用旧缓存数据')
+    }
   } finally {
     loading.value = false
   }
@@ -326,9 +370,9 @@ const navigateToCoinDetail = (symbol) => {
   router.push(`/market/coin/${symbol}`)
 }
 
-const showTradeModal = (coin) => {
+const showTradeModal = (coin, type) => {
   selectedCoin.value = coin || marketData.value[0]
-  tradeType.value = 'buy'
+  tradeType.value = type || 'buy'
   tradeAmount.value = 0
   showModal.value = true
 }
@@ -685,7 +729,7 @@ onMounted(() => {
   color: #ef4444;
 }
 
-/* 交易弹窗 */
+/* 交易弹窗 - 底部弹出 */
 .trade-modal {
   position: fixed;
   top: 0;
@@ -695,7 +739,7 @@ onMounted(() => {
   background: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: flex-end;
-  z-index: 1000;
+  z-index: 2000;
 }
 
 .modal-content {
@@ -707,6 +751,45 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #333;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #666;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+
+.close-btn:active {
+  color: #999;
 }
 
 /* 币种选择器 - 可上下滑动 */
@@ -797,36 +880,6 @@ onMounted(() => {
 
 .selector-change.negative {
   color: #ef4444;
-}
-
-@keyframes slideUp {
-  from {
-    transform: translateY(100%);
-  }
-  to {
-    transform: translateY(0);
-  }
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.modal-header h3 {
-  margin: 0;
-  font-size: 18px;
-  color: #fff;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 24px;
-  color: #666;
-  cursor: pointer;
 }
 
 .current-price {

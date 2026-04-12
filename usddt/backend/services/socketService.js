@@ -229,6 +229,11 @@ class SocketService {
       await this.handleCheckDeposit(socket, userId, data);
     });
 
+    // 💰 虚拟币交易执行
+    socket.on('executeTrade', async (data) => {
+      await this.handleExecuteTrade(socket, userId, data);
+    });
+
     // ========== 群聊相关 ==========
     
     // 发送群组消息（旧格式）
@@ -1549,6 +1554,113 @@ class SocketService {
     } catch (err) {
       logger.error('Check deposit error:', err);
       socket.emit('errorMessage', { msg: err.message });
+    }
+  }
+
+  /**
+   * 💰 处理虚拟币交易执行（市价单）
+   */
+  async handleExecuteTrade(socket, userId, data) {
+    const { symbol: rawSymbol, type, amount, price } = data;
+    const symbol = rawSymbol.toUpperCase(); // 🔥 统一转为大写，防止大小写不匹配
+    
+    logger.info(`💰 [交易请求] 用户 ${userId} ${type === 'buy' ? '买入' : '卖出'} ${amount} ${symbol} @ ${price}`);
+    
+    try {
+      const User = require('../models/User');
+      const TradeRecord = require('../models/TradeRecord');
+      const user = await User.findById(userId);
+      
+      if (!user) {
+        return socket.emit('tradeError', { message: '用户不存在' });
+      }
+      
+      logger.info(`🔍 [调试信息] 原始 symbol: ${rawSymbol}, 转换后 symbol: ${symbol}`);
+      logger.info(`🔍 [调试信息] 用户当前持仓对象:`, user.cryptoHoldings);
+      logger.info(`🔍 [调试信息] 尝试读取 ${symbol} 的持仓:`, user.cryptoHoldings?.get(symbol));
+      
+      // 2. 计算总额（保留2位小数）
+      const total = parseFloat((price * amount).toFixed(2));
+      
+      // 3. 验证余额/持仓
+      if (type === 'buy') {
+        // 买入：检查 USDT 余额
+        if (user.balance < total) {
+          return socket.emit('tradeError', { 
+            message: `余额不足，需要 $${total.toFixed(2)}，当前 $${user.balance.toFixed(2)}` 
+          });
+        }
+        
+        // 扣款（保留2位小数）
+        user.balance = parseFloat((user.balance - total).toFixed(2));
+        
+        // 增加持仓（保留8位小数）
+        user.cryptoHoldings = user.cryptoHoldings || new Map();
+        const currentHolding = user.cryptoHoldings.get(symbol) || 0;
+        user.cryptoHoldings.set(symbol, parseFloat((currentHolding + amount).toFixed(8)));
+        
+      } else if (type === 'sell') {
+        // 卖出：检查持仓
+        const currentHolding = user.cryptoHoldings?.get(symbol) || 0;
+        if (currentHolding < amount) {
+          return socket.emit('tradeError', { 
+            message: `持仓不足，需要 ${amount} ${symbol}，当前 ${currentHolding} ${symbol}` 
+          });
+        }
+        
+        // 减少持仓（保留8位小数）
+        user.cryptoHoldings.set(symbol, parseFloat((currentHolding - amount).toFixed(8)));
+        
+        // 加款（保留2位小数）
+        user.balance = parseFloat((user.balance + total).toFixed(2));
+      }
+      
+      // 4. 保存用户数据
+      await user.save();
+      
+      // 5. 记录交易日志
+      await TradeRecord.create({
+        userId,
+        symbol,
+        type,
+        amount,
+        price,
+        total,
+        timestamp: Date.now()
+      });
+      
+      logger.info(`✅ [交易成功] ${userId} ${type} ${amount} ${symbol} @ ${price}`);
+      
+      // 6. WSS 广播交易结果（精度控制）
+      socket.emit('tradeExecuted', {
+        symbol,
+        type,
+        amount: parseFloat(amount.toFixed(8)),
+        price: parseFloat(price.toFixed(2)),
+        total: parseFloat(total.toFixed(2)),
+        newBalance: parseFloat(user.balance.toFixed(2)),
+        newHolding: parseFloat((user.cryptoHoldings.get(symbol) || 0).toFixed(8)),
+        timestamp: Date.now()
+      });
+      
+      // 7. 广播余额更新（精度控制）+ 🔥 同时返回所有币种持仓
+      const holdings = {}
+      if (user.cryptoHoldings) {
+        for (const [s, amt] of user.cryptoHoldings.entries()) {
+          holdings[s] = parseFloat(amt.toFixed(8))
+        }
+      }
+      
+      socket.emit('balanceUpdated', {
+        balance: parseFloat(user.balance.toFixed(2)),
+        holdings  // 🔥 新增：返回所有币种持仓
+      });
+      
+    } catch (error) {
+      logger.error(`❌ [交易失败] ${error.message}`);
+      socket.emit('tradeError', { 
+        message: '交易处理失败，请稍后重试' 
+      });
     }
   }
 }

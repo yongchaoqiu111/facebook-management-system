@@ -25,13 +25,34 @@
     
     <!-- ✅ 全局 BottomNav（仅在有路由时显示） -->
     <BottomNav v-if="showBottomNav" />
+    
+    <!-- 📞 来电弹窗 -->
+    <div v-if="showIncomingCallModal" class="incoming-call-modal">
+      <div class="incoming-call-content">
+        <div class="caller-info">
+          <div class="caller-avatar">{{ incomingCallData.callerAvatar }}</div>
+          <div class="caller-name">{{ incomingCallData.callerName }}</div>
+          <div class="call-type">{{ incomingCallData.type === 'video' ? '视频通话' : '语音通话' }}</div>
+        </div>
+        <div class="call-actions">
+          <button class="action-btn reject" @click="rejectIncomingCall">
+            <span class="icon">📞</span>
+            <span class="label">拒绝</span>
+          </button>
+          <button class="action-btn accept" @click="acceptIncomingCall">
+            <span class="icon">📞</span>
+            <span class="label">接听</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { initSocket, getSocket, joinGroup, onFriendAdded, onFriendRemoved, onFriendListUpdated } from './socket'
+import { initSocket, getSocket, joinGroup, onFriendAdded, onFriendRemoved, onFriendListUpdated, rejectCall } from './socket'
 import { parseMessage } from './utils/chatStorage'
 import { queueMessage, queueTrade, flushAllQueues, clearAllQueues } from './utils/wsQueue'  // 🆕 导入队列管理器
 import { triggerMessageUpdate } from './utils/messageBus'
@@ -100,6 +121,17 @@ const { loadingVisible, loadingMessage } = useLoading()
 const getCurrentUserId = () => {
   return localStorage.getItem('userId')
 }
+
+// 📞 来电弹窗状态
+const showIncomingCallModal = ref(false)
+const incomingCallData = ref({
+  callId: '',
+  callerId: '',
+  callerName: '',
+  callerAvatar: '',
+  type: 'video',
+  offer: null
+})
 
 let groupMessageHandler = null
 let groupRedPacketHandler = null
@@ -499,6 +531,23 @@ const registerGlobalListeners = () => {
   }
   socket.on('redPacketSent', redPacketSentHandler)
   
+  // 📞 全局监听来电
+  const incomingCallHandler = (data) => {
+    console.log('📞 [App] 收到来电:', data)
+    
+    // 显示来电弹窗
+    incomingCallData.value = {
+      callId: data.callId,
+      callerId: data.from,
+      callerName: data.callerName || '好友',
+      callerAvatar: data.callerAvatar || '👤',
+      type: data.type || 'video',
+      offer: data.offer
+    }
+    showIncomingCallModal.value = true
+  }
+  socket.on('call:incoming', incomingCallHandler)
+  
   console.log('✅ 全局 Socket 监听器已注册')
 }
 
@@ -532,13 +581,171 @@ onUnmounted(() => {
     socket.off('redPacketSent', redPacketSentHandler)
   }
   
+  // 📞 清理事件监听
+  const socket = getSocket()
+  if (socket) {
+    socket.off('call:incoming')
+  }
+  
   // 停止消息队列并保存所有剩余消息
   stopMessageQueue()
   console.log('⚠️ App 卸载，消息队列已停止')
 })
+
+// 📞 接听来电
+const acceptIncomingCall = () => {
+  console.log('📞 [App] 接听来电')
+  showIncomingCallModal.value = false
+  
+  // 跳转到通话页面
+  router.push({
+    path: '/call',
+    query: {
+      callId: incomingCallData.value.callId,
+      callerId: incomingCallData.value.callerId,
+      callerName: incomingCallData.value.callerName,
+      callerAvatar: incomingCallData.value.callerAvatar,
+      type: incomingCallData.value.type,
+      incoming: 'true',
+      offer: JSON.stringify(incomingCallData.value.offer)
+    }
+  })
+}
+
+// 📞 拒绝来电
+const rejectIncomingCall = () => {
+  console.log('📞 [App] 拒绝来电')
+  showIncomingCallModal.value = false
+  
+  // 发送拒绝信令
+  rejectCall({
+    to: incomingCallData.value.callerId,
+    callId: incomingCallData.value.callId
+  })
+}
 </script>
 
 <style>
+.incoming-call-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.incoming-call-content {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 24px;
+  padding: 40px 30px;
+  width: 90%;
+  max-width: 360px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.caller-info {
+  margin-bottom: 40px;
+}
+
+.caller-avatar {
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 50px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.caller-name {
+  font-size: 28px;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 12px;
+}
+
+.call-type {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.call-actions {
+  display: flex;
+  justify-content: space-around;
+  gap: 20px;
+}
+
+.action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  border-radius: 50%;
+  width: 72px;
+  height: 72px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.action-btn:active {
+  transform: scale(0.95);
+}
+
+.action-btn.reject {
+  background: #ff3b30;
+}
+
+.action-btn.reject:active {
+  background: #e6352b;
+}
+
+.action-btn.accept {
+  background: #34c759;
+}
+
+.action-btn.accept:active {
+  background: #2db84e;
+}
+
+.action-btn .icon {
+  font-size: 28px;
+}
+
+.action-btn .label {
+  font-size: 12px;
+  color: white;
+  font-weight: 500;
+}
+
 * {
   margin: 0;
   padding: 0;

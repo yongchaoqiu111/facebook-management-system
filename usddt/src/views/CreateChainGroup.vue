@@ -4,7 +4,7 @@
     <header class="header">
       <button class="back-btn" @click="goBack">←</button>
       <h1>创建接龙群</h1>
-      <div class="placeholder"></div>
+      <button class="close-btn" @click="goBack">✕</button>
     </header>
 
     <!-- 内容区域 -->
