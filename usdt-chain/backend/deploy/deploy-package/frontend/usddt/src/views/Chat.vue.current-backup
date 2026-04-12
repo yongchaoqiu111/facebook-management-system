@@ -1,0 +1,3364 @@
+<template>
+  <div class="chat-container">
+    <!-- 聊天区域 -->
+    <div class="chat-area">
+      <div class="chat-header">
+        <button class="action-btn back-btn" @click="goBack">←</button>
+        <div class="chat-title">
+          <div class="chat-avatar">{{ currentContact?.avatar || 'ZS' }}</div>
+          <div class="chat-name">{{ currentContact?.name || '张三' }}</div>
+        </div>
+        <div class="chat-actions">
+          <button v-if="chainGroupInfo" class="action-btn invite-btn" @click="showInviteModal = true" title="邀请好友">👥</button>
+          <button v-if="chainGroupInfo" class="action-btn share-btn" @click="shareGroup" title="分享群组">🔗</button>
+          <button class="action-btn info-btn" @click="showInfoModal = true" title="接龙红包说明">📖</button>
+        </div>
+      </div>
+
+      <!-- 接龙群状态条 -->
+      <div v-if="chainGroupInfo" class="chain-status-bar">
+        <div class="chain-info">
+          <span class="chain-label">🐉 累计领取:</span>
+          <span class="chain-amount" :class="{ 'warning': chainGroupInfo.memberInfo?.totalReceived >= chainGroupInfo.kickThreshold * 0.8 }">
+            {{ chainGroupInfo.memberInfo?.totalReceived || 0 }} / {{ chainGroupInfo.kickThreshold }} USDT
+          </span>
+        </div>
+        <div v-if="chainWaitCountdown && chainWaitCountdown !== '可以抢红包了！'" class="chain-countdown">
+          <span>⏰ 等待: {{ chainWaitCountdown }}</span>
+        </div>
+        <div v-else-if="chainWaitCountdown === '可以抢红包了！'" class="chain-ready">
+          <span>✅ 可以抢红包了！</span>
+        </div>
+      </div>
+
+      <div class="chat-messages" ref="messagesContainer">
+        <template v-for="(message, index) in messages" :key="index">
+          <!-- 系统消息（不带头像） -->
+          <div v-if="message.type === 'system'" class="message system">
+            <div class="system-content">{{ message.content }}</div>
+            <div class="message-time">{{ message.time }}</div>
+          </div>
+
+          <!-- 普通消息和红包消息（带头像） -->
+          <div v-else :class="['message', message.isSelf ? 'self' : 'other']">
+            <!-- 别人的消息：头像在左 -->
+            <div v-if="!message.isSelf" class="message-avatar" :style="{ background: getAvatarColor(message.sender?.username || 'U') }">
+              {{ (message.sender?.username || 'U').charAt(0).toUpperCase() }}
+            </div>
+            
+            <div class="message-bubble-wrapper">
+              <div v-if="message.type === 'redPacket'" :class="['red-packet', { 'red-packet-opened': message.opened, 'red-packet-expired': message.expired }]" @click="!message.expired && openRedPacket(message)">
+                <div class="red-packet-header">
+                  <span>🧧</span>
+                  <span class="red-packet-title">{{ 
+                    message.expired ? '已过期' :
+                    message.opened ? '已领取' :
+                    message.redPacketType === 'lucky' ? '拼手气红包' : 
+                    message.redPacketType === 'liuhe' ? '六合红包' : 
+                    message.isChainRedPacket ? '接龙红包' : '普通红包' 
+                  }}</span>
+                </div>
+                <div v-if="message.expired" class="red-packet-amount">已过期，无法领取</div>
+                <div v-else-if="message.opened" class="red-packet-amount">恭喜发财，大吉大利</div>
+                <div v-else class="red-packet-message">恭喜发财，大吉大利</div>
+                <div class="red-packet-footer">
+                  <span>{{ message.count }}个红包</span>
+                  <span>{{ message.time }}</span>
+                </div>
+              </div>
+              <div v-else class="text-message">
+                {{ message.content }}
+              </div>
+              <div class="message-time">{{ message.time }}</div>
+            </div>
+
+            <!-- 自己的消息：头像在右 -->
+            <div v-if="message.isSelf" class="message-avatar" :style="{ background: getAvatarColor(currentUser?.username || 'Me') }">
+              {{ (currentUser?.username || 'Me').charAt(0).toUpperCase() }}
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <div class="chat-input">
+        <div class="chat-tools">
+          <button 
+            class="tool-btn" 
+            @click="showRedPacketModalVisible = true"
+            title="发送红包"
+          >
+            🧧
+          </button>
+        </div>
+        <input 
+          type="text" 
+          class="message-input" 
+          v-model="messageInput" 
+          placeholder="输入消息..." 
+          @keypress="handleKeyPress"
+        >
+        <button class="send-btn" @click="sendMessage">发送</button>
+      </div>
+    </div>
+
+    <!-- 添加好友弹窗 -->
+    <div class="modal" v-if="showAddFriendModalVisible">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>添加好友</h3>
+          <button class="close-btn" @click="showAddFriendModalVisible = false">&times;</button>
+        </div>
+        <form class="search-user-form" @submit.prevent="searchUser">
+          <input 
+            type="text" 
+            class="search-user-input" 
+            v-model="searchUserId" 
+            placeholder="输入用户ID"
+          >
+          <button type="submit" class="search-user-btn">搜索</button>
+        </form>
+        <div class="search-results">
+          <div 
+            v-for="user in searchResults" 
+            :key="user.id"
+            class="search-result-item"
+          >
+            <div class="search-result-info">
+              <div class="contact-avatar">{{ user.avatar }}</div>
+              <div>
+                <div style="font-weight: 500;">{{ user.name }}</div>
+                <div style="font-size: 0.8rem; color: #666;">{{ user.id }}</div>
+              </div>
+            </div>
+            <button class="add-friend-btn" @click="addFriend(user)">添加</button>
+          </div>
+          <div v-if="searchResults.length === 0" style="text-align: center; color: #999; padding: 20px;">
+            未找到用户
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 红包弹窗 -->
+    <div class="modal" v-if="showRedPacketModalVisible">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>发红包</h3>
+          <button class="close-btn" @click="showRedPacketModalVisible = false">&times;</button>
+        </div>
+        
+        <!-- 红包类型选择 -->
+        <div class="red-packet-types">
+          <div 
+            :class="['red-packet-type', { active: redPacketType === 'lucky' }]"
+            @click="redPacketType = 'lucky'"
+          >
+            <div class="red-packet-type-icon">🎁</div>
+            <div class="red-packet-type-name">拼手气红包</div>
+          </div>
+          <div 
+            :class="['red-packet-type', { active: redPacketType === 'normal' }]"
+            @click="redPacketType = 'normal'"
+          >
+            <div class="red-packet-type-icon">💰</div>
+            <div class="red-packet-type-name">普通红包</div>
+          </div>
+        </div>
+        
+        <form @submit.prevent="sendRedPacket">
+          <div class="form-group">
+            <label for="redPacketAmount">红包金额</label>
+            <input 
+              type="number" 
+              id="redPacketAmount" 
+              v-model.number="redPacketAmount" 
+              placeholder="请输入金额" 
+              step="0.01" 
+              min="0.01"
+              required
+            >
+          </div>
+          
+          <!-- 拼手气红包显示个数选择，普通红包不显示 -->
+          <div class="form-group" v-if="redPacketType === 'lucky'">
+            <label for="redPacketCount">红包个数</label>
+            <input 
+              type="number" 
+              id="redPacketCount" 
+              v-model.number="redPacketCount" 
+              placeholder="请输入个数" 
+              min="1" 
+              :max="currentContact?.isGroup ? 50 : 1"
+              required
+            >
+          </div>
+          
+          <div class="form-group">
+            <label for="redPacketMessage">祝福语</label>
+            <input 
+              type="text" 
+              id="redPacketMessage" 
+              v-model="redPacketMessage" 
+              placeholder="恭喜发财，大吉大利" 
+              maxlength="50"
+            >
+          </div>
+          <button type="submit" class="send-red-packet-btn">塞钱进红包</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- 🐉 红包领取结果弹窗 -->
+    <div class="modal" v-if="showRedPacketResultModal">
+      <div class="modal-content red-packet-result">
+        <div class="result-header">
+          <div class="result-icon">🧧</div>
+          <h3>恭喜抢到红包！</h3>
+        </div>
+        <div class="result-body">
+          <div class="result-amount">
+            <span class="amount-value">{{ redPacketResult.amount }}</span>
+            <span class="amount-unit">USDT</span>
+          </div>
+          <div class="result-message">{{ redPacketResult.message }}</div>
+          <div class="result-from">来自 {{ redPacketResult.from }}</div>
+        </div>
+        <button class="result-close-btn" @click="showRedPacketResultModal = false">开心收下</button>
+      </div>
+    </div>
+
+    <!-- 接龙红包说明卡片 -->
+    <div v-if="showInfoModal" class="modal-overlay" @click="showInfoModal = false">
+      <div class="info-card" @click.stop>
+        <div class="info-card-header">
+          <h3>🐉 接龙红包玩法说明</h3>
+          <button class="close-btn" @click="showInfoModal = false">✕</button>
+        </div>
+        <div class="info-card-content">
+          <div class="info-section">
+            <h4>📌 什么是接龙红包？</h4>
+            <p>接龙红包是一种创新的群红包玩法，每个成员进群需支付门票费，随后发送首个红包（首包）供群友领取。</p>
+          </div>
+          
+          <div class="info-section">
+            <h4>💰 进群费用</h4>
+            <p>• <strong>门票费</strong>：进群需支付的固定费用<br>
+            • <strong>首包金额</strong>：进群后需发送的第一个红包总金额</p>
+          </div>
+          
+          <div class="info-section">
+            <h4>🎯 核心规则</h4>
+            <p>• 每个成员有 <strong>3小时等待期</strong>，期间不可抢红包<br>
+            • 等待期结束后，累计领取金额达到 <strong>380 USDT</strong> 将被自动踢出<br>
+            • 被踢出后需重新支付门票费才能再次进群</p>
+          </div>
+          
+          <div class="info-section">
+            <h4>🧧 红包结构</h4>
+            <p>• 首包红包：<strong>300 USDT</strong>，分为 <strong>30个子包</strong><br>
+            • 每个子包金额：根据红包类型（拼手气/普通）分配<br>
+            • 所有成员均可参与抢红包</p>
+          </div>
+          
+          <div class="info-section warning">
+            <h4>⚠️ 注意事项</h4>
+            <p>• 请合理安排抢红包节奏，避免超额被踢<br>
+            • 接龙红包一旦发出不可撤回<br>
+            • 如有疑问请联系群管理员</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 邀请好友弹窗 -->
+    <div v-if="showInviteModal" class="modal-overlay" @click="showInviteModal = false">
+      <div class="invite-modal" @click.stop>
+        <div class="modal-header">
+          <h3>👥 邀请好友</h3>
+          <button class="close-btn" @click="showInviteModal = false">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="invite-info">
+            <p>选择要邀请的好友，他们将收到加入接龙群的邀请</p>
+          </div>
+          
+          <div class="friends-list">
+            <div 
+              v-for="friend in availableFriends" 
+              :key="friend._id || friend.id"
+              :class="['friend-item', { selected: selectedInviteFriends.includes(friend._id || friend.id) }]"
+              @click="toggleInviteFriend(friend._id || friend.id)"
+            >
+              <div class="friend-avatar" :style="{ background: getAvatarColor(friend.username || friend.name || 'F') }">
+                {{ (friend.username || friend.name || 'F').charAt(0).toUpperCase() }}
+              </div>
+              <div class="friend-info">
+                <div class="friend-name">{{ friend.username || friend.name }}</div>
+                <div class="friend-id">ID: {{ friend.userId || friend.id }}</div>
+              </div>
+              <div class="friend-checkbox" :class="{ checked: selectedInviteFriends.includes(friend._id || friend.id) }">
+                {{ selectedInviteFriends.includes(friend._id || friend.id) ? '✓' : '' }}
+              </div>
+            </div>
+            <div v-if="availableFriends.length === 0" class="empty-friends">
+              <p>暂无好友可邀请</p>
+            </div>
+          </div>
+          
+          <div class="invite-settings">
+            <label>邀请有效期（天）</label>
+            <input 
+              type="number" 
+              v-model.number="inviteExpireDays" 
+              min="1" 
+              max="30"
+              placeholder="7"
+            />
+            <span class="days-label">天</span>
+          </div>
+          
+          <div class="selected-count">
+            已选择 {{ selectedInviteFriends.length }} 位好友
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" @click="showInviteModal = false">取消</button>
+          <button 
+            class="btn-confirm" 
+            @click="sendInvitations" 
+            :disabled="sendingInvites || selectedInviteFriends.length === 0"
+          >
+            {{ sendingInvites ? '发送中...' : '发送邀请' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import axios from 'axios'
+import { friendAPI, chatAPI, redPacketAPI, chainGroupAPI } from '../api'
+import { initSocket, getSocket, joinRoom, joinGroup, sendPrivateMessage, sendGroupMessage, sendRedPacket as sendSocketRedPacket, openRedPacket as openSocketRedPacket, onPrivateMessage, onGroupMessage, onReceiveRedPacket, onGroupRedPacket, onRedPacketOpened, onGroupInvitation, disconnectSocket } from '../socket'
+import { generateRedPacketId, buildRedPacketMessage, emitPrivateRedPacket, emitGroupRedPacket, isRedPacketForCurrentChat, processReceivedRedPacket } from '../utils/redPacket'
+import { loadChatHistory as loadChatFromLocalStorage, saveChatHistory as saveChatToLocalStorage, mergeMessages, isRedPacketOpened as checkIfRedPacketOpened, markRedPacketOpened as markRedPacketOpenedFn } from '../utils/storage.js'
+
+const router = useRouter()
+const route = useRoute()
+const messagesContainer = ref(null)
+const loading = ref(true)
+
+// 状态
+const currentContact = ref(null)
+const messages = ref([])
+const messageInput = ref('')
+const searchUserId = ref('')
+const searchResults = ref([])
+const showAddFriendModalVisible = ref(false)
+const showRedPacketModalVisible = ref(false)
+const showInfoModal = ref(false)
+const currentUser = ref({ username: 'Me' })
+
+// 邀请好友状态
+const showInviteModal = ref(false)
+const availableFriends = ref([])
+const selectedInviteFriends = ref([])
+const inviteExpireDays = ref(7)
+const sendingInvites = ref(false)
+
+// 红包状态
+const redPacketType = ref('lucky') // 'lucky' 拼手气红包, 'normal' 普通红包
+const redPacketAmount = ref(0)
+const redPacketCount = ref(1)
+const redPacketMessage = ref('恭喜发财，大吉大利')
+
+// 🐉 红包领取结果弹窗
+const showRedPacketResultModal = ref(false)
+const redPacketResult = ref({
+  amount: 0,
+  message: '',
+  from: ''
+})
+
+// 接龙群状态
+const chainGroupInfo = ref(null)
+const chainWaitCountdown = ref('')
+let chainCountdownTimer = null
+
+// 初始化
+onMounted(() => {
+  // 初始化Socket连接
+  initSocket()
+  
+  // 加载当前用户信息
+  const userData = localStorage.getItem('user')
+  if (userData) {
+    try {
+      currentUser.value = JSON.parse(userData)
+    } catch (e) {
+      console.error('解析用户信息失败', e)
+    }
+  }
+  
+  const contactId = route.params.id
+  if (contactId) {
+    loadChatData(contactId)
+  }
+  
+  // 监听Socket事件
+  setupSocketListeners()
+})
+
+// 清理组件定时器（不断开Socket，保持全局连接）
+onUnmounted(() => {
+  // 清理接龙群倒计时定时器
+  if (chainCountdownTimer) {
+    clearInterval(chainCountdownTimer)
+  }
+  
+  console.log('🔌 Chat 组件已卸载，Socket 保持连接')
+})
+
+// 添加消息（带智能去重）
+// 生成头像背景色
+const getAvatarColor = (name) => {
+  const colors = [
+    '#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', 
+    '#eb2f96', '#13c2c2', '#fa8c16', '#a0d911', '#2f54eb'
+  ]
+  let hash = 0
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return colors[Math.abs(hash) % colors.length]
+}
+
+// 添加消息到列表（带去重）
+const addMessage = (newMessage) => {
+  console.log('📥 添加消息:', newMessage)
+  
+  // ✅ 针对红包消息的特殊去重逻辑
+  if (newMessage.type === 'redPacket') {
+    const exists = messages.value.some(msg => 
+      msg.type === 'redPacket' && 
+      msg.redPacketId === newMessage.redPacketId
+    )
+    
+    console.log('红包消息是否已存在:', exists)
+    
+    if (!exists) {
+      console.log('✅ 添加红包消息:', newMessage.redPacketId)
+      
+      // ✅ 使用展开运算符创建新数组，强制触发Vue响应式
+      messages.value = [...messages.value, newMessage]
+      
+      console.log('📊 当前消息数量:', messages.value.length)
+      
+      // 保存到本地存储
+      if (currentContact.value) {
+        saveChatToLocalStorage(currentContact.value.id, messages.value)
+      }
+      scrollToBottom()
+      return true
+    } else {
+      console.log('⚠️ 红包消息已存在，跳过:', newMessage.redPacketId)
+      return false
+    }
+  } else {
+    // 普通消息的去重逻辑
+    const exists = messages.value.some(msg => 
+      (msg.id === newMessage.id && msg.content === newMessage.content) ||
+      (msg.clientMsgId === newMessage.clientMsgId && newMessage.clientMsgId)
+    )
+    
+    console.log('普通消息是否已存在:', exists)
+    
+    if (!exists) {
+      console.log('✅ 添加新消息:', newMessage.id, newMessage.content)
+      
+      // ✅ 使用展开运算符创建新数组，强制触发Vue响应式
+      messages.value = [...messages.value, newMessage]
+      
+      console.log('📊 当前消息数量:', messages.value.length)
+      
+      // 保存到本地存储
+      if (currentContact.value) {
+        saveChatToLocalStorage(currentContact.value.id, messages.value)
+      }
+      scrollToBottom()
+      return true
+    } else {
+      console.log('⚠️ 消息已存在，跳过:', newMessage.id)
+      return false
+    }
+  }
+}
+
+// 设置Socket事件监听
+const setupSocketListeners = () => {
+  const currentUserId = localStorage.getItem('userId')
+  
+  // 监听私聊消息
+  onPrivateMessage((data) => {
+    console.log('🔔 收到私聊消息:', data)
+    
+    const now = new Date()
+    const time = now.getHours() + ':' + (now.getMinutes()< 10 ? '0' : '') + now.getMinutes()
+    
+    const currentUserId = localStorage.getItem('userId')
+    // 🐉 获取当前用户的 ObjectId（优先从 userObjectId，其次从 user 对象中解析）
+    let currentUserObjectId = localStorage.getItem('userObjectId')
+    if (!currentUserObjectId) {
+      try {
+        const userStr = localStorage.getItem('user')
+        if (userStr) {
+          const userObj = JSON.parse(userStr)
+          currentUserObjectId = userObj._id || userObj.id
+        }
+      } catch (e) {
+        console.warn('⚠️ 无法解析 user 对象:', e)
+      }
+    }
+    
+    console.group('🔔 收到 Socket 消息')
+    console.log('原始消息:', data)
+    console.log('发送者对象:', data.sender)
+    console.log('接收者对象:', data.receiver)
+    
+    // 获取消息中的业务ID和ObjectId
+    const senderUserId = typeof data.sender === 'object' ? data.sender.userId : null
+    const senderObjectId = typeof data.sender === 'object' ? data.sender._id : data.sender
+    const receiverUserId = typeof data.receiver === 'object' ? data.receiver.userId : null
+    const receiverObjectId = typeof data.receiver === 'object' ? data.receiver._id : data.receiver
+    
+    console.log('发送者业务ID:', senderUserId)
+    console.log('发送者ObjectId:', senderObjectId)
+    console.log('接收者业务ID:', receiverUserId)
+    console.log('接收者ObjectId:', receiverObjectId)
+    console.log('当前用户ID:', currentUserId)
+    console.log('当前用户ObjectId:', currentUserObjectId)
+    console.log('聊天对方ID:', currentContact.value?.userId || currentContact.value?.id)
+    
+    // 🐉 调试：打印完整的 sender 和 receiver 对象
+    console.log('🔍 完整 sender 对象:', JSON.stringify(data.sender))
+    console.log('🔍 完整 receiver 对象:', JSON.stringify(data.receiver))
+    
+    // 🐉 判断是否是当前私聊的消息（简化逻辑：只要聊天对象匹配即可）
+    const chatOtherUserId = currentContact.value?.userId || currentContact.value?.id
+    
+    // 私聊消息匹配：检查发送者或接收者是否是当前聊天对象
+    const isContactMatched = 
+      String(senderUserId) === String(chatOtherUserId) || 
+      String(receiverUserId) === String(chatOtherUserId) ||
+      String(senderObjectId) === String(chatOtherUserId) || 
+      String(receiverObjectId) === String(chatOtherUserId)
+    
+    // 同时检查当前用户是否是消息参与者（防止收到无关消息）
+    // 🐉 关键修复：同时检查业务ID和ObjectId
+    const isCurrentUserInvolved = 
+      String(senderUserId) === String(currentUserId) || 
+      String(receiverUserId) === String(currentUserId) ||
+      String(senderObjectId) === String(currentUserId) ||
+      String(receiverObjectId) === String(currentUserId) ||
+      String(senderObjectId) === String(currentUserObjectId) || // 🐉 新增：用 ObjectId 匹配
+      String(receiverObjectId) === String(currentUserObjectId) // 🐉 新增：用 ObjectId 匹配
+    
+    // 私聊：只要聊天对象匹配且当前用户参与，就显示
+    const isCurrentChat = currentContact.value && !currentContact.value.isGroup && isContactMatched && isCurrentUserInvolved
+    
+    console.log('当前用户是否参与:', isCurrentUserInvolved)
+    console.log('聊天对象是否匹配:', isContactMatched)
+    console.log('判断结果:', isCurrentChat)
+    console.groupEnd()
+    
+    // 使用业务ID作为senderId
+    const senderId = senderUserId || senderObjectId
+    const receiverId_msg = receiverUserId || receiverObjectId
+    
+    if (isCurrentChat) {
+      console.log('✅ 添加消息到列表')
+      
+      const messageType = senderId === currentUserId ? 'sent' : 'received'
+      
+      const message = {
+        id: data._id || data.clientMsgId || Date.now().toString(),
+        type: messageType,
+        content: data.content,
+        time: time,
+        clientMsgId: data.clientMsgId,
+        senderId: senderId,
+        receiverId: receiverId_msg,
+        createdAt: data.createdAt || new Date().toISOString(),
+        updatedAt: data.updatedAt || new Date().toISOString(),
+        isSelf: senderId === currentUserId,
+        sender: typeof data.sender === 'object' ? data.sender : { username: data.senderName || 'U' }
+      }
+      
+      addMessage(message)
+    } else {
+      console.log('❌ 不是当前聊天，忽略')
+    }
+  })
+  
+  // 监听群聊消息
+  onGroupMessage((data) =>{
+    console.log('收到群聊消息:', data)
+    
+    const now = new Date()
+    const time = now.getHours() + ':' + (now.getMinutes()< 10 ? '0' : '') + now.getMinutes()
+    
+    // 判断消息类型（sent或received）
+    const senderId = data.senderId || data.sender?._id || data.sender
+    const messageType = senderId === currentUserId ? 'sent' : 'received'
+    
+    const message = {
+      type: messageType,
+      content: data.content,
+      time: time,
+      clientMsgId: data.clientMsgId,
+      senderId: senderId,
+      isSelf: senderId === currentUserId,
+      sender: typeof data.sender === 'object' ? data.sender : { username: data.senderName || 'U' }
+    }
+    
+    addMessage(message)
+  })
+  
+  // 监听私聊红包
+  onReceiveRedPacket((data) => {
+    console.log('🧧 收到私聊红包:', data)
+    
+    const currentUserId = localStorage.getItem('userId')
+    
+    // 🐉 如果是群聊红包（有groupId），交给群聊红包处理
+    if (data.groupId) {
+      console.log('🐉 这是群聊红包，跳过私聊处理')
+      return
+    }
+    
+    // 🐉 调试：打印红包数据的关键字段
+    console.log('🔍 红包 sender:', JSON.stringify(data.sender))
+    console.log('🔍 红包 receiver:', JSON.stringify(data.receiver))
+    console.log('🔍 当前聊天对象:', currentContact.value)
+    
+    // 使用统一的验证逻辑
+    const isCurrentChat = isRedPacketForCurrentChat(data, currentContact.value, currentUserId)
+    console.log('是否当前私聊:', isCurrentChat)
+    
+    if (isCurrentChat) {
+      // 使用统一的处理函数
+      const redPacketMessage = processReceivedRedPacket(data, currentUserId)
+      console.log('✅ 添加私聊红包消息:', redPacketMessage)
+      addMessage(redPacketMessage)
+    } else {
+      console.log('❌ 不是当前私聊的红包，忽略')
+    }
+  })
+  
+  // 监听群聊红包
+  onGroupRedPacket((data) => {
+    console.group('🔔 ========== 收到群聊红包 ==========')
+    console.log('完整数据:', JSON.stringify(data, null, 2))
+    
+    const currentUserId = localStorage.getItem('userId')
+    
+    // 使用统一的验证逻辑
+    const isCurrentChat = isRedPacketForCurrentChat(data, currentContact.value, currentUserId)
+    
+    console.log('当前群聊ID:', currentContact.value?.id)
+    console.log('红包群聊ID:', data.groupId)
+    console.log('是否当前群聊:', isCurrentChat)
+    
+    if (isCurrentChat) {
+      // 使用统一的处理函数
+      const redPacketMessage = processReceivedRedPacket(data, currentUserId)
+      
+      console.log('✅ 添加群聊红包消息:', redPacketMessage)
+      addMessage(redPacketMessage)
+      
+      // 🐉 如果是自己进群发的首包，显示提示
+      if (data.isChainRedPacket && data.senderId === currentUserId) {
+        showToastMessage('您的首包红包已发送，群友可以开始抢了！')
+      }
+    } else {
+      console.log('❌ 不是当前群聊的红包，忽略')
+    }
+    console.groupEnd()
+    console.log('=========================================')
+  })
+  
+  // 监听红包打开
+  onRedPacketOpened((data) =>{
+    console.log('红包被打开:', data)
+  })
+  
+  // 🐉 监听群邀请
+  onGroupInvitation((data) => {
+    console.log('✅ 收到群邀请:', data)
+    
+    // 显示通知
+    const inviterName = data.inviter?.username || data.inviterName || '好友'
+    const groupName = data.group?.name || data.groupName || '未知群组'
+    
+    showToastMessage(`${inviterName} 邀请你加入群聊：${groupName}`)
+    
+    // 可以在这里跳转到邀请页面或添加到待处理列表
+    // 例如：router.push(`/my-invitations`)
+  })
+}
+
+// 返回消息列表
+const goBack = () => {
+  router.push('/home')
+}
+
+// 🐉 分享接龙群
+const shareGroup = async () => {
+  try {
+    if (!chainGroupInfo.value) {
+      alert('当前不是接龙群')
+      return
+    }
+    
+    const groupName = currentContact.value?.name || '接龙群'
+    const groupId = currentContact.value?.id
+    
+    // 生成邀请链接
+    const inviteLink = `${window.location.origin}/invite?group=${groupId}`
+    
+    // 尝试使用系统分享API
+    if (navigator.share) {
+      await navigator.share({
+        title: `加入${groupName}`,
+        text: `邀请你加入${groupName}，一起参与接龙红包游戏！`,
+        url: inviteLink
+      })
+      console.log('✅ 分享成功')
+    } else {
+      // 降级方案：复制到剪贴板
+      await navigator.clipboard.writeText(inviteLink)
+      showToastMessage('邀请链接已复制到剪贴板')
+      console.log('📋 邀请链接已复制:', inviteLink)
+    }
+  } catch (error) {
+    console.error('❌ 分享失败:', error)
+    showToastMessage('分享失败，请重试')
+  }
+}
+
+// 加载聊天数据
+const loadChatData = async (chatId) => {
+  loading.value = true
+  try {
+    // ✅ 先初始化默认联系人（假设是私聊）
+    currentContact.value = {
+      id: chatId,
+      userId: chatId,
+      name: '好友',
+      avatar: '👤',
+      isGroup: false  // 默认是私聊，后面根据API响应更新
+    }
+    
+    // 🐉 检查是否刚刚从 Home 页面进群
+    const justJoinedData = sessionStorage.getItem('justJoinedChainGroup')
+    if (justJoinedData) {
+      try {
+        const chainData = JSON.parse(justJoinedData)
+        if (chainData.groupId === chatId) {
+          console.log('✅ 读取到刚刚进群的数据')
+          
+          // 1. 使用接口返回的红包数据立即显示红包
+          if (chainData.redPacket) {
+            const now = new Date()
+            const time = now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes()
+            
+            const redPacketMsg = {
+              type: 'redPacket',
+              redPacketType: 'normal',
+              amount: chainData.redPacket.totalAmount,
+              count: chainData.redPacket.count,
+              message: chainData.redPacket.message || '恭喜发财，大吉大利',
+              time: time,
+              opened: false,
+              redPacketId: chainData.redPacket.id,
+              clientMsgId: `chain_${chainData.redPacket.id}_${Date.now()}`, // 使用唯一 ID
+              groupId: chainData.groupId,
+              senderId: chainData.redPacket.senderId,
+              isChainRedPacket: chainData.redPacket.isChainRedPacket || true,
+              perAmount: chainData.redPacket.perAmount
+            }
+            
+            messages.value.push(redPacketMsg)
+            console.log('✅ 已添加首包红包到消息列表')
+          }
+          
+          // 2. 初始化接龙群信息（用于显示等待时间）
+          chainGroupInfo.value = {
+            isChainGroup: true,
+            ticketAmount: 10, // 门票金额
+            firstRedPacketAmount: chainData.redPacket?.totalAmount || 300,
+            waitHours: 3, // 默认 3 小时
+            kickThreshold: 380, // 默认踢出阈值
+            memberInfo: {
+              joinedAt: new Date().toISOString(),
+              canGrabAfter: chainData.canGrabAfter || null,
+              totalReceived: 0
+            }
+          }
+          
+          // 3. 更新余额显示
+          if (chainData.remainingBalance !== undefined) {
+            console.log('💰 更新余额:', chainData.remainingBalance)
+            // TODO: 如果需要更新全局余额状态，在这里处理
+          }
+          
+          console.log('✅ 接龙群状态初始化完成')
+        }
+        
+        // 清理 sessionStorage
+        sessionStorage.removeItem('justJoinedChainGroup')
+      } catch (error) {
+        console.error('解析进群数据失败:', error)
+        sessionStorage.removeItem('justJoinedChainGroup')
+      }
+    }
+    
+    // 🐉 加入群组房间（后端监听的房间名是 group:${groupId}）
+    console.log('📡 准备加入群组房间:', chatId)
+    
+    // 直接通过 socket 加入房间，确保房间名正确
+    const socket = getSocket()
+    if (socket) {
+      socket.emit('joinGroup', chatId)
+      console.log('✅ 已发送 joinGroup 事件, groupId:', chatId)
+    }
+    
+    // 🐉 仅对群聊加载接龙群信息（私聊不需要）
+    if (chatId && currentContact.value?.isGroup && (!chainGroupInfo.value || !chainGroupInfo.value.isChainGroup)) {
+      await loadChainGroupInfo(chatId)
+    }
+    
+    // 加载聊天记录（群组使用 getGroupMessages）
+    if (chatId) {
+      try {
+        await loadChatHistory(chatId)
+        console.log('✅ 聊天记录加载完成，当前消息数:', messages.value.length)
+      } catch (historyError) {
+        console.warn('加载聊天记录失败（可能无历史）:', historyError)
+        messages.value = []
+      }
+    }
+    
+    // 🐉 加载接龙群历史红包（退出再进时）
+    if (chainGroupInfo.value?.isChainGroup && chatId) {
+      try {
+        console.log('🧧 加载接龙群历史红包...')
+        const packetsResponse = await redPacketAPI.getGroupRedPackets(chatId)
+        console.log('📦 红包列表响应:', packetsResponse)
+        
+        // 兼容两种响应格式
+        const packetsData = packetsResponse?.data || packetsResponse
+        const packets = Array.isArray(packetsData) ? packetsData : []
+        
+        if (packets.length > 0) {
+          const now = new Date()
+          const timeStr = now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes()
+          
+          // 过滤掉已经在消息列表中的红包
+          const existingRedPacketIds = new Set(
+            messages.value
+              .filter(m => m.type === 'redPacket')
+              .map(m => m.redPacketId)
+          )
+          
+          const newRedPackets = packets
+            .filter(p => !existingRedPacketIds.has(p.id))
+            .map(packet => ({
+              type: 'redPacket',
+              redPacketType: 'normal',
+              amount: packet.totalAmount,
+              count: packet.count,
+              message: packet.message || '恭喜发财，大吉大利',
+              time: new Date(packet.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+              opened: false,
+              redPacketId: packet.id,
+              clientMsgId: `history_${packet.id}_${Date.now()}`, // 使用唯一 ID
+              groupId: chatId,
+              senderId: packet.senderId,
+              isChainRedPacket: packet.isChainRedPacket || false,
+              perAmount: packet.perAmount
+            }))
+          
+          if (newRedPackets.length > 0) {
+            messages.value = [...messages.value, ...newRedPackets]
+            console.log('✅ 已加载', newRedPackets.length, '条历史红包')
+            scrollToBottom()
+          }
+        }
+      } catch (error) {
+        console.warn('加载历史红包失败:', error)
+      }
+    }
+    
+    // 🐉 如果是接龙群，处理系统消息和倒计时
+    if (chainGroupInfo.value && chainGroupInfo.value.isChainGroup) {
+      const now = new Date()
+      const time = now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes()
+      
+      // 启动倒计时
+      if (chainGroupInfo.value.memberInfo && chainGroupInfo.value.memberInfo.canGrabAfter) {
+        const canGrabAfter = new Date(chainGroupInfo.value.memberInfo.canGrabAfter)
+        
+        if (now < canGrabAfter) {
+          startChainCountdown(canGrabAfter)
+        } else {
+          chainWaitCountdown.value = '可以抢红包了！'
+        }
+      }
+      
+      // 检查是否是刚进群（5 分钟内），添加系统消息
+      const memberJoinedAt = chainGroupInfo.value.memberInfo?.joinedAt
+      if (memberJoinedAt) {
+        const joinedAt = new Date(memberJoinedAt)
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000)
+        
+        if (joinedAt > fiveMinutesAgo) {
+          // 在消息列表顶部添加系统消息
+          const systemMessages = [
+            {
+              type: 'system',
+              content: `🎉 欢迎加入接龙群！您已支付 ${chainGroupInfo.value.ticketAmount + chainGroupInfo.value.firstRedPacketAmount} USDT（门票+首包），首包红包已发送给群友。`,
+              time: time
+            },
+            {
+              type: 'system',
+              content: `⏰ 您需要等待 ${chainGroupInfo.value.waitHours} 小时后才能抢红包。当前累计领取：${chainGroupInfo.value.memberInfo?.totalReceived || 0} USDT`,
+              time: time
+            }
+          ]
+          
+          // 将系统消息插入到消息列表开头
+          messages.value = [...systemMessages, ...messages.value]
+          
+          console.log('✅ 已添加进群系统消息')
+          scrollToBottom()
+        }
+      }
+    }
+    
+    // 🐉 如果是接龙群，加载好友列表（用于邀请功能）
+    if (chainGroupInfo.value?.isChainGroup) {
+      await loadAvailableFriends()
+    }
+  } catch (error) {
+    console.error('加载聊天数据失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+
+// 加载接龙群信息
+const loadChainGroupInfo = async (groupId) => {
+  if (!groupId) {
+    console.log('ℹ️ groupId 为空，跳过加载接龙群信息')
+    return
+  }
+  try {
+    const response = await chainGroupAPI.getChainInfo(groupId)
+    console.log('🐉 接龙群信息响应:', response)
+    
+    if (response && response.data) {
+      chainGroupInfo.value = response.data
+      console.log('🐉 接龙群信息:', chainGroupInfo.value)
+      
+      // 即使 isChainGroup 是 false，只要有 memberInfo 就显示
+      if (chainGroupInfo.value.memberInfo) {
+        // 如果没有 canGrabAfter，根据 joinedAt 计算
+        if (!chainGroupInfo.value.memberInfo.canGrabAfter && chainGroupInfo.value.memberInfo.joinedAt) {
+          const joinedAt = new Date(chainGroupInfo.value.memberInfo.joinedAt)
+          const waitHours = chainGroupInfo.value.waitHours || 3
+          const canGrabAfter = new Date(joinedAt.getTime() + waitHours * 60 * 60 * 1000)
+          chainGroupInfo.value.memberInfo.canGrabAfter = canGrabAfter.toISOString()
+          console.log('⏰ 计算 canGrabAfter:', canGrabAfter)
+        }
+        
+        // 如果还在等待期，启动倒计时
+        if (chainGroupInfo.value.memberInfo.canGrabAfter && !chainGroupInfo.value.memberInfo.kickedOut) {
+          const canGrabAfter = new Date(chainGroupInfo.value.memberInfo.canGrabAfter)
+          const now = new Date()
+          
+          if (now < canGrabAfter) {
+            startChainCountdown(canGrabAfter)
+          } else {
+            chainWaitCountdown.value = '可以抢红包了！'
+          }
+        }
+      }
+    }
+  } catch (error) {
+    //  静默处理：非接龙群或接口不存在时不报错
+    // 400/404 表示这不是接龙群，正常情况
+    const status = error.response?.status
+    if (status === 400 || status === 404) {
+      console.log('ℹ️ 当前群不是接龙群，跳过加载')
+    } else {
+      console.warn('⚠️ 加载接龙群信息失败:', error.message)
+    }
+    chainGroupInfo.value = null
+  }
+}
+
+// 启动接龙群等待倒计时
+const startChainCountdown = (targetTime) => {
+  if (chainCountdownTimer) {
+    clearInterval(chainCountdownTimer)
+  }
+  
+  const updateCountdown = () => {
+    const now = new Date()
+    const diff = targetTime - now
+    
+    if (diff <= 0) {
+      chainWaitCountdown.value = '可以抢红包了！'
+      clearInterval(chainCountdownTimer)
+      return
+    }
+    
+    const hours = Math.floor(diff / (1000 * 60 * 60))
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+    
+    chainWaitCountdown.value = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+  }
+  
+  updateCountdown()
+  chainCountdownTimer = setInterval(updateCountdown, 1000)
+}
+
+// 加载聊天历史
+const loadChatHistory = async (chatId) => {
+  try {
+    console.log('📦 加载聊天记录:', chatId)
+    const response = await chatAPI.getChatMessages(chatId)
+    
+    console.log('📨 原始响应:', response)
+    
+    // 兼容两种响应格式：
+    // 1. { success: true, data: { chatInfo, chatType, messages } }
+    // 2. { chatInfo, chatType, messages } （直接返回）
+    let chatInfo, msgList
+    
+    if (response.success && response.data) {
+      // 格式1：有 success 和 data 包裹
+      chatInfo = response.data.chatInfo
+      msgList = response.data.messages
+    } else if (response.chatInfo) {
+      // 格式2：直接返回数据
+      chatInfo = response.chatInfo
+      msgList = response.messages
+    } else {
+      console.warn('⚠️ 响应格式不正确:', response)
+      messages.value = []
+      return
+    }
+    
+    console.log('💬 聊天信息:', chatInfo)
+    console.log('📨 消息数量:', msgList?.length || 0)
+    
+    // 更新联系人信息（如果是群聊）
+    if (chatInfo && currentContact.value) {
+      currentContact.value.name = chatInfo.name || currentContact.value.name
+      if (chatInfo.avatar) {
+        currentContact.value.avatar = chatInfo.avatar
+      }
+      // 标记是否为群聊
+      currentContact.value.isGroup = chatInfo.type === 'group' || response.chatType === 'group'
+    }
+    
+    if (msgList && msgList.length > 0) {
+      console.log(' 原始消息列表:', msgList)
+      
+      // 🔄 反转消息列表，确保旧消息在上，新消息在下
+      const sortedMsgList = [...msgList].reverse()
+      
+      // 格式化后端返回的数据
+      messages.value = sortedMsgList.map(msg => {
+        // 检查是否是红包消息
+        if (msg.redPacket || msg.type === 'redPacket') {
+          console.log('🧧 发现红包消息:', msg)
+          const senderId = typeof msg.sender === 'object' ? (msg.sender.userId || msg.sender._id) : msg.sender
+          const redPacketId = msg.redPacket?._id || msg.redPacket?.redPacketId || msg._id
+          
+          return {
+            type: 'redPacket',
+            redPacketType: msg.redPacket?.type || 'normal',
+            amount: msg.redPacket?.amount || 0,
+            count: msg.redPacket?.count || 1,
+            message: msg.redPacket?.message || '恭喜发财，大吉大利',
+            time: new Date(msg.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+            opened: checkIfRedPacketOpened(redPacketId),
+            expired: msg.redPacket?.expired || false, // 🐉 从后端获取过期状态
+            openedBy: msg.openedBy || [],
+            redPacketId: redPacketId,
+            clientMsgId: msg._id,
+            senderId: senderId,
+            receiverId: msg.receiver ? (typeof msg.receiver === 'object' ? (msg.receiver.userId || msg.receiver._id) : msg.receiver) : null,
+            groupId: msg.groupId || null,
+            isChainRedPacket: msg.redPacket?.isChainRedPacket || false,
+            isSelf: senderId === localStorage.getItem('userId'),
+            sender: typeof msg.sender === 'object' ? msg.sender : { username: 'U' }
+          }
+        } else {
+          // 普通文本消息
+          const senderId = typeof msg.sender === 'object' ? (msg.sender.userId || msg.sender._id) : msg.sender
+          const isSelf = senderId === localStorage.getItem('userId')
+          
+          return {
+            type: isSelf ? 'sent' : 'received',
+            content: msg.content,
+            time: new Date(msg.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+            read: msg.read || false,
+            senderId: senderId,
+            clientMsgId: msg._id,
+            isSelf: isSelf,
+            sender: typeof msg.sender === 'object' ? msg.sender : { username: 'U' }
+          }
+        }
+      })
+      
+      console.log('🧧 红包消息数量:', messages.value.filter(m => m.type === 'redPacket').length)
+      console.log('📨 格式化后消息列表:', messages.value)
+      
+      // 🐉 在保存到 localStorage 前，先检查是否有本地消息需要合并
+      const existingLocalMessages = loadChatFromLocalStorage(chatId)
+      if (existingLocalMessages && existingLocalMessages.length > 0) {
+        // 找出本地有但后端没有的消息
+        const backendIds = new Set(messages.value.map(m => m.id || m.clientMsgId))
+        const localOnlyMessages = existingLocalMessages.filter(m => {
+          const msgId = m.id || m.clientMsgId
+          // 保留所有后端没有的消息（包括普通消息和红包消息）
+          return !backendIds.has(msgId)
+        })
+        
+        if (localOnlyMessages.length > 0) {
+          console.log('🎭 发现本地独有消息:', localOnlyMessages.length, '条，将合并保存')
+          messages.value = [...messages.value, ...localOnlyMessages]
+          // 重新排序（按时间）
+          messages.value.sort((a, b) => {
+            const timeA = a.createdAt || a.time || ''
+            const timeB = b.createdAt || b.time || ''
+            return timeA.localeCompare(timeB)
+          })
+        }
+      }
+      
+      // 🐉 恢复红包的 opened 状态（从 localStorage 同步）
+      messages.value.forEach(msg => {
+        if (msg.type === 'redPacket' && msg.redPacketId) {
+          msg.opened = checkIfRedPacketOpened(msg.redPacketId)
+        }
+      })
+      
+      // 保存到本地存储
+      saveChatToLocalStorage(chatId, messages.value)
+      console.log('✅ 从后端加载聊天记录:', messages.value.length, '条')
+      
+      scrollToBottom()
+    } else {
+      console.log('ℹ️ 暂无历史消息（空数组是正常的，因为是新群）')
+      
+      // 🐉 即使后端没有消息，也要从 localStorage 加载本地模拟消息
+      const localMessages = loadChatFromLocalStorage(chatId)
+      if (localMessages && localMessages.length > 0) {
+        console.log('🎭 从本地恢复消息:', localMessages.length, '条')
+        messages.value = localMessages
+      } else {
+        messages.value = []
+      }
+    }
+  } catch (error) {
+    console.error('❌ 加载聊天历史失败:', error)
+    // 如果接口不存在或失败，初始化为空数组
+    messages.value = []
+  }
+}
+
+// 发送消息
+const sendMessage = async () => {
+  if (!messageInput.value.trim() || !currentContact.value) return
+  
+  const now = new Date()
+  const time = now.getHours() + ':' + (now.getMinutes()< 10 ? '0' : '') + now.getMinutes()
+  const content = messageInput.value.trim()
+  const clientMsgId = Date.now().toString() + Math.random().toString(36).substr(2, 9)
+  
+  try {
+    const currentUserId = localStorage.getItem('userId')
+    
+    // 判断是私聊还是群聊
+    if (currentContact.value.isGroup) {
+      // 发送群聊消息
+      sendGroupMessage({
+        groupId: currentContact.value.id,
+        content: content,
+        type: 'text',
+        clientMsgId: clientMsgId,
+        senderId: currentUserId
+      })
+    } else {
+      // 发送私聊消息
+      sendPrivateMessage({
+        receiverId: currentContact.value.id,
+        content: content,
+        type: 'text',
+        clientMsgId: clientMsgId,
+        senderId: currentUserId
+      })
+    }
+    
+    // ✅ 本地乐观更新 - 立即显示消息
+    const message = {
+      id: clientMsgId,
+      type: 'sent',
+      content: content,
+      time: time,
+      clientMsgId: clientMsgId,
+      senderId: currentUserId,
+      receiverId: currentContact.value.isGroup ? null : currentContact.value.id,
+      groupId: currentContact.value.isGroup ? currentContact.value.id : null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isSelf: true,
+      sender: currentUser.value || { username: 'Me' }
+    }
+    
+    console.log('📤 发送消息，添加到列表:', message)
+    addMessage(message)
+    messageInput.value = ''
+  } catch (error) {
+    console.error('发送消息失败:', error)
+    messageInput.value = ''
+    alert('发送消息失败，请稍后重试')
+  }
+}
+
+// 回车键发送
+const handleKeyPress = (event) => {
+  if (event.key === 'Enter') {
+    sendMessage()
+  }
+}
+
+// 滚动到底部
+const scrollToBottom = () => {
+  setTimeout(() => {
+    if (messagesContainer.value) {
+      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+    }
+  }, 100)
+}
+
+// 搜索用户
+const searchUser = async () => {
+  if (!searchUserId.value) return
+  
+  try {
+    // 这里应该调用搜索用户的API
+    // const response = await userAPI.searchUser(searchUserId.value)
+    // if (response.success) {
+    //   searchResults.value = response.data
+    // }
+    
+    // 暂时使用模拟数据
+    const mockUsers = [
+      { id: 'XH123456', name: '赵六', avatar: 'ZL' },
+      { id: 'XH654321', name: '钱七', avatar: 'QQ' }
+    ]
+    
+    searchResults.value = mockUsers.filter(user => user.id.includes(searchUserId.value))
+  } catch (error) {
+    console.error('搜索用户失败:', error)
+  }
+}
+
+// 添加好友
+const addFriend = async (user) => {
+  try {
+    const response = await friendAPI.addFriend(user.id)
+    if (response.success) {
+      alert(`已发送好友请求给 ${user.name}`)
+      showAddFriendModalVisible.value = false
+      searchUserId.value = ''
+      searchResults.value = []
+    } else {
+      alert(response.message || '发送好友请求失败')
+    }
+  } catch (error) {
+    console.error('添加好友失败:', error)
+    alert('添加好友失败，请稍后重试')
+  }
+}
+
+// 发送红包
+const sendRedPacket = async () => {
+  if (!redPacketAmount.value) {
+    alert('请填写红包金额')
+    return
+  }
+  
+  if (redPacketAmount.value< 0.01) {
+    alert('请输入有效的金额')
+    return
+  }
+  
+  // 普通红包不需要个数，默认为1
+  const count = redPacketType.value === 'lucky' ? redPacketCount.value : 1
+  
+  try {
+    const currentUserId = localStorage.getItem('userId')
+    
+    // 准备红包数据
+    const redPacketData = {
+      amount: redPacketAmount.value,
+      type: redPacketType.value,
+      message: redPacketMessage.value,
+      senderId: currentUserId
+    }
+    
+    // 判断是私聊还是群聊
+    if (currentContact.value.isGroup) {
+      redPacketData.groupId = currentContact.value.id
+      redPacketData.count = count
+    } else {
+      redPacketData.receiverId = currentContact.value.id
+      redPacketData.count = 1 // 私聊红包只有1个
+    }
+    
+    console.log('📤 发送红包请求:', redPacketData)
+    
+    // 调用后端API发送红包，获取真实的红包ID
+    let response
+    try {
+      if (currentContact.value.isGroup) {
+        // 群聊红包
+        response = await redPacketAPI.createGroupRedPacket(redPacketData)
+      } else {
+        // 私聊红包
+        response = await redPacketAPI.createPrivateRedPacket(redPacketData)
+      }
+    } catch (apiError) {
+      console.warn('⚠️ 后端红包接口不可用，使用本地模拟')
+      console.warn('错误详情:', apiError.message)
+      
+      // 降级到本地模拟 - 使用统一的红包模块
+      const now = new Date()
+      const time = now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes()
+      
+      // 🎯 生成唯一的红包ID
+      const redPacketType = currentContact.value.isGroup ? 'group' : 'private'
+      const mockRedPacketId = generateRedPacketId(redPacketType, currentUserId)
+      
+      // 构建红包消息对象
+      const newRedPacketMessage = buildRedPacketMessage({
+        redPacketId: mockRedPacketId,
+        type: redPacketType.value,
+        amount: redPacketAmount.value,
+        count,
+        message: redPacketMessage.value,
+        time,
+        senderId: currentUserId,
+        senderName: currentUser.value?.username || '我',
+        receiverId: currentContact.value.isGroup ? null : currentContact.value.id,
+        receiverName: currentContact.value.isGroup ? null : currentContact.value.name,
+        groupId: currentContact.value.isGroup ? currentContact.value.id : null,
+        isChainRedPacket: chainGroupInfo.value?.isChainGroup || false
+      })
+      
+      console.log('✅ 本地模拟红包已创建:', newRedPacketMessage)
+      addMessage(newRedPacketMessage)
+      
+      // ⭐ 关键：通过 Socket 推送给接收方
+      if (currentContact.value.isGroup) {
+        // 群聊红包
+        emitGroupRedPacket({
+          redPacketId: mockRedPacketId,
+          groupId: currentContact.value.id,
+          type: redPacketType.value,
+          amount: redPacketAmount.value,
+          count,
+          message: redPacketMessage.value,
+          senderId: currentUserId,
+          senderName: currentUser.value?.username || '我',
+          isChainRedPacket: chainGroupInfo.value?.isChainGroup || false
+        })
+      } else {
+        // 私聊红包
+        emitPrivateRedPacket({
+          redPacketId: mockRedPacketId,
+          receiverId: currentContact.value.id,
+          receiverName: currentContact.value.name || '好友',
+          type: redPacketType.value,
+          amount: redPacketAmount.value,
+          message: redPacketMessage.value,
+          senderId: currentUserId,
+          senderName: currentUser.value?.username || '我'
+        })
+      }
+      
+      showRedPacketModalVisible.value = false
+      redPacketAmount.value = 0
+      redPacketCount.value = 1
+      redPacketMessage.value = '恭喜发财，大吉大利'
+      
+      // 显示自定义提示而不是 alert
+      const toast = document.createElement('div')
+      toast.textContent = '红包已发送！（本地模拟）'
+      toast.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        z-index: 9999;
+        font-size: 14px;
+      `
+      document.body.appendChild(toast)
+      setTimeout(() => toast.remove(), 2000)
+      
+      // 🐉 保存模拟红包到 localStorage
+      saveChatToLocalStorage(currentContact.value.id, messages.value)
+      console.log('🐉 模拟红包已保存到本地存储')
+      
+      return
+    }
+    
+    console.log('📤 发送红包响应:', response.data)
+    
+    if (response.data.success) {
+      const createdRedPacket = response.data.data
+      console.log('📤 创建的红包:', createdRedPacket)
+      
+      // 使用后端返回的真实红包ID，构建统一的消息对象
+      const now = new Date()
+      const time = now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes()
+      
+      const newRedPacketMessage = buildRedPacketMessage({
+        redPacketId: createdRedPacket._id,
+        type: redPacketType.value,
+        amount: redPacketAmount.value,
+        count,
+        message: redPacketMessage.value,
+        time,
+        senderId: currentUserId,
+        senderName: currentUser.value?.username || '我',
+        receiverId: currentContact.value.isGroup ? null : currentContact.value.id,
+        receiverName: currentContact.value.isGroup ? null : currentContact.value.name,
+        groupId: currentContact.value.isGroup ? currentContact.value.id : null,
+        isChainRedPacket: chainGroupInfo.value?.isChainGroup || false
+      })
+      
+      console.log('📤 发送红包，添加到列表:', newRedPacketMessage)
+      addMessage(newRedPacketMessage)
+      
+      showRedPacketModalVisible.value = false
+      redPacketAmount.value = 0
+      redPacketCount.value = 1
+      redPacketMessage.value = '恭喜发财，大吉大利'
+      
+      alert('红包已发送！')
+    } else {
+      console.error('发送红包失败:', response.data.error)
+      alert('发送红包失败: ' + (response.data.error || '未知错误'))
+    }
+  } catch (error) {
+    console.error('发送红包失败:', error)
+    console.error('错误详情:', error.response?.data || error.message)
+    alert('发送红包失败，请稍后重试')
+  }
+}
+
+// 🐉 加载可用好友列表（用于邀请）
+const loadAvailableFriends = async () => {
+  try {
+    const response = await friendAPI.getFriends()
+    availableFriends.value = response || []
+    console.log('✅ 加载好友列表:', availableFriends.value.length, '人')
+  } catch (error) {
+    console.error('❌ 加载好友列表失败:', error)
+  }
+}
+
+// 🐉 切换选择邀请的好友
+const toggleInviteFriend = (friendId) => {
+  const index = selectedInviteFriends.value.indexOf(friendId)
+  if (index > -1) {
+    selectedInviteFriends.value.splice(index, 1)
+  } else {
+    selectedInviteFriends.value.push(friendId)
+  }
+}
+
+// 🐉 发送邀请
+const sendInvitations = async () => {
+  // 使用当前聊天的群组ID
+  const groupId = currentContact.value?.id || currentContact.value?.userId
+  
+  if (!groupId) {
+    alert('群组信息异常，无法发送邀请')
+    return
+  }
+  
+  if (!chainGroupInfo.value || !chainGroupInfo.value.isChainGroup) {
+    alert('当前不是接龙群，无法发送邀请')
+    return
+  }
+  
+  if (selectedInviteFriends.value.length === 0) {
+    alert('请至少选择一位好友')
+    return
+  }
+  
+  sendingInvites.value = true
+  
+  try {
+    let successCount = 0
+    let failCount = 0
+    
+    console.log('📤 开始发送邀请, groupId:', groupId)
+    
+    // 逐个发送邀请
+    for (const friendId of selectedInviteFriends.value) {
+      try {
+        console.log(`📤 发送邀请给 ${friendId}，过期天数: ${inviteExpireDays.value}`)
+        const response = await chainGroupAPI.createInvitation(groupId, friendId, inviteExpireDays.value)
+        console.log(`✅ 邀请成功:`, response)
+        successCount++
+      } catch (error) {
+        console.error(`❌ 邀请好友 ${friendId} 失败:`)
+        console.error('错误详情:', error.response?.data)
+        console.error('完整错误:', error)
+        failCount++
+      }
+    }
+    
+    // 显示结果
+    if (successCount > 0) {
+      alert(`✅ 成功发送 ${successCount} 个邀请${failCount > 0 ? `，${failCount} 个失败` : ''}`)
+      showInviteModal.value = false
+      selectedInviteFriends.value = []
+    } else {
+      alert('❌ 所有邀请发送失败，请稍后重试')
+    }
+  } catch (error) {
+    console.error('❌ 发送邀请失败:', error)
+    alert('发送邀请失败: ' + (error.response?.data?.msg || error.message))
+  } finally {
+    sendingInvites.value = false
+  }
+}
+
+// 打开红包
+const openRedPacket = async (message) => {
+  console.log('🔴 点击红包:', message)
+  
+  try {
+    // 🐉 检查是否已过期
+    if (message.expired) {
+      alert('该红包已过期，无法领取')
+      return
+    }
+    
+    if (message.opened) {
+      // 显示红包账单
+      showRedPacketBill(message)
+      return
+    }
+    
+    console.log('📦 准备打开红包:', message.redPacketId)
+    
+    // 创建红包封面弹窗（带"开"按钮）
+    const redPacketCoverModal = document.createElement('div')
+    redPacketCoverModal.className = 'red-packet-modal'
+    
+    // 添加微信红包封面样式
+    redPacketCoverModal.innerHTML = `
+      <div class="red-packet-modal-content">
+        <div class="red-packet-cover">
+          <div class="red-packet-cover-header">
+            <span class="red-packet-icon">🧧</span>
+          </div>
+          <div class="red-packet-cover-title">${message.message || '恭喜发财，大吉大利'}</div>
+          <div class="red-packet-open-btn" id="openRedPacketBtn">开</div>
+        </div>
+      </div>
+    `
+    
+    // 添加到body
+    document.body.appendChild(redPacketCoverModal)
+    
+    // 触发动画
+    setTimeout(() => {
+      redPacketCoverModal.classList.add('show')
+    }, 10)
+    
+    // 绑定点击外部关闭
+    redPacketCoverModal.addEventListener('click', (e) => {
+      if (e.target === redPacketCoverModal) {
+        redPacketCoverModal.classList.remove('show')
+        setTimeout(() => {
+          document.body.removeChild(redPacketCoverModal)
+        }, 300)
+      }
+    })
+    
+    // 绑定"开"按钮点击事件
+    setTimeout(() => {
+      const openBtn = document.getElementById('openRedPacketBtn')
+      if (openBtn) {
+        openBtn.addEventListener('click', async (e) => {
+          e.stopPropagation()
+              
+          // 🐉 如果是接龙群，首先检查等待期（在显示弹窗前就检查）
+          if (chainGroupInfo.value && chainGroupInfo.value.memberInfo) {
+            const canGrabAfter = new Date(chainGroupInfo.value.memberInfo.canGrabAfter)
+            const now = new Date()
+                
+            if (now < canGrabAfter) {
+              const waitMinutes = Math.ceil((canGrabAfter - now) / 60000)
+              alert(`还需等待 ${waitMinutes} 分钟才能抢红包`)
+              redPacketCoverModal.classList.remove('show')
+              setTimeout(() => {
+                document.body.removeChild(redPacketCoverModal)
+              }, 300)
+              return
+            }
+          }
+              
+          // ✅ 检查是否已领取
+          if (message.redPacketId && message.redPacketId.startsWith('mock_')) {
+            alert('这是一个测试红包，无法在后端领取。')
+            redPacketCoverModal.classList.remove('show')
+            setTimeout(() => {
+              document.body.removeChild(redPacketCoverModal)
+            }, 300)
+            return
+          }
+          
+          if (checkIfRedPacketOpened(message.redPacketId)) {
+            alert('你已经领取过这个红包了！')
+            redPacketCoverModal.classList.remove('show')
+            setTimeout(() => {
+              document.body.removeChild(redPacketCoverModal)
+            }, 300)
+            return
+          }
+              
+          try {
+            // 🐉 检查是否是模拟红包（前端生成的ID）
+            const isMockRedPacket = message.redPacketId.startsWith('pvt_') || 
+                                    message.redPacketId.startsWith('grp_') ||
+                                    message.redPacketId.startsWith('chn_') ||
+                                    message.redPacketId.startsWith('mock_')
+            
+            if (isMockRedPacket) {
+              console.log('🎭 这是模拟红包，本地处理')
+              
+              // 🐉 先关闭红包详情弹窗
+              redPacketCoverModal.classList.remove('show')
+              setTimeout(() => {
+                if (redPacketCoverModal.parentNode) {
+                  document.body.removeChild(redPacketCoverModal)
+                }
+              }, 300)
+              
+              // 标记红包已领取
+              markRedPacketOpenedFn(message.redPacketId)
+              
+              // 修改消息状态为已打开
+              message.opened = true
+              
+              // 模拟抢到金额（随机分配）
+              const mockAmount = Math.floor(Math.random() * message.amount) + 1
+              message.openedAmount = mockAmount
+              message.openedBy = message.openedBy || []
+              message.openedBy.push({
+                userId: localStorage.getItem('userId'),
+                amount: mockAmount,
+                username: localStorage.getItem('username') || '用户'
+              })
+              
+              // 显示领取结果
+              showRedPacketResultModal.value = true
+              redPacketResult.value = {
+                amount: mockAmount,
+                message: message.message || '恭喜发财，大吉大利',
+                from: message.senderName || '好友'
+              }
+              
+              return
+            }
+            
+            // 调用后端 API 抢红包
+            console.log('🧧 正在尝试抢红包，ID:', message.redPacketId)
+            const response = await redPacketAPI.openRedPacket(message.redPacketId)
+            console.log('🧧 抢红包响应:', response)
+                      
+            // ✅ 标记红包已领取
+            markRedPacketOpenedFn(message.redPacketId)
+                      
+            // 修改消息状态为已打开
+            message.opened = true
+                      
+            // 获取抢到金额（兼容多种响应格式）
+            const amount = response.amount || response.data?.amount || 0
+            const newBalance = response.newBalance || response.data?.newBalance
+                      
+            // 更新消息对象的领取信息
+            message.openedAmount = amount
+            message.openedBy = message.openedBy || []
+            message.openedBy.push({
+              userId: localStorage.getItem('userId'),
+              amount: amount,
+              username: localStorage.getItem('username') || '用户'
+            })
+                      
+            // 保存到本地存储
+            if (currentContact.value) {
+              saveChatToLocalStorage(currentContact.value.id, messages.value)
+            }
+                      
+            // 🐉 检查是否为接龙群红包（通过 totalReceived 字段判断）
+            const totalReceived = response.totalReceived ?? response.data?.totalReceived
+            const wasKicked = response.wasKicked ?? response.data?.wasKicked
+            const kickReason = response.kickReason ?? response.data?.kickReason
+                      
+            if (totalReceived !== undefined) {
+              // 这是接龙群红包
+              console.log('🐉 接龙群红包，累计金额:', totalReceived)
+                        
+              // 显示抢到金额和累计金额
+              let resultMessage = `恭喜！抢到 ${amount} USDT\n`
+              resultMessage += `累计领取: ${totalReceived} USDT`
+                        
+              alert(resultMessage)
+                        
+              // 如果被踢出，显示提示
+              if (wasKicked) {
+                setTimeout(() => {
+                  const kickedConfirm = confirm(
+                    `⚠️ 您已被踢出群\n\n原因：${kickReason}\n\n您可以重新缴费进群继续游戏`
+                  )
+                  if (kickedConfirm) {
+                    // 跳转到接龙群列表
+                    router.push('/chain-groups')
+                  }
+                }, 500)
+              }
+                        
+              // 刷新接龙群信息
+              if (currentContact.value) {
+                await loadChainGroupInfo(currentContact.value.id)
+              }
+                        
+              // 关闭封面弹窗
+              redPacketCoverModal.classList.remove('show')
+              setTimeout(() => {
+                document.body.removeChild(redPacketCoverModal)
+              }, 300)
+            } else {
+              // 普通红包，显示金额动画
+              // 关闭封面弹窗
+              redPacketCoverModal.classList.remove('show')
+              setTimeout(() => {
+                document.body.removeChild(redPacketCoverModal)
+                          
+                // 创建金额显示弹窗
+                const redPacketAmountModal = document.createElement('div')
+                redPacketAmountModal.className = 'red-packet-modal'
+                          
+                redPacketAmountModal.innerHTML = `
+                  <div class="red-packet-modal-content">
+                    <div class="red-packet-header">
+                      <span class="red-packet-icon">🧧</span>
+                      <span class="red-packet-title">${message.message || '恭喜发财，大吉大利'}</span>
+                    </div>
+                    <div class="red-packet-amount-big">¥${amount}</div>
+                    <div class="red-packet-footer">
+                      <span class="red-packet-desc">恭喜发财</span>
+                    </div>
+                  </div>
+                `
+                          
+                document.body.appendChild(redPacketAmountModal)
+                          
+                setTimeout(() => {
+                  redPacketAmountModal.classList.add('show')
+                }, 10)
+                          
+                // 绑定点击外部关闭
+                redPacketAmountModal.addEventListener('click', (e) => {
+                  if (e.target === redPacketAmountModal) {
+                    redPacketAmountModal.classList.remove('show')
+                              
+                    setTimeout(() => {
+                      document.body.removeChild(redPacketAmountModal)
+                    }, 300)
+                  }
+                })
+                          
+                // 自动关闭（3秒后）
+                setTimeout(() => {
+                  redPacketAmountModal.classList.remove('show')
+                  setTimeout(() => {
+                    if (document.body.contains(redPacketAmountModal)) {
+                      document.body.removeChild(redPacketAmountModal)
+                    }
+                  }, 300)
+                }, 3000)
+                          
+              }, 300)
+            }
+          } catch (error) {
+            console.error('抢红包失败:', error)
+            const errorMsg = error.response?.data?.message || error.response?.data?.msg || '抢红包失败'
+                      
+            // 🐉 处理过期错误
+            if (errorMsg.includes('过期') || errorMsg.includes('expired')) {
+              alert('该红包已过期，无法领取')
+              message.expired = true
+              // 保存到本地存储
+              if (currentContact.value) {
+                saveChatToLocalStorage(currentContact.value.id, messages.value)
+              }
+              return
+            }
+            
+            // 处理等待期错误
+            if (errorMsg.includes('wait')) {
+              const minutes = errorMsg.match(/\d+/)?.[0] || '未知'
+              alert(`还需等待 ${minutes} 分钟才能抢红包`)
+            } else {
+              alert(errorMsg)
+            }
+                      
+            redPacketCoverModal.classList.remove('show')
+            setTimeout(() => {
+              document.body.removeChild(redPacketCoverModal)
+            }, 300)
+          }
+        })
+      }
+    }, 100)
+  } catch (error) {
+    console.error('打开红包失败:', error)
+    alert('打开红包失败，请稍后重试')
+  }
+}
+
+// 显示红包账单
+const showRedPacketBill = (message) => {
+  console.log('📊 显示红包账单:', message)
+  
+  // 获取当前用户名
+  const userData = localStorage.getItem('user')
+  const currentUsername = userData ? JSON.parse(userData).username || '用户' : '用户'
+  
+  // 构建账单HTML
+  let billHtml = `
+    <div class="red-packet-bill">
+      <div class="red-packet-bill-header">
+        <span class="red-packet-icon">💰</span>
+        <span class="red-packet-title">红包账单</span>
+      </div>
+      <div class="red-packet-bill-info">
+        <div class="red-packet-bill-item">
+          <span>${currentUsername}发出的红包</span>
+        </div>
+        <div class="red-packet-bill-item">
+          <span>${message.message || '恭喜发财，大吉大利'}</span>
+        </div>
+        <div class="red-packet-bill-item">
+          <span>总金额:</span>
+          <span>¥${message.amount}</span>
+        </div>
+        <div class="red-packet-bill-item">
+          <span>红包个数:</span>
+          <span>${message.count}个</span>
+        </div>
+      </div>
+      <div class="red-packet-bill-summary">
+        <span>已领取/${message.count}个，共¥${message.amount}</span>
+      </div>
+      <div class="red-packet-bill-list">
+        <div class="red-packet-bill-list-title">领取记录</div>
+  `
+  
+  if (message.redPacketType === 'lucky') {
+    // 拼手气红包显示多个领取者
+    const users = [currentUsername, '好友1', '好友2', '好友3', '好友4']
+    for (let i = 0; i < Math.min(message.count, users.length); i++) {
+      const userAmount = i === 0 ? message.openedAmount : (Math.random() * message.amount).toFixed(2)
+      const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+      billHtml += `
+        <div class="red-packet-bill-list-item">
+          <div class="red-packet-bill-user-info">
+            <span class="red-packet-bill-user">${users[i]}</span>
+            <span class="red-packet-bill-time">${time}</span>
+          </div>
+          <span class="red-packet-bill-amount">¥${userAmount}</span>
+        </div>
+      `
+    }
+  } else {
+    // 普通红包只显示当前用户领取记录
+    const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+    billHtml += `
+      <div class="red-packet-bill-list-item">
+        <div class="red-packet-bill-user-info">
+          <span class="red-packet-bill-user">${currentUsername}</span>
+          <span class="red-packet-bill-time">${time}</span>
+        </div>
+        <span class="red-packet-bill-amount">¥${message.openedAmount}</span>
+      </div>
+    `
+  }
+  
+  billHtml += `
+      </div>
+    </div>
+  `
+  
+  // 创建账单弹窗
+  const redPacketBillModal = document.createElement('div')
+  redPacketBillModal.className = 'red-packet-modal'
+  redPacketBillModal.innerHTML = `
+    <div class="red-packet-modal-content">
+      ${billHtml}
+    </div>
+  `
+  
+  document.body.appendChild(redPacketBillModal)
+  
+  setTimeout(() => {
+    redPacketBillModal.classList.add('show')
+  }, 10)
+  
+  // 绑定点击外部关闭
+  redPacketBillModal.addEventListener('click', (e) => {
+    if (e.target === redPacketBillModal) {
+      redPacketBillModal.classList.remove('show')
+      setTimeout(() => {
+        document.body.removeChild(redPacketBillModal)
+      }, 300)
+    }
+  })
+}
+</script>
+
+<style>
+/* 全局样式 - 红包弹窗 */
+.red-packet-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.red-packet-modal.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.red-packet-modal-content {
+  width: 320px;
+  background: linear-gradient(135deg, #ff4757 0%, #ff3742 100%);
+  border-radius: 16px;
+  padding: 40px 30px;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  transform: scale(0.8) translateY(20px);
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.red-packet-modal.show .red-packet-modal-content {
+  transform: scale(1) translateY(0);
+}
+
+.red-packet-header {
+  margin-bottom: 30px;
+}
+
+.red-packet-icon {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 15px;
+  animation: bounce 1s ease-in-out;
+}
+
+.red-packet-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.red-packet-amount-big {
+  font-size: 48px;
+  font-weight: 800;
+  color: #ffeb3b;
+  text-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+  margin-bottom: 30px;
+  animation: amountPop 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.red-packet-footer {
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.red-packet-desc {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* 金额特效页面样式 */
+.red-packet-amount-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.red-packet-user-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 15px;
+}
+
+.red-packet-user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  margin-right: 10px;
+}
+
+.red-packet-user-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+}
+
+.red-packet-message {
+  font-size: 18px;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 10px;
+}
+
+.red-packet-amount-footer {
+  margin-bottom: 20px;
+}
+
+.red-packet-amount-summary {
+  text-align: center;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 20px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.red-packet-amount-record {
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  padding-top: 20px;
+}
+
+.red-packet-record-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 0;
+}
+
+.red-packet-record-user {
+  display: flex;
+  align-items: center;
+}
+
+.red-packet-record-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  margin-right: 10px;
+}
+
+.red-packet-record-user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.red-packet-record-username {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.red-packet-record-time {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+}
+
+.red-packet-record-amount {
+  color: #ffeb3b;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.red-packet-close-btn {
+  width: 120px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 22px;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 20px;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.red-packet-close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.red-packet-close-btn:active {
+  transform: translateY(0);
+}
+
+/* 红包账单样式 */
+.red-packet-bill {
+  width: 100%;
+  max-width: 400px;
+}
+
+.red-packet-bill-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.red-packet-bill-info {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.red-packet-bill-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.red-packet-bill-item:last-child {
+  margin-bottom: 0;
+}
+
+.red-packet-bill-list {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.red-packet-bill-list-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.red-packet-bill-summary {
+  text-align: center;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 15px 0;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.red-packet-bill-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 14px;
+}
+
+.red-packet-bill-list-item:last-child {
+  border-bottom: none;
+}
+
+.red-packet-bill-user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.red-packet-bill-user {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.red-packet-bill-time {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+}
+
+.red-packet-bill-amount {
+  color: #ffeb3b;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+/* 红包封面样式 */
+.red-packet-cover {
+  text-align: center;
+}
+
+.red-packet-cover-header {
+  margin-bottom: 30px;
+}
+
+.red-packet-cover-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  margin-bottom: 40px;
+}
+
+.red-packet-open-btn {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ffeb3b 0%, #fbc02d 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 36px;
+  font-weight: 800;
+  color: #d32f2f;
+  margin: 0 auto;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  animation: pulse 2s infinite;
+}
+
+.red-packet-open-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.4);
+}
+
+.red-packet-open-btn:active {
+  transform: scale(0.95);
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-20px);
+  }
+  60% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes amountPop {
+  0% {
+    transform: scale(0) translateY(30px);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1) translateY(-5px);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.4);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* 聊天样式 */
+.chat-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 聊天区域 */
+.chat-area {
+  flex: 1;
+  background: #f5f7fa;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.action-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: #f5f7fa;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  transition: background-color 0.3s ease;
+}
+
+.action-btn:hover {
+  background: #e0e0e0;
+}
+
+.back-btn {
+  margin-right: 15px;
+}
+
+/* 接龙群状态条 */
+.chain-status-bar {
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+  border-bottom: 2px solid #ffc107;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.chain-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.chain-label {
+  font-size: 14px;
+  color: #856404;
+  font-weight: 500;
+}
+
+.chain-amount {
+  font-size: 16px;
+  font-weight: bold;
+  color: #d35400;
+}
+
+.chain-amount.warning {
+  color: #e74c3c;
+  animation: pulse 1.5s infinite;
+}
+
+.chain-countdown, .chain-ready {
+  font-size: 14px;
+  font-weight: bold;
+  padding: 6px 12px;
+  border-radius: 16px;
+  white-space: nowrap;
+}
+
+.chain-countdown {
+  background: #ff6b6b;
+  color: white;
+}
+
+.chain-ready {
+  background: #2ecc71;
+  color: white;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* 红包类型选择 */
+.red-packet-types {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.red-packet-type {
+  flex: 1;
+  padding: 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.red-packet-type:hover {
+  border-color: #667eea;
+}
+
+.red-packet-type.active {
+  border-color: #667eea;
+  background: #e3f2fd;
+}
+
+.red-packet-type-icon {
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+
+.red-packet-type-name {
+  font-weight: 500;
+  color: #333;
+}
+
+.chat-header {
+  padding: 20px;
+  background: white;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.chat-title {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.chat-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1rem;
+}
+
+.chat-name {
+  font-weight: 500;
+  font-size: 1.1rem;
+}
+
+.chat-actions {
+  display: flex;
+  gap: 15px;
+}
+
+.chat-messages {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.message {
+  display: flex;
+  max-width: 85%;
+  position: relative;
+  gap: 10px;
+}
+
+.message.self {
+  align-self: flex-end;
+  justify-content: flex-end;
+}
+
+.message.other {
+  align-self: flex-start;
+}
+
+.message-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 16px;
+  font-weight: bold;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.message-bubble-wrapper {
+  display: flex;
+  flex-direction: column;
+  max-width: calc(100% - 50px);
+}
+
+.text-message {
+  padding: 12px 16px;
+  border-radius: 18px;
+  font-size: 15px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.message.self .text-message {
+  background: #667eea;
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.message.other .text-message {
+  background: white;
+  color: #333;
+  border-bottom-left-radius: 4px;
+}
+
+.message.self .message-time {
+  text-align: right;
+}
+
+.message.other .message-time {
+  text-align: left;
+}
+
+.message.system {
+  align-self: center;
+  max-width: 90%;
+}
+
+.message.system .system-content {
+  background: rgba(0,0,0,0.05);
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  color: #666;
+  text-align: center;
+}
+
+.message.sent {
+  align-self: flex-end;
+  background: #667eea;
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.message.received {
+  align-self: flex-start;
+  background: white;
+  color: #333;
+  border-bottom-left-radius: 4px;
+}
+
+.message-time {
+  font-size: 0.7rem;
+  opacity: 0.7;
+  margin-top: 5px;
+  text-align: right;
+}
+
+/* 红包样式 */
+.red-packet {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+  color: white;
+  padding: 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  position: relative;
+  min-width: 240px;
+  max-width: 280px;
+  align-self: flex-start;
+}
+
+/* 已领取红包样式 */
+.red-packet.red-packet-opened {
+  background: linear-gradient(135deg, #d4a574 0%, #b8860b 100%);
+  color: #fff;
+  cursor: default;
+}
+
+.red-packet.red-packet-opened:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* 已过期红包样式 */
+.red-packet.red-packet-expired {
+  background: linear-gradient(135deg, #9e9e9e 0%, #757575 100%);
+  color: #e0e0e0;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.red-packet.red-packet-expired:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* 已领取状态下的金额文字样式 */
+.red-packet.red-packet-opened .red-packet-amount {
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* 已过期状态下的文字样式 */
+.red-packet.red-packet-expired .red-packet-amount {
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  opacity: 0.8;
+}
+
+.red-packet:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+}
+
+.red-packet-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.red-packet-title {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.red-packet-amount {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 10px 0;
+}
+
+.red-packet-message {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 15px 0;
+  text-align: center;
+  opacity: 0.95;
+}
+
+.red-packet-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+/* 系统消息样式 */
+.system-message {
+  align-self: center;
+  max-width: 90%;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+  border: 1px solid #667eea30;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.system-content {
+  font-size: 0.9rem;
+  color: #667eea;
+  line-height: 1.6;
+  margin-bottom: 5px;
+}
+
+.red-packet-detail {
+  background: white;
+  border-radius: 12px;
+  padding: 15px;
+  margin-top: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  align-self: flex-start;
+  max-width: 250px;
+}
+
+.red-packet-detail-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.red-packet-detail-item:last-child {
+  border-bottom: none;
+}
+
+.red-packet-user {
+  font-weight: 500;
+}
+
+.red-packet-user-amount {
+  color: #ff6b6b;
+  font-weight: 600;
+}
+
+
+
+/* 聊天输入 */
+.chat-input {
+  padding: 15px;
+  background: white;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.chat-tools {
+  display: flex;
+  gap: 10px;
+}
+
+.tool-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: #f5f7fa;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  transition: background-color 0.3s ease;
+}
+
+.tool-btn:hover:not(:disabled) {
+  background: #e0e0e0;
+}
+
+.tool-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.message-input {
+  flex: 1;
+  padding: 12px 20px;
+  border: none;
+  background: #f5f7fa;
+  border-radius: 25px;
+  font-size: 1rem;
+}
+
+.message-input:focus {
+  outline: none;
+}
+
+.send-btn {
+  padding: 12px 24px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+}
+
+.send-btn:hover {
+  background: #5a6fd8;
+}
+
+/* 弹窗 */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 20px;
+  padding: 30px;
+  width: 90%;
+  max-width: 400px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.modal-header h3 {
+  color: #667eea;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #999;
+}
+
+.search-user-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.search-user-input {
+  flex: 1;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+}
+
+.search-user-btn {
+  padding: 12px 24px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.search-results {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.search-result-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.search-result-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.add-friend-btn {
+  padding: 8px 16px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+/* 表单样式 */
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 1rem;
+}
+
+.form-group input:focus {
+  border-color: #667eea;
+}
+
+.send-red-packet-btn {
+  width: 100%;
+  padding: 15px;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* 说明按钮样式 - 与其他action-btn统一 */
+.info-btn {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  color: white !important;
+  width: 40px !important;
+  height: 40px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  font-size: 20px !important;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.info-btn:hover {
+  background: rgba(255, 255, 255, 0.35) !important;
+  transform: scale(1.05);
+}
+
+/* 说明卡片模态框 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.info-card {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 450px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.info-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #f0f0f0;
+  position: sticky;
+  top: 0;
+  background: white;
+  border-radius: 16px 16px 0 0;
+  z-index: 1;
+}
+
+.info-card-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 18px;
+}
+
+.info-card-header .close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #999;
+  padding: 0;
+  line-height: 1;
+}
+
+.info-card-content {
+  padding: 20px;
+}
+
+.info-section {
+  margin-bottom: 20px;
+}
+
+.info-section:last-child {
+  margin-bottom: 0;
+}
+
+.info-section h4 {
+  color: #333;
+  font-size: 15px;
+  margin: 0 0 8px 0;
+  font-weight: 600;
+}
+
+.info-section p {
+  color: #666;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.info-section p strong {
+  color: #333;
+  font-weight: 600;
+}
+
+.info-section.warning {
+  background: #fff7e6;
+  border-left: 4px solid #faad14;
+  padding: 12px 16px;
+  border-radius: 0 8px 8px 0;
+}
+
+.info-section.warning h4 {
+  color: #fa8c16;
+}
+
+/* 🐉 邀请好友弹窗样式 */
+.invite-modal {
+  background: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.invite-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #f0f0f0;
+  position: sticky;
+  top: 0;
+  background: white;
+  border-radius: 16px 16px 0 0;
+  z-index: 1;
+}
+
+.invite-modal .modal-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 18px;
+}
+
+.invite-modal .modal-body {
+  padding: 20px;
+}
+
+.invite-info {
+  background: #f0f7ff;
+  border-left: 4px solid #1890ff;
+  padding: 12px 16px;
+  border-radius: 0 8px 8px 0;
+  margin-bottom: 20px;
+}
+
+.invite-info p {
+  margin: 0;
+  color: #1890ff;
+  font-size: 14px;
+}
+
+.friends-list {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 20px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+}
+
+.friend-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.friend-item:last-child {
+  border-bottom: none;
+}
+
+.friend-item:hover {
+  background: #f8f9fa;
+}
+
+.friend-item.selected {
+  background: #e6f7ff;
+}
+
+.friend-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.friend-info {
+  flex: 1;
+  margin-left: 12px;
+  min-width: 0;
+}
+
+.friend-name {
+  font-weight: 600;
+  color: #333;
+  font-size: 14px;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.friend-id {
+  font-size: 12px;
+  color: #999;
+}
+
+.friend-checkbox {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #d9d9d9;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: white;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.friend-checkbox.checked {
+  background: #1890ff;
+  border-color: #1890ff;
+}
+
+.empty-friends {
+  padding: 40px 20px;
+  text-align: center;
+  color: #999;
+}
+
+.invite-settings {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.invite-settings label {
+  font-weight: 600;
+  color: #333;
+  font-size: 14px;
+}
+
+.invite-settings input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+
+.invite-settings input:focus {
+  outline: none;
+  border-color: #1890ff;
+}
+
+.days-label {
+  color: #666;
+  font-size: 14px;
+}
+
+.selected-count {
+  text-align: center;
+  color: #666;
+  font-size: 14px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.invite-modal .modal-footer {
+  padding: 16px 20px;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  gap: 12px;
+}
+
+.invite-btn {
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%) !important;
+  color: white !important;
+}
+
+.invite-btn:hover {
+  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%) !important;
+}
+
+/* 分享按钮 */
+.share-btn {
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%) !important;
+  color: white !important;
+}
+
+.share-btn:hover {
+  background: linear-gradient(135deg, #66BB6A 0%, #4CAF50 100%) !important;
+}
+
+.info-section.warning p {
+  color: #8c6d1f;
+}
+
+/* 🐉 红包领取结果弹窗样式 */
+.red-packet-result {
+  text-align: center;
+  max-width: 320px;
+}
+
+.result-header {
+  padding: 24px 20px 16px;
+}
+
+.result-icon {
+  font-size: 64px;
+  margin-bottom: 12px;
+  animation: bounce 1s ease infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.result-header h3 {
+  margin: 0;
+  color: #ff4d4f;
+  font-size: 20px;
+}
+
+.result-body {
+  padding: 0 20px 24px;
+}
+
+.result-amount {
+  margin: 20px 0;
+}
+
+.amount-value {
+  font-size: 48px;
+  font-weight: bold;
+  color: #ff4d4f;
+  margin-right: 8px;
+}
+
+.amount-unit {
+  font-size: 20px;
+  color: #ff4d4f;
+}
+
+.result-message {
+  font-size: 16px;
+  color: #666;
+  margin: 16px 0 8px;
+}
+
+.result-from {
+  font-size: 14px;
+  color: #999;
+}
+
+.result-close-btn {
+  width: calc(100% - 40px);
+  margin: 0 20px 20px;
+  padding: 12px;
+  background: linear-gradient(135deg, #ff4d4f 0%, #cf1322 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.result-close-btn:hover {
+  background: linear-gradient(135deg, #ff7875 0%, #ff4d4f 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 77, 79, 0.3);
+}
+</style>

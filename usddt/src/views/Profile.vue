@@ -4,6 +4,7 @@
     <header class="header">
       <h1>我的</h1>
       <div class="header-actions">
+        <button class="action-btn" @click="openScanner">📷</button>
         <button class="action-btn">⚙️</button>
       </div>
     </header>
@@ -34,9 +35,9 @@
           <span class="menu-text">设置</span>
           <span class="menu-arrow">›</span>
         </div>
-        <div class="menu-item" @click="showFeature('隐私')">
-          <span class="menu-icon">🔒</span>
-          <span class="menu-text">隐私</span>
+        <div class="menu-item" @click="openScanner">
+          <span class="menu-icon">📷</span>
+          <span class="menu-text">扫一扫</span>
           <span class="menu-arrow">›</span>
         </div>
         <div class="menu-item" @click="showFeature('帮助与反馈')">
@@ -60,26 +61,6 @@
       </div>
     </main>
 
-    <!-- 底部导航 -->
-    <footer class="bottom-nav">
-      <div class="nav-item" @click="navigate('/home')">
-        <div class="nav-icon">💬</div>
-        <div class="nav-label">消息</div>
-      </div>
-      <div class="nav-item" @click="navigate('/contacts')">
-        <div class="nav-icon">👥</div>
-        <div class="nav-label">联系人</div>
-      </div>
-      <div class="nav-item" @click="navigate('/wallet')">
-        <div class="nav-icon">💰</div>
-        <div class="nav-label">钱包</div>
-      </div>
-      <div class="nav-item active" @click="navigate('/profile')">
-        <div class="nav-icon">👤</div>
-        <div class="nav-label">我的</div>
-      </div>
-    </footer>
-
     <!-- 分享菜单弹窗 -->
     <div v-if="showShareModal" class="modal-overlay" @click="showShareModal = false">
       <div class="share-modal" @click.stop>
@@ -87,7 +68,16 @@
           <h3>分享我的ID</h3>
           <button class="close-btn" @click="showShareModal = false">×</button>
         </div>
-        <div class="share-options">
+        
+        <!-- 二维码卡片 -->
+        <div v-if="qrCodeDataUrl" class="qrcode-card">
+          <img :src="qrCodeDataUrl" alt="用户ID二维码" class="qrcode-image" />
+          <div class="qrcode-user-id">{{ user.id }}</div>
+          <div class="qrcode-hint">扫码添加好友</div>
+        </div>
+        
+        <!-- 分享选项 -->
+        <div v-else class="share-options">
           <div class="share-option" @click="copyAndShare">
             <div class="share-icon">📋</div>
             <div class="share-text">复制ID</div>
@@ -100,6 +90,22 @@
             <div class="share-icon">💬</div>
             <div class="share-text">分享到微信</div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 扫码弹窗 -->
+    <div v-if="showScanner" class="scanner-fullscreen" @click="closeScanner">
+      <div class="scanner-content" @click.stop>
+        <div class="scanner-header">
+          <h3>扫一扫</h3>
+          <button class="close-btn" @click="closeScanner">×</button>
+        </div>
+        <div class="scanner-camera">
+          <div id="qr-reader"></div>
+        </div>
+        <div class="scanner-hint">
+          <p>将二维码放入框内，即可自动扫描</p>
         </div>
       </div>
     </div>
@@ -132,13 +138,17 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from '@/utils/toast'
+import { Html5QrcodeScanner } from 'html5-qrcode'
+import { getSocket } from '@/socket'
 
 const router = useRouter()
 const showEditModal = ref(false)
 const showShareModal = ref(false)
+const showScanner = ref(false)
+const qrCodeDataUrl = ref('')
 
 // 用户数据
 const user = ref({
@@ -193,8 +203,15 @@ const copyAndShare = () => {
 
 // 生成二维码
 const generateQRCode = () => {
-  showShareModal.value = false
-  showToast('二维码生成功能开发中...', 'info')
+  // ✅ 使用在线二维码生成服务
+  const userId = user.value.id
+  if (userId) {
+    const encodedData = encodeURIComponent(userId)
+    qrCodeDataUrl.value = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodedData}`
+    console.log('✅ 二维码生成成功')
+  } else {
+    showToast('用户ID不存在', 'error')
+  }
 }
 
 // 分享到微信
@@ -213,6 +230,114 @@ const showFeature = (feature) => {
   showToast(`${feature}功能开发中...`, 'info')
 }
 
+// ✅ 打开扫码器
+const openScanner = async () => {
+  showScanner.value = true
+  
+  // 等待 DOM 更新后初始化扫描器
+  setTimeout(() => {
+    if (!videoElement.value) return
+    
+    const scanner = new Html5QrcodeScanner(
+      'qr-reader',
+      { 
+        fps: 10, 
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0
+      },
+      false // 不显示详细日志
+    )
+    
+    scanner.render(onScanSuccess, onScanFailure)
+    
+    // 保存扫描器实例以便清理
+    window.qrScanner = scanner
+  }, 100)
+}
+
+// ✅ 扫码成功回调
+const onScanSuccess = (decodedText) => {
+  console.log('✅ 扫码成功:', decodedText)
+  
+  // 停止扫描器
+  if (window.qrScanner) {
+    window.qrScanner.clear()
+    delete window.qrScanner
+  }
+  
+  closeScanner()
+  
+  // 判断是好友ID还是钱包地址
+  if (/^\d{8}$/.test(decodedText)) {
+    // 8位数字，认为是好友ID，直接发送好友请求
+    showToast(`正在添加好友: ${decodedText}`, 'success')
+    sendFriendRequest(decodedText)
+  } else if (/^T[a-zA-Z0-9]{33}$/.test(decodedText)) {
+    // TRON地址格式（T开头34位），跳转到转账页面
+    showToast('识别到钱包地址，跳转转账页面', 'success')
+    router.push(`/wallet/transfer?address=${decodedText}`)
+  } else {
+    showToast(`无法识别的二维码内容`, 'error')
+  }
+}
+
+// ✅ 发送好友请求
+const sendFriendRequest = async (userId) => {
+  try {
+    const socket = getSocket()
+    socket.emit('chat:addFriend', {
+      userId: userId,
+      message: '通过扫码添加好友'
+    })
+    
+    // 监听响应
+    const handleResponse = (data) => {
+      if (data.success) {
+        showToast('好友请求已发送', 'success')
+      } else {
+        showToast(data.msg || '发送失败', 'error')
+      }
+      socket.off('friendRequestSent', handleResponse)
+      socket.off('errorMessage', handleError)
+    }
+    
+    const handleError = (data) => {
+      showToast(data.msg || '发送失败', 'error')
+      socket.off('friendRequestSent', handleResponse)
+      socket.off('errorMessage', handleError)
+    }
+    
+    socket.on('friendRequestSent', handleResponse)
+    socket.on('errorMessage', handleError)
+    
+    // 5秒后超时
+    setTimeout(() => {
+      socket.off('friendRequestSent', handleResponse)
+      socket.off('errorMessage', handleError)
+    }, 5000)
+  } catch (error) {
+    console.error('发送好友请求失败:', error)
+    showToast('发送失败', 'error')
+  }
+}
+
+// ✅ 扫码失败回调
+const onScanFailure = (error) => {
+  // 静默失败，不显示错误
+  // console.warn('扫码失败:', error)
+}
+
+// ✅ 关闭扫码器
+const closeScanner = () => {
+  // 停止扫描器
+  if (window.qrScanner) {
+    window.qrScanner.clear()
+    delete window.qrScanner
+  }
+  
+  showScanner.value = false
+}
+
 // 跳转到通知页面
 const goToNotifications = () => {
   showToast('消息通知功能开发中...', 'info')
@@ -227,42 +352,27 @@ const saveProfile = () => {
 // 退出登录
 const logout = async () => {
   if (confirm('确定要退出登录吗？')) {
-    const userId = localStorage.getItem('userId')
-    
-    // ✅ 清空 MessageCenter 的所有数据（内存 + IndexedDB）
+    // 🚪 使用统一的清理工具
     try {
-      const { useMessageCenter } = await import('@/composables/useMessageCenter')
-      const messageCenter = useMessageCenter()
-      await messageCenter.clearAllData()
-      console.log('✅ 已清空 MessageCenter 数据')
+      const { logoutCleanup } = await import('@/utils/logout')
+      await logoutCleanup()
+      console.log('✅ 已执行退出清理')
     } catch (error) {
-      console.error('❌ 清空 MessageCenter 数据失败:', error)
+      console.error('❌ 退出清理失败:', error)
     }
     
-    // 清除群组列表缓存
-    if (userId) {
-      localStorage.removeItem(`groups_${userId}`)
-      
-      // 清除 joined_ 前缀的群组状态缓存
-      for (let i = localStorage.length - 1; i >= 0; i--) {
-        const key = localStorage.key(i)
-        if (key.startsWith(`joined_${userId}_`)) {
-          localStorage.removeItem(key)
-        }
-      }
-    }
-    
-    // 清除其他登录数据
-    localStorage.removeItem('token')
-    localStorage.removeItem('userId')
-    localStorage.removeItem('user')
-    localStorage.removeItem('userObjectId')
-    localStorage.removeItem('tokenExpiresAt')
-    
-    console.log('✅ 已清除所有登录缓存')
+    // 跳转到登录页
     router.push('/login')
   }
 }
+
+// ✅ 页面卸载时清理
+onUnmounted(() => {
+  if (window.qrScanner) {
+    window.qrScanner.clear()
+    delete window.qrScanner
+  }
+})
 </script>
 
 <style scoped>
@@ -484,44 +594,6 @@ const logout = async () => {
   color: #999;
 }
 
-/* 底部导航 */
-.bottom-nav {
-  background: white;
-  border-top: 1px solid #e0e0e0;
-  padding: 15px 10px;
-  padding-bottom: calc(15px + env(safe-area-inset-bottom));
-  display: flex;
-  justify-content: space-around;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 100;
-}
-
-.nav-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  cursor: pointer;
-  color: #666;
-  transition: color 0.3s ease;
-}
-
-.nav-item.active {
-  color: #667eea;
-}
-
-.nav-icon {
-  font-size: 1.3rem;
-}
-
-.nav-label {
-  font-size: 0.7rem;
-}
-
 /* 弹窗 */
 .modal {
   position: fixed;
@@ -652,5 +724,124 @@ const logout = async () => {
 .share-text {
   font-size: 0.9rem;
   color: #333;
+}
+
+/* ✅ 扫码全屏样式 */
+.scanner-fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #000;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+}
+
+.scanner-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.scanner-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
+}
+
+.scanner-header h3 {
+  color: white;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.scanner-header .close-btn {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scanner-camera {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+#qr-reader {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+#qr-reader video {
+  object-fit: cover !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.scanner-hint {
+  position: absolute;
+  bottom: 40px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  z-index: 10;
+}
+
+.scanner-hint p {
+  color: white;
+  font-size: 0.95rem;
+  background: rgba(0,0,0,0.5);
+  padding: 12px 24px;
+  border-radius: 20px;
+  display: inline-block;
+}
+
+/* ✅ 二维码卡片样式 */
+.qrcode-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+}
+
+.qrcode-image {
+  width: 250px;
+  height: 250px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.qrcode-user-id {
+  margin-top: 16px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+}
+
+.qrcode-hint {
+  margin-top: 8px;
+  font-size: 0.9rem;
+  color: #999;
+  text-align: center;
 }
 </style>

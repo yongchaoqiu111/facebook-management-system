@@ -1,13 +1,5 @@
 <template>
   <div class="home-container">
-    <!-- 头部导航 -->
-    <header class="header">
-      <h1>消息</h1>
-      <div class="header-actions">
-        <button class="action-btn" @click="navigate('/create-chain-group')" title="创建接龙群">+</button>
-      </div>
-    </header>
-
     <!-- 内容区域 -->
     <main class="content">
       <!-- 消息列表 -->
@@ -77,26 +69,6 @@
         </div>
       </div>
     </main>
-
-    <!-- 底部导航 -->
-    <footer class="bottom-nav">
-      <div class="nav-item active" @click="navigate('/home')">
-        <div class="nav-icon">💬</div>
-        <div class="nav-label">消息</div>
-      </div>
-      <div class="nav-item" @click="navigate('/contacts')">
-        <div class="nav-icon">👥</div>
-        <div class="nav-label">联系人</div>
-      </div>
-      <div class="nav-item" @click="navigate('/wallet')">
-        <div class="nav-icon">💰</div>
-        <div class="nav-label">钱包</div>
-      </div>
-      <div class="nav-item" @click="navigate('/profile')">
-        <div class="nav-icon">👤</div>
-        <div class="nav-label">我的</div>
-      </div>
-    </footer>
 
     <!-- 创建群聊弹窗 -->
     <div class="modal" v-if="showModal">
@@ -379,10 +351,38 @@ const setupFriendListListener = () => {
   socket.on('friendListUpdated', (data) => {
     console.log('👥 [Home] 收到好友列表更新:', data)
     
-    if (!data.friends || !Array.isArray(data.friends)) return
+    // 🆕 兼容两种格式：{friendIds: [...]} 或 {friends: [...]}
+    let friendList = []
+    
+    if (data.friends && Array.isArray(data.friends)) {
+      // 对象数组格式
+      friendList = data.friends
+    } else if (data.friendIds && Array.isArray(data.friendIds)) {
+      // ID 数组格式，需要转换为对象
+      friendList = data.friendIds.map(id => ({
+        userId: id,
+        username: `用户${id.slice(-4)}`,
+        avatar: '👤'
+      }))
+    } else if (Array.isArray(data)) {
+      // 直接是数组
+      friendList = data.map(item => 
+        typeof item === 'string' ? {
+          userId: item,
+          username: `用户${item.slice(-4)}`,
+          avatar: '👤'
+        } : item
+      )
+    }
+    
+    if (friendList.length === 0) {
+      console.warn('⚠️ [Home] 好友列表为空')
+      contacts.value = []
+      return
+    }
     
     // 🔥 直接用好友列表作为联系人
-    contacts.value = data.friends.map(friend => ({
+    contacts.value = friendList.map(friend => ({
       id: friend._id || friend.id || friend.userId,
       type: 'private',
       name: friend.username || friend.name || '未命名',
@@ -1067,43 +1067,6 @@ const createGroup = async () => {
 }
 
 /* 底部导航 */
-.bottom-nav {
-  background: white;
-  border-top: 1px solid #e0e0e0;
-  padding: 15px 10px;
-  padding-bottom: calc(15px + env(safe-area-inset-bottom));
-  display: flex;
-  justify-content: space-around;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 100;
-}
-
-.nav-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  cursor: pointer;
-  color: #666;
-  transition: color 0.3s ease;
-}
-
-.nav-item.active {
-  color: #667eea;
-}
-
-.nav-icon {
-  font-size: 1.3rem;
-}
-
-.nav-label {
-  font-size: 0.7rem;
-}
-
 /* 弹窗 */
 .modal {
   position: fixed;

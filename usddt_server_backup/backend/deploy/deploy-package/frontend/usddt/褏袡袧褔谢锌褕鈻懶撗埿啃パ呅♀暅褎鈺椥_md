@@ -1,0 +1,302 @@
+# 前端调试命令指南
+
+## 🎯 使用方法
+
+在浏览器中打开 http://localhost:5173/，登录账号后，按 `F12` 打开控制台（Console），然后复制下面的命令执行。
+
+---
+
+## 🔍 调试步骤
+
+### 步骤1: 检查 Socket 连接状态
+
+```javascript
+// 导入 socket 模块并检查状态
+import('/src/socket.js').then(module => {
+  const socket = module.getSocket();
+  console.log('🔌 Socket 连接状态:', socket.connected);
+  console.log('🆔 Socket ID:', socket.id);
+  console.log('📦 当前房间:', Array.from(socket.rooms));
+});
+```
+
+**期望输出**:
+```
+🔌 Socket 连接状态: true
+🆔 Socket ID: <some_id>
+📦 当前房间: ['<socket_id>', 'group:69d3f89668f596338b0c1930']
+```
+
+**如果没有看到 `group:69d3f89668f596338b0c1930`**，说明没有加入群组房间，执行：
+```javascript
+import('/src/socket.js').then(module => {
+  module.joinGroup('69d3f89668f596338b0c1930');
+});
+```
+
+---
+
+### 步骤2: 手动获取群组列表
+
+```javascript
+// 从后端获取群组列表
+const token = localStorage.getItem('token');
+fetch('http://localhost:5000/api/chats', {
+  headers: { 
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  }
+})
+.then(r => r.json())
+.then(data => {
+  console.log('📋 后端返回的完整数据:', data);
+  console.log('💬 私聊数量:', data.data?.chats?.length || 0);
+  console.log('👥 群组数量:', data.data?.groupChats?.length || 0);
+  
+  if (data.data?.groupChats) {
+    console.log('📝 群组列表:');
+    data.data.groupChats.forEach(group => {
+      console.log(`  - ${group.name} (ID: ${group.id})`);
+    });
+  }
+})
+.catch(err => {
+  console.error('❌ 请求失败:', err);
+});
+```
+
+**期望输出**:
+```
+📋 后端返回的完整数据: { success: true, data: {...} }
+💬 私聊数量: 2
+👥 群组数量: 1
+📝 群组列表:
+  - 六合天下 (ID: 69d3f89668f596338b0c1930)
+```
+
+**如果返回空数组或报错**，说明后端接口有问题。
+
+---
+
+### 步骤3: 检查本地存储
+
+```javascript
+// 查看本地存储的用户信息
+console.log('👤 Token:', localStorage.getItem('token') ? '✅ 已设置' : '❌ 未设置');
+console.log('🆔 用户ID:', localStorage.getItem('userId'));
+console.log('👤 用户信息:', localStorage.getItem('user'));
+console.log('⏰ Token过期时间:', localStorage.getItem('tokenExpiresAt'));
+```
+
+---
+
+### 步骤4: 测试发送红包推送
+
+**在用户A的控制台执行**（发送者）:
+```javascript
+// 监听所有 Socket 事件（调试用）
+import('/src/socket.js').then(module => {
+  const socket = module.getSocket();
+  socket.onAny((event, ...args) => {
+    console.log(`📨 [A] 收到事件: ${event}`, args);
+  });
+  console.log('✅ [A] 已启用全事件监听');
+});
+```
+
+**在用户B的控制台执行**（接收者）:
+```javascript
+// 监听所有 Socket 事件（调试用）
+import('/src/socket.js').then(module => {
+  const socket = module.getSocket();
+  socket.onAny((event, ...args) => {
+    console.log(`📨 [B] 收到事件: ${event}`, args);
+  });
+  console.log('✅ [B] 已启用全事件监听');
+});
+```
+
+然后让用户A发送一个红包，观察用户B的控制台是否有输出。
+
+---
+
+### 步骤5: 检查 LiuHe.vue 的监听器
+
+```javascript
+// 检查是否在六合天下群页面
+console.log('📍 当前路径:', window.location.pathname);
+
+// 如果在 /liuhe 页面，应该已经注册了监听器
+// 查看控制台是否有这些日志:
+// ✅ Joined group: 69d3f89668f596338b0c1930
+// ✅ newLiuheRedPacket 监听器已注册
+```
+
+---
+
+## 🐛 常见问题排查
+
+### 问题1: Socket 未连接
+
+**症状**: `socket.connected === false`
+
+**解决**:
+```javascript
+// 重新初始化 Socket
+import('/src/socket.js').then(module => {
+  module.initSocket();
+  setTimeout(() => {
+    console.log('重连后状态:', module.getSocket().connected);
+  }, 1000);
+});
+```
+
+### 问题2: 没有加入群组房间
+
+**症状**: `socket.rooms` 中没有 `group:69d3f89668f596338b0c1930`
+
+**解决**:
+```javascript
+import('/src/socket.js').then(module => {
+  module.joinGroup('69d3f89668f596338b0c1930');
+  setTimeout(() => {
+    console.log('加入后房间:', Array.from(module.getSocket().rooms));
+  }, 500);
+});
+```
+
+### 问题3: 后端返回 401 未授权
+
+**症状**: `{"success":false,"error":{"code":"UNAUTHORIZED"}}`
+
+**解决**:
+```javascript
+// 检查 token 是否有效
+console.log('Token:', localStorage.getItem('token'));
+
+// 如果 token 为空或过期，需要重新登录
+// 或者手动设置一个有效的 token
+localStorage.setItem('token', 'your_valid_token_here');
+```
+
+### 问题4: 后端返回 500 服务器错误
+
+**症状**: `{"success":false,"error":{"code":"INTERNAL_ERROR"}}`
+
+**原因**: 后端数据库未连接或其他服务器错误
+
+**解决**: 
+1. 检查后端控制台日志
+2. 确保 MongoDB 正在运行
+3. 重启后端服务
+
+---
+
+## 📊 完整的诊断脚本
+
+复制以下完整脚本到控制台执行，会自动输出所有诊断信息：
+
+```javascript
+(async function diagnose() {
+  console.log('🔍 ===== 开始诊断 =====\n');
+  
+  // 1. 检查本地存储
+  console.log('📦 本地存储检查:');
+  console.log('  - Token:', localStorage.getItem('token') ? '✅' : '❌');
+  console.log('  - 用户ID:', localStorage.getItem('userId') || '❌');
+  console.log('  - Token过期:', localStorage.getItem('tokenExpiresAt') || '❌');
+  
+  // 2. 检查 Socket
+  console.log('\n🔌 Socket 检查:');
+  try {
+    const module = await import('/src/socket.js');
+    const socket = module.getSocket();
+    console.log('  - 连接状态:', socket.connected ? '✅' : '❌');
+    console.log('  - Socket ID:', socket.id || '❌');
+    console.log('  - 当前房间:', Array.from(socket.rooms));
+    
+    const hasGroup = Array.from(socket.rooms).some(r => 
+      r.includes('69d3f89668f596338b0c1930')
+    );
+    console.log('  - 已加入六合群:', hasGroup ? '✅' : '❌');
+  } catch (e) {
+    console.log('  - ❌ Socket 模块加载失败:', e.message);
+  }
+  
+  // 3. 检查后端连通性
+  console.log('\n🌐 后端连通性检查:');
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch('http://localhost:5000/health');
+    const health = await response.json();
+    console.log('  - 后端状态:', health.status);
+    console.log('  - 数据库连接:', health.database?.connected ? '✅' : '❌');
+  } catch (e) {
+    console.log('  - ❌ 后端无法访问:', e.message);
+  }
+  
+  // 4. 检查群组列表
+  console.log('\n👥 群组列表检查:');
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch('http://localhost:5000/api/chats', {
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    const data = await response.json();
+    
+    if (data.success && data.data) {
+      console.log('  - 私聊数量:', data.data.chats?.length || 0);
+      console.log('  - 群组数量:', data.data.groupChats?.length || 0);
+      
+      if (data.data.groupChats?.length > 0) {
+        console.log('  - 群组详情:');
+        data.data.groupChats.forEach(g => {
+          console.log(`    * ${g.name} (ID: ${g.id})`);
+        });
+      } else {
+        console.log('  - ⚠️ 没有群组数据');
+      }
+    } else {
+      console.log('  - ❌ API 返回失败:', data);
+    }
+  } catch (e) {
+    console.log('  - ❌ 请求失败:', e.message);
+  }
+  
+  console.log('\n✅ ===== 诊断完成 =====');
+})();
+```
+
+---
+
+## 📝 报告模板
+
+如果需要反馈问题，请提供以下信息：
+
+```
+【诊断结果】
+- Token: ✅/❌
+- 用户ID: xxx
+- Socket 连接: ✅/❌
+- Socket ID: xxx
+- 当前房间: [...]
+- 已加入六合群: ✅/❌
+- 后端状态: ok/degraded/down
+- 数据库连接: ✅/❌
+- 私聊数量: x
+- 群组数量: x
+- 群组列表: [...]
+
+【问题描述】
+(详细描述你遇到的问题)
+
+【控制台日志】
+(粘贴完整的控制台输出)
+```
+
+---
+
+**祝调试顺利！如有问题请提供诊断结果。** 🚀

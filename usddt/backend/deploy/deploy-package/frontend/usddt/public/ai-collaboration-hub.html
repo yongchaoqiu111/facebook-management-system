@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 协作中心 - 前后端联调监控</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 32px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        /* Status Cards */
+        .status-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .status-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .status-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .status-card.frontend {
+            border-left: 5px solid #667eea;
+        }
+
+        .status-card.backend {
+            border-left: 5px solid #764ba2;
+        }
+
+        .status-card.system {
+            border-left: 5px solid #f093fb;
+        }
+
+        .status-card h3 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.online {
+            background: #10b981;
+        }
+
+        .status-indicator.offline {
+            background: #ef4444;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .status-info {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.8;
+        }
+
+        .status-info strong {
+            color: #333;
+        }
+
+        /* Main Content */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Chat Panel */
+        .chat-panel {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .chat-panel h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .message {
+            margin-bottom: 25px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .message-sender {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sender-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 18px;
+        }
+
+        .sender-avatar.frontend {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .sender-avatar.backend {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .sender-name {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .message-time {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .message-content {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            line-height: 1.8;
+            font-size: 14px;
+        }
+
+        .message-content h2,
+        .message-content h3 {
+            margin: 15px 0 10px 0;
+            color: #333;
+        }
+
+        .message-content code {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .message-content pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+
+        .message-content pre code {
+            background: none;
+            color: inherit;
+        }
+
+        /* Progress Panel */
+        .progress-panel {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-panel h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .task-list {
+            list-style: none;
+        }
+
+        .task-item {
+            padding: 15px;
+            margin-bottom: 12px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.3s;
+        }
+
+        .task-item.completed {
+            background: #d1fae5;
+            border-left: 4px solid #10b981;
+        }
+
+        .task-item.pending {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+        }
+
+        .task-item.testing {
+            background: #dbeafe;
+            border-left: 4px solid #3b82f6;
+        }
+
+        .task-icon {
+            font-size: 20px;
+        }
+
+        .task-text {
+            flex: 1;
+            font-size: 14px;
+        }
+
+        .task-status {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .task-status.completed {
+            background: #10b981;
+            color: white;
+        }
+
+        .task-status.pending {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .task-status.testing {
+            background: #3b82f6;
+            color: white;
+        }
+
+        /* Auto-refresh indicator */
+        .refresh-indicator {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: white;
+            padding: 15px 25px;
+            border-radius: 50px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+        }
+
+        .refresh-spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🤖 AI 协作中心</h1>
+            <p>前后端实时联调监控系统 | 自动刷新间隔: 5秒</p>
+        </div>
+
+        <!-- Status Cards -->
+        <div class="status-cards">
+            <div class="status-card frontend">
+                <h3>
+                    <span class="status-indicator online"></span>
+                    🔵 前端 AI
+                </h3>
+                <div class="status-info">
+                    <div><strong>状态:</strong> <span id="frontendStatus">在线</span></div>
+                    <div><strong>最后活动:</strong> <span id="frontendLastActivity">--</span></div>
+                    <div><strong>消息数:</strong> <span id="frontendMsgCount">0</span></div>
+                </div>
+            </div>
+
+            <div class="status-card backend">
+                <h3>
+                    <span class="status-indicator online"></span>
+                    🟣 后端 AI
+                </h3>
+                <div class="status-info">
+                    <div><strong>状态:</strong> <span id="backendStatus">在线</span></div>
+                    <div><strong>最后活动:</strong> <span id="backendLastActivity">--</span></div>
+                    <div><strong>消息数:</strong> <span id="backendMsgCount">0</span></div>
+                </div>
+            </div>
+
+            <div class="status-card system">
+                <h3>
+                    <span class="status-indicator online"></span>
+                    ⚙️ 系统状态
+                </h3>
+                <div class="status-info">
+                    <div><strong>Socket 服务:</strong> ✅ 运行中</div>
+                    <div><strong>Redis:</strong> ✅ 已连接</div>
+                    <div><strong>监控页面:</strong> ✅ 正常</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Chat Panel -->
+            <div class="chat-panel">
+                <h2>💬 沟通记录</h2>
+                <div id="messages"></div>
+            </div>
+
+            <!-- Progress Panel -->
+            <div class="progress-panel">
+                <h2>📊 任务进度</h2>
+                <ul class="task-list" id="taskList">
+                    <li class="task-item completed">
+                        <span class="task-icon">✅</span>
+                        <span class="task-text">Socket 连接建立</span>
+                        <span class="task-status completed">完成</span>
+                    </li>
+                    <li class="task-item completed">
+                        <span class="task-icon">✅</span>
+                        <span class="task-text">JWT Token 认证</span>
+                        <span class="task-status completed">完成</span>
+                    </li>
+                    <li class="task-item completed">
+                        <span class="task-icon">✅</span>
+                        <span class="task-text">群组房间加入</span>
+                        <span class="task-status completed">完成</span>
+                    </li>
+                    <li class="task-item testing">
+                        <span class="task-icon">🧪</span>
+                        <span class="task-text">群聊消息推送测试</span>
+                        <span class="task-status testing">测试中</span>
+                    </li>
+                    <li class="task-item pending">
+                        <span class="task-icon">⏳</span>
+                        <span class="task-text">群聊红包推送测试</span>
+                        <span class="task-status pending">待测试</span>
+                    </li>
+                    <li class="task-item pending">
+                        <span class="task-icon">⏳</span>
+                        <span class="task-text">私聊功能测试</span>
+                        <span class="task-status pending">待测试</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Refresh Indicator -->
+    <div class="refresh-indicator">
+        <div class="refresh-spinner"></div>
+        <span>自动刷新中...</span>
+    </div>
+
+    <script>
+        let lastUpdate = null;
+        const API_URL = 'http://localhost:5000/api/chat-messages';
+
+        async function loadMessages() {
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) {
+                    throw new Error('API请求失败');
+                }
+                const messages = await response.json();
+                
+                if (JSON.stringify(messages) !== lastUpdate) {
+                    renderMessages(messages);
+                    updateStats(messages);
+                    lastUpdate = JSON.stringify(messages);
+                }
+            } catch (error) {
+                console.error('加载消息失败:', error);
+            }
+        }
+
+        function renderMessages(messages) {
+            const container = document.getElementById('messages');
+            container.innerHTML = messages.map(msg => `
+                <div class="message">
+                    <div class="message-header">
+                        <div class="message-sender">
+                            <div class="sender-avatar ${msg.sender}">
+                                ${msg.sender === 'frontend' ? '前' : '后'}
+                            </div>
+                            <span class="sender-name">${msg.senderName}</span>
+                        </div>
+                        <span class="message-time">${new Date(msg.timestamp).toLocaleString('zh-CN')}</span>
+                    </div>
+                    <div class="message-content">
+                        ${formatContent(msg.content)}
+                    </div>
+                </div>
+            `).join('');
+            
+            // Scroll to bottom
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function formatContent(content) {
+            // Simple markdown-like formatting
+            return content
+                .replace(/```javascript\n([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+                .replace(/`([^`]+)`/g, '<code>$1</code>')
+                .replace(/\n/g, '<br>');
+        }
+
+        function updateStats(messages) {
+            const frontendMsgs = messages.filter(m => m.sender === 'frontend').length;
+            const backendMsgs = messages.filter(m => m.sender === 'backend').length;
+            
+            document.getElementById('frontendMsgCount').textContent = frontendMsgs;
+            document.getElementById('backendMsgCount').textContent = backendMsgs;
+            
+            if (messages.length > 0) {
+                const lastMsg = messages[messages.length - 1];
+                const time = new Date(lastMsg.timestamp).toLocaleTimeString('zh-CN');
+                if (lastMsg.sender === 'frontend') {
+                    document.getElementById('frontendLastActivity').textContent = time;
+                } else {
+                    document.getElementById('backendLastActivity').textContent = time;
+                }
+            }
+        }
+
+        // Initial load
+        loadMessages();
+
+        // Auto refresh every 5 seconds
+        setInterval(loadMessages, 5000);
+    </script>
+</body>
+</html>

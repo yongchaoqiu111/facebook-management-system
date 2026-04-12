@@ -1,0 +1,133 @@
+# 开发人员 A - 核心架构迁移
+
+**负责人**：开发人员 A（资深前端 - 组长）  
+**预计工时**：4-5 小时  
+**难度**：⭐⭐⭐  
+**依赖**：后端 Phase 1 完成
+
+---
+
+## 📋 你的任务
+
+1. **核心架构迁移**（4-5 小时）
+   - 修改 `useChainGroupChat.js`
+   - 修改 `ChainGroupChat/index.vue`
+   - 实现消息发送、接收、历史加载
+
+2. **代码审查**（贯穿全天）
+   - 审查开发人员 B、C、D、E 的代码
+   - 确保代码质量达标
+
+---
+
+## 🔧 实施步骤
+
+### Step 1: 引入 useMessageCenter（30 分钟）
+
+**文件**：`src/views/ChainGroupChat/index.vue`
+
+```javascript
+import { useMessageCenter } from '@/composables/useMessageCenter'
+
+const { 
+  getMessages, 
+  sendMessage: sendMsg, 
+  loadHistory,
+  initSocketListeners 
+} = useMessageCenter()
+```
+
+---
+
+### Step 2: 替换 messages 数组（1 小时）
+
+**文件**：`src/views/ChainGroupChat/composables/useChainGroupChat.js`
+
+```javascript
+// ❌ 删除
+// const messages = ref([])
+
+// ✅ 添加
+const messages = computed(() => {
+  return getMessages(`group_${chatId}`)
+})
+```
+
+---
+
+### Step 3: 替换 sendMessage（1 小时）
+
+```javascript
+const sendMessage = async () => {
+  if (!messageInput.value.trim()) return
+  
+  try {
+    await sendMsg(`group_${chatId}`, {
+      content: messageInput.value.trim(),
+      type: 'text',
+      clientMsgId: Date.now().toString() + Math.random().toString(36).substr(2, 9)
+    })
+    
+    messageInput.value = ''
+  } catch (error) {
+    console.error('发送消息失败:', error)
+    alert('发送失败，请重试')
+  }
+}
+```
+
+---
+
+### Step 4: 替换 loadHistory（1 小时）
+
+```javascript
+const loadChatHistory = async () => {
+  await loadHistory(`group_${chatId}`)
+  console.log('历史消息加载完成')
+}
+```
+
+---
+
+### Step 5: 移除本地 Socket 监听（30 分钟）
+
+删除以下代码：
+```javascript
+// ❌ 删除
+onGroupMessage((data) => { ... })
+onGroupRedPacket((data) => { ... })
+```
+
+---
+
+### Step 6: 初始化消息中心（30 分钟）
+
+**文件**：`src/views/ChainGroupChat/index.vue`
+
+```javascript
+onMounted(() => {
+  initSocketListeners()
+  loadHistory(`group_${chatId}`)
+  joinGroup(chatId)
+})
+
+onUnmounted(() => {
+  leaveGroup(chatId)
+})
+```
+
+---
+
+## ✅ 验收标准
+
+- [ ] 发送消息正常
+- [ ] 接收消息正常
+- [ ] 历史消息加载正常
+- [ ] 无 ESLint 错误
+- [ ] 无控制台报错
+
+---
+
+## 📞 需要帮助？
+
+联系 AI 助手进行代码审查和问题解决。

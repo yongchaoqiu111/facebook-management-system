@@ -4,6 +4,9 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import { getSocket } from './socket'
 
+// ✅ 引入全局样式
+import './styles/ios-safe-area.css'
+
 // 导入页面组件
 import Login from './views/Login.vue'
 import Register from './views/Register.vue'
@@ -20,6 +23,8 @@ import MyInvitations from './views/MyInvitations.vue'
 import IncomeCenter from './views/IncomeCenter.vue'
 import ContactDetail from './views/ContactDetail.vue' // 👤 联系人详情
 import AdminRecharge from './views/AdminRecharge.vue' // 💰 管理员充值
+import Market from './views/Market.vue' // 📈 实时行情
+import TradeDetail from './views/TradeDetail.vue' // 📊 交易详情
 
 // 路由配置
 const routes = [
@@ -38,7 +43,9 @@ const routes = [
   { path: '/income-center', component: IncomeCenter },
   { path: '/contact/:id', component: ContactDetail }, // 👤 联系人详情
   { path: '/chat/:id', component: PrivateChat }, // 📱 私聊
-  { path: '/admin/recharge', component: AdminRecharge } // 💰 管理员充值
+  { path: '/admin/recharge', component: AdminRecharge }, // 💰 管理员充值
+  { path: '/market', component: Market }, // 📈 实时行情
+  { path: '/market/coin/:symbol', component: TradeDetail } // 📊 交易详情
 ]
 
 const router = createRouter({
@@ -74,6 +81,28 @@ router.beforeEach((to, from, next) => {
   }
   
   next()
+})
+
+// ✅ 路由跳转后检查并初始化 Socket
+router.afterEach((to, from) => {
+  const token = localStorage.getItem('token')
+  const userId = localStorage.getItem('userId')
+  
+  if (token && userId && to.path !== '/login' && to.path !== '/register') {
+    // 已登录且不是登录/注册页面，确保 Socket 已初始化
+    import('./socket').then(({ getSocket, initSocket }) => {
+      const socket = getSocket()
+      if (!socket) {
+        console.log('🔌 [Router] 检测到未连接，初始化 Socket...')
+        initSocket()
+      } else if (!socket.connected) {
+        console.log('🔌 [Router] Socket 未连接，重新连接...')
+        socket.connect()
+      } else {
+        console.log('✅ [Router] Socket 已连接')
+      }
+    })
+  }
 })
 
 const app = createApp(App)

@@ -64,6 +64,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { userAPI } from '../api'
+import { showToast } from '@/utils/toast'  // 🆕 导入 Toast
 
 const router = useRouter()
 const username = ref('')
@@ -133,10 +134,44 @@ const handleRegister = async () => {
       localStorage.setItem('user', JSON.stringify(response.user))
       localStorage.setItem('userId', userIdStr)  // ✅ 保存纯数字字符串
       
+      // 🆕 设置 token 过期时间（7天）
+      const expiresAt = new Date().getTime() + (7 * 24 * 60 * 60 * 1000)
+      localStorage.setItem('tokenExpiresAt', String(expiresAt))
+      
+      // 🆕 保存好友ID数组
+      if (response.user.friendIds && Array.isArray(response.user.friendIds)) {
+        localStorage.setItem('friendIds', JSON.stringify(response.user.friendIds))
+        console.log('👥 好友ID数组已保存:', response.user.friendIds)
+      }
+      
+      // 🆕 保存多币种余额（独立字段）
+      const balances = {
+        btcBalance: response.user.btcBalance || 0,
+        ethBalance: response.user.ethBalance || 0,
+        bnbBalance: response.user.bnbBalance || 0,
+        solBalance: response.user.solBalance || 0,
+        xrpBalance: response.user.xrpBalance || 0
+      }
+      localStorage.setItem('balances', JSON.stringify(balances))
+      console.log('💰 多币种余额已保存:', balances)
+      
+      // 🆕 保存钱包信息
+      if (response.user.depositAddress) {
+        const walletInfo = {
+          depositAddress: response.user.depositAddress,
+          balance: response.user.balance || 0,
+          ...balances
+        }
+        localStorage.setItem('walletInfo', JSON.stringify(walletInfo))
+        console.log('💼 钱包信息已保存:', walletInfo)
+      }
+      
       console.log('✅ localStorage userId:', localStorage.getItem('userId'))
       
-      alert('注册成功！')
-      router.push('/home')
+      showToast('注册成功！', 'success')
+      setTimeout(() => {
+        router.push('/home')
+      }, 1000)
     } else {
       error.value = '注册失败'
     }
@@ -147,10 +182,10 @@ const handleRegister = async () => {
       // 正确读取后端返回的错误信息
       const errorMessage = err.response.data.error?.message || err.response.data.msg || err.response.data.message || '注册失败，请稍后重试'
       error.value = errorMessage
-      alert(errorMessage)
+      showToast(errorMessage, 'error')
     } else {
       error.value = '网络错误，请检查网络连接'
-      alert('网络错误，请检查网络连接')
+      showToast('网络错误，请检查网络连接', 'error')
     }
   } finally {
     loading.value = false

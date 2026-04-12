@@ -41,9 +41,12 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { userAPI } from '../api'
+import { userAPI } from '@/api'
+import { useUserStore } from '@/stores/userStore'
+import { showToast } from '@/utils/toast'
 
 const router = useRouter()
+const userStore = useUserStore()
 const username = ref('')
 const password = ref('')
 const error = ref('')
@@ -84,6 +87,42 @@ const handleLogin = async () => {
       localStorage.setItem('userId', userIdStr)  // ✅ 保存纯数字字符串
       localStorage.setItem('tokenExpiresAt', expiresAt.toString())
       
+      // 🆕 保存好友ID数组
+      if (response.user.friendIds && Array.isArray(response.user.friendIds)) {
+        localStorage.setItem('friendIds', JSON.stringify(response.user.friendIds))
+        console.log('👥 好友ID数组已保存:', response.user.friendIds)
+      }
+      
+      // 🆕 保存多币种余额（独立字段）
+      const balances = {
+        btcBalance: response.user.btcBalance || 0,
+        ethBalance: response.user.ethBalance || 0,
+        bnbBalance: response.user.bnbBalance || 0,
+        solBalance: response.user.solBalance || 0,
+        xrpBalance: response.user.xrpBalance || 0
+      }
+      localStorage.setItem('balances', JSON.stringify(balances))
+      console.log('💰 多币种余额已保存:', balances)
+      
+      // 🆕 保存钱包信息
+      if (response.user.depositAddress) {
+        const walletInfo = {
+          depositAddress: response.user.depositAddress,
+          balance: response.user.balance || 0,
+          ...balances
+        }
+        localStorage.setItem('walletInfo', JSON.stringify(walletInfo))
+        console.log('💼 钱包信息已保存:', walletInfo)
+      }
+      
+      // ✅ 存入 userStore
+      userStore.setUserInfo({
+        id: userIdStr,
+        username: response.user.username,
+        avatar: response.user.avatar
+      })
+      userStore.updateBalance(response.user.balance || 0)
+      
       console.log('✅ localStorage userId:', localStorage.getItem('userId'))
       
       router.push('/home')
@@ -94,12 +133,13 @@ const handleLogin = async () => {
     console.error('登录错误:', err)
     // 显示具体的错误信息
     if (err.response) {
-      const errorMessage = err.response.data.msg || err.response.data.message || '登录失败，请稍后重试'
+      const data = err.response.data
+      const errorMessage = data.error?.message || data.msg || data.message || '登录失败，请稍后重试'
       error.value = errorMessage
-      alert(errorMessage)
+      showToast(errorMessage, 'error')
     } else {
       error.value = '网络错误，请检查网络连接'
-      alert('网络错误，请检查网络连接')
+      showToast('网络错误，请检查网络连接', 'error')
     }
   } finally {
     loading.value = false

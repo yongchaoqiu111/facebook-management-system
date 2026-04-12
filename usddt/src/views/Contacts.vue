@@ -1,13 +1,5 @@
 <template>
   <div class="contacts-container">
-    <!-- 头部导航 -->
-    <header class="header">
-      <h1>联系人</h1>
-      <div class="header-actions">
-        <button class="action-btn" @click="showAddFriendModal">+</button>
-      </div>
-    </header>
-
     <!-- 搜索框 -->
     <div class="search-section">
       <input 
@@ -49,27 +41,29 @@
           </div>
         </div>
       </div>
+      
+      <!-- 好友列表 -->
+      <div class="contacts-section" v-if="filteredContacts.length > 0">
+        <div class="section-header">好友列表 ({{ filteredContacts.length }})</div>
+        <div 
+          v-for="contact in filteredContacts" 
+          :key="contact.id"
+          class="contact-item"
+          @click="navigateToContact(contact.id)"
+        >
+          <div class="contact-avatar">{{ contact.avatar }}</div>
+          <div class="contact-info">
+            <div class="contact-name">{{ contact.name }}</div>
+            <div class="contact-id">{{ contact.id }}</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 空状态 -->
+      <div v-if="filteredContacts.length === 0 && friendRequests.length === 0" style="text-align: center; color: #999; padding: 40px;">
+        暂无好友
+      </div>
     </main>
-
-    <!-- 底部导航 -->
-    <footer class="bottom-nav">
-      <div class="nav-item" @click="navigate('/home')">
-        <div class="nav-icon">💬</div>
-        <div class="nav-label">消息</div>
-      </div>
-      <div class="nav-item active" @click="navigate('/contacts')">
-        <div class="nav-icon">👥</div>
-        <div class="nav-label">联系人</div>
-      </div>
-      <div class="nav-item" @click="navigate('/wallet')">
-        <div class="nav-icon">💰</div>
-        <div class="nav-label">钱包</div>
-      </div>
-      <div class="nav-item" @click="navigate('/profile')">
-        <div class="nav-icon">👤</div>
-        <div class="nav-label">我的</div>
-      </div>
-    </footer>
 
     <!-- 添加好友弹窗 -->
     <div class="modal" v-if="showModal">
@@ -165,40 +159,85 @@ const fetchContacts = async () => {
   try {
     console.log('📥 [Contacts] 获取好友列表...')
     
-    // ✅ 从 API 获取好友列表
-    const response = await friendAPI.getFriends()
-    console.log('🔍 [Contacts] API 响应:', response)
-    console.log('🔍 [Contacts] response.data:', response.data)
+    // ✅ 优先从 localStorage 读取缓存
+    let friendIds = JSON.parse(localStorage.getItem('friendIds') || '[]')
     
-    // ✅ 兼容两种格式：{data: {friends: [...]}} 或直接返回数组 [...]
-    let friendsData = []
-    
-    if (Array.isArray(response.data)) {
-      // 直接返回数组
-      friendsData = response.data
-    } else if (response.data && response.data.friends) {
-      // 对象格式
-      friendsData = response.data.friends
-    } else if (Array.isArray(response)) {
-      // response 本身就是数组
-      friendsData = response
+    // 如果缓存为空，才从 store 或 API 获取
+    if (!friendIds || friendIds.length === 0) {
+      // 尝试从 store 读取
+      friendIds = friendStore.friendIds
+      
+      // 如果 store 也为空，请求 API
+      if (!friendIds || friendIds.length === 0) {
+        console.log('⚠️ [Contacts] 无缓存数据，请求 API...')
+        const response = await friendAPI.getFriends()
+        
+        if (Array.isArray(response.data)) {
+          friendIds = response.data
+        } else if (Array.isArray(response)) {
+          friendIds = response
+        }
+        
+        // 保存到 localStorage 和 store
+        if (friendIds.length > 0) {
+          localStorage.setItem('friendIds', JSON.stringify(friendIds))
+          friendStore.setFriendIds(friendIds)
+        }
+      }
     }
     
-    if (friendsData.length > 0) {
-      const friends = friendsData.map(friend => ({
-        id: friend._id || friend.id,
-        name: friend.username || friend.name || '未知用户',
-        avatar: friend.avatar || '👤',
-        status: friend.online ? 'online' : 'offline',
-        unreadCount: 0
-      }))
+    console.log('👥 [Contacts] 好友ID数组:', friendIds)
+    
+    if (friendIds.length > 0) {
+      // 🆕 根据 ID 数组构建联系人列表（需要从 Store 或 API 获取详情）
+      const friends = friendIds.map(friendId => {
+        // 尝试从 friendStore 获取详情
+        const detail = friendStore.getFriendDetail(friendId)
+        
+        // ✅ 从 localStorage 读取备注
+        const cachedFriends = JSON.parse(localStorage.getItem('friendDetails') || '{}')
+        const remark = cachedFriends[friendId]?.remark
+        
+        return {
+          id: friendId,
+          name: remark || detail?.username || `用户${friendId.slice(-4)}`,
+          avatar: detail?.avatar || '👤',
+          status: friendStore.onlineStatus[friendId] ? 'online' : 'offline',
+          unreadCount: 0
+        }
+      })
       
       allContacts.value = friends
       
       console.log('✅ [Contacts] 加载好友列表:', friends.length, '条')
       console.log('✅ [Contacts] 好友详情:', friends)
+      
+      // 🆕 批量获取缺失的好友详情
+      await friendStore.fetchFriendDetails(friendIds, async (ids) => {
+        // TODO: 调用 API 获取用户详情
+        console.log('🌐 获取好友详情:', ids)
+        return [] // 暂时返回空，后续实现
+      })
+      
+      // 重新渲染（详情更新后）
+      setTimeout(() => {
+        const cachedFriends = JSON.parse(localStorage.getItem('friendDetails') || '{}')
+        const updatedFriends = friendIds.map(friendId => {
+          const detail = friendStore.getFriendDetail(friendId)
+          const remark = cachedFriends[friendId]?.remark
+          return {
+            id: friendId,
+            name: remark || detail?.username || `用户${friendId.slice(-4)}`,
+            avatar: detail?.avatar || '👤',
+            status: friendStore.onlineStatus[friendId] ? 'online' : 'offline',
+            unreadCount: 0
+          }
+        })
+        allContacts.value = updatedFriends
+      }, 500)
     } else {
       console.warn('⚠️ [Contacts] 没有好友数据')
+      allContacts.value = []
     }
     
     // 获取群聊列表（优先从缓存读取）
@@ -224,24 +263,7 @@ const fetchContacts = async () => {
 }
 
 // 获取好友请求列表
-const fetchFriendRequests = async () => {
-  try {
-    const currentUserId = localStorage.getItem('userId')
-    const response = await friendAPI.getFriendRequests()
-    
-    if (response.data && response.data.requests) {
-      friendRequests.value = response.data.requests.map(request => ({
-        id: request._id || request.id,
-        name: request.sender?.username || request.fromUser?.username || '未知用户',
-        avatar: request.sender?.avatar || request.fromUser?.avatar || '👤',
-        message: request.message || '请求添加你为好友'
-      }))
-      console.log('✅ [Contacts] 加载好友请求:', friendRequests.value.length, '条')
-    }
-  } catch (error) {
-    console.error('❌ [Contacts] 获取好友请求失败:', error)
-  }
-}
+
 
 // ✅ 设置 WebSocket 监听
 let socketListeners = []
@@ -286,9 +308,6 @@ const setupWebSocketListeners = () => {
     
     // 显示 Toast 提示
     toastRef.value?.info(`${newRequest.name} 请求添加你为好友`)
-    
-    // 同时也从 API 刷新（确保数据同步）
-    fetchFriendRequests()
   }
   socket.on('friendRequestReceived', friendRequestReceivedHandler)
   socketListeners.push({ event: 'friendRequestReceived', handler: friendRequestReceivedHandler })
@@ -306,14 +325,17 @@ const setupWebSocketListeners = () => {
     console.log('✅ [Contacts] 好友请求被接受:', data)
     toastRef.value?.success('好友请求已被接受')
     
-    // ✅ 从列表中移除已接受的请求
-    if (data.requestId) {
-      friendRequests.value = friendRequests.value.filter(req => req.id !== data.requestId)
-      console.log('✅ [Contacts] 已从列表中移除已接受的请求')
+    // ✅ 从 store 中移除已接受的请求
+    if (data.friendId || data.requestId) {
+      const requestToRemove = friendRequests.value.find(req => 
+        req.id === data.requestId || req.fromUser?.userId === data.friendId
+      )
+      if (requestToRemove) {
+        friendStore.removeFriendRequest(requestToRemove.id)
+      }
     }
     
-    // 刷新好友列表
-    fetchContacts()
+    // ⚠️ 不调用 fetchContacts()，等待 friendListUpdated 广播
   }
   socket.on('friendRequestAccepted', friendRequestAcceptedHandler)
   socketListeners.push({ event: 'friendRequestAccepted', handler: friendRequestAcceptedHandler })
@@ -361,8 +383,8 @@ const setupWebSocketListeners = () => {
     
     console.log('🔍 [Contacts] 解析后的消息:', msg)
     
-    // 如果是成功消息（后端误用了 errorMessage）
-    if (msg === '已发送好友请求') {
+    // 🆕 如果是成功消息（后端用 errorMessage 发送提示）
+    if (msg === '已发送好友请求' || msg.includes('好友请求已发送')) {
       toastRef.value?.success(msg)
       showModal.value = false
       searchResults.value = []
@@ -387,7 +409,6 @@ const cleanupWebSocketListeners = () => {
 
 onMounted(() => {
   fetchContacts()
-  fetchFriendRequests()  // ✅ 加载好友请求
   setupWebSocketListeners()
   
   // ✅ 请求浏览器通知权限
@@ -396,46 +417,11 @@ onMounted(() => {
       console.log('🔔 通知权限:', permission)
     })
   }
-  
-  // ✅ 监听页面可见性变化（切换回页面时刷新好友请求）
-  const handleVisibilityChange = () => {
-    if (!document.hidden) {
-      console.log('👁️ [Contacts] 页面可见，刷新好友请求')
-      fetchFriendRequests()
-    }
-  }
-  document.addEventListener('visibilitychange', handleVisibilityChange)
-  
-  // ✅ 监听 localStorage 变化（当其他标签页收到好友请求时）
-  const handleStorageChange = (e) => {
-    if (e.key === 'friendRequestUpdated') {
-      console.log('📨 [Contacts] 检测到新的好友请求，刷新列表')
-      fetchFriendRequests()
-      toastRef.value?.info('收到新的好友请求')
-    }
-  }
-  window.addEventListener('storage', handleStorageChange)
-  
-  // 保存清理函数
-  window.__contactsVisibilityHandler = handleVisibilityChange
-  window.__contactsStorageHandler = handleStorageChange
 })
 
 onUnmounted(() => {
   // ✅ 清理 Socket 监听器，避免内存泄漏
   cleanupWebSocketListeners()
-  
-  // ✅ 清理 localStorage 监听器
-  if (window.__contactsStorageHandler) {
-    window.removeEventListener('storage', window.__contactsStorageHandler)
-    delete window.__contactsStorageHandler
-  }
-  
-  // ✅ 清理可见性监听器
-  if (window.__contactsVisibilityHandler) {
-    document.removeEventListener('visibilitychange', window.__contactsVisibilityHandler)
-    delete window.__contactsVisibilityHandler
-  }
 })
 
 // 跳转到聊天页面
@@ -508,24 +494,33 @@ const searchUser = async () => {
 }
 
 // 添加好友
-const addFriend = async (user) => {
-  try {
-    console.log('📨 发送好友请求给:', user.id)
-    
-    // ✅ 新标准：通过 WebSocket 发送好友请求
-    const socket = getSocket()
-    socket.emit('chat:addFriend', {
-      userId: user.id,
-      message: '你好，我想加你好友'  // 可选
-    })
-    
-    // 等待 friendRequestSent 事件处理结果
-    console.log('⏳ 等待后端响应...')
-    
-  } catch (error) {
-    console.error('添加好友失败:', error)
-    toastRef.value?.error('添加好友失败，请稍后重试')
+const addFriend = (user) => {
+  console.log('🔥 [Contacts] 点击添加好友');
+  console.log('🔥 [Contacts] user:', user);
+  
+  if (!user || !user.id) {
+    console.error('❌ [Contacts] user 或 user.id 为空');
+    toastRef.value?.error('用户信息错误');
+    return;
   }
+  
+  const socket = getSocket();
+  if (!socket || !socket.connected) {
+    console.error('❌ [Contacts] WebSocket 未连接');
+    toastRef.value?.error('网络连接异常');
+    return;
+  }
+  
+  console.log('📨 [Contacts] 发送 chat:addFriend 事件');
+  console.log('📨 [Contacts] userId:', user.id);
+  
+  socket.emit('chat:addFriend', {
+    userId: String(user.id),
+    message: '你好，我想加你好友'
+  });
+  
+  console.log('✅ [Contacts] 事件已发送');
+  toastRef.value?.info('请求已发送，等待对方同意');
 }
 
 // 接受好友请求
@@ -533,24 +528,26 @@ const acceptFriendRequest = async (request) => {
   try {
     console.log('✅ 接受好友请求:', request.id)
     
-    // ✅ 乐观更新：立即从列表中移除
-    friendRequests.value = friendRequests.value.filter(req => req.id !== request.id)
+    // ✅ 立即从 store 中移除，防止重复点击
+    friendStore.removeFriendRequest(request.id)
     
-    // ✅ 新标准：通过 WebSocket 接受好友请求
+    // ✅ 通过 WebSocket 接受
     const socket = getSocket()
     socket.emit('chat:acceptFriend', {
       requestId: request.id
     })
     
     toastRef.value?.success('正在处理...')
-    console.log('⏳ 等待后端响应...')
     
   } catch (error) {
     console.error('接受好友请求失败:', error)
-    toastRef.value?.error('接受好友请求失败，请稍后重试')
-    // 失败时重新加载
-    fetchFriendRequests()
+    toastRef.value?.error('操作失败')
   }
+}
+
+// ✅ 跳转到联系人详情
+const navigateToContact = (contactId) => {
+  router.push(`/contact/${contactId}`)
 }
 
 // 拒绝好友请求
@@ -558,29 +555,22 @@ const rejectFriendRequest = async (request) => {
   try {
     console.log('❌ 拒绝好友请求:', request.id)
     
-    // ✅ 乐观更新：立即从列表中移除
-    friendRequests.value = friendRequests.value.filter(req => req.id !== request.id)
-    
-    // ✅ 新标准：通过 WebSocket 拒绝好友请求
+    // ✅ 通过 WebSocket 拒绝
     const socket = getSocket()
     socket.emit('chat:rejectFriend', {
       requestId: request.id
     })
     
+    // ✅ 从 store 中移除
+    friendStore.removeFriendRequest(request.id)
+    
     toastRef.value?.info('已拒绝好友请求')
-    console.log('⏳ 等待后端响应...')
     
   } catch (error) {
     console.error('拒绝好友请求失败:', error)
-    toastRef.value?.error('拒绝好友请求失败，请稍后重试')
-    // 失败时重新加载
-    fetchFriendRequests()
+    toastRef.value?.error('操作失败')
   }
 }
-
-onMounted(() => {
-  fetchContacts()
-})
 </script>
 
 <style scoped>
@@ -797,44 +787,6 @@ onMounted(() => {
   min-width: 18px;
   text-align: center;
   font-weight: 500;
-}
-
-/* 底部导航 */
-.bottom-nav {
-  background: white;
-  border-top: 1px solid #e0e0e0;
-  padding: 15px 10px;
-  padding-bottom: calc(15px + env(safe-area-inset-bottom));
-  display: flex;
-  justify-content: space-around;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 100;
-}
-
-.nav-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  cursor: pointer;
-  color: #666;
-  transition: color 0.3s ease;
-}
-
-.nav-item.active {
-  color: #667eea;
-}
-
-.nav-icon {
-  font-size: 1.3rem;
-}
-
-.nav-label {
-  font-size: 0.7rem;
 }
 
 /* 弹窗 */

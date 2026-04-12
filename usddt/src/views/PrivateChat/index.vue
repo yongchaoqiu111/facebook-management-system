@@ -61,7 +61,11 @@
           @keyup.enter="sendMessage"
           @focus="handleInputFocus"
         />
-        <button @click="sendMessage">发送</button>
+        <button class="send-btn-ios" @click="sendMessage" :disabled="!messageInput.trim()">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M2.01 21L23 12L2.01 3L2 10L17 12L2 14L2.01 21Z" fill="white"/>
+          </svg>
+        </button>
       </div>
     </footer>
     

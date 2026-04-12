@@ -1,16 +1,16 @@
 <template>
   <div class="app">
-    <ChainGroup />
+    <TradeDetail />
   </div>
 </template>
 
 <script>
-import ChainGroup from './views/ChainGroup.vue'
+import TradeDetail from './views/TradeDetail.vue'
 
 export default {
   name: 'App',
   components: {
-    ChainGroup
+    TradeDetail
   }
 }
 </script>

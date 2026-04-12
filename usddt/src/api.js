@@ -325,6 +325,13 @@ export const chainGroupAPI = {
   }
 }
 
-
+// 宏观数据API
+export const macroAPI = {
+  // 获取宏观数据
+  getMacroData: async () => {
+    const response = await api.get('/macro')
+    return response
+  }
+}
 
 export default api

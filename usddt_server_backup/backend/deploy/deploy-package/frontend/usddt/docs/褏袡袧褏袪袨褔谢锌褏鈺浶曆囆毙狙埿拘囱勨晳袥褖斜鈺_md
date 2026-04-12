@@ -1,0 +1,542 @@
+# 前后端待确认事项清单
+
+> 基于后端反馈（2026-04-07）整理，需要立即确认的问题
+
+---
+
+## 📝 前端团队回复区
+
+**回复人**：_____________  
+**回复时间**：_____________  
+**审核人**：_____________
+
+### 高优先级问题回复
+
+#### 1. 群聊消息存储模型
+**前端建议**：_____________  
+**原因**：_____________
+
+#### 2. POST /api/chats/messages 接口
+**前端需要的参数**：
+```javascript
+{
+  // 请列出必需参数
+}
+```
+
+**前端需要的返回字段**：
+```javascript
+{
+  // 请列出必需字段
+}
+```
+
+#### 3. GET /api/chats/messages/:chatId
+**前端期望的分页参数**：_____________  
+**前端期望的排序方式**：_____________  
+**前端必需的返回字段**：_____________
+
+#### 4. clientMsgId 唯一索引
+**前端去重策略**：_____________  
+**如果重复，前端期望后端返回**：_____________
+
+---
+
+### 中优先级问题回复
+
+#### 5. 余额变动推送
+**前端需要监听的场景**：
+- [x] 红包领取 ✅
+- [x] 充值成功 ✅
+- [x] 提现成功 ✅
+- [x] 发红包扣款 ✅
+- [ ] 邀请奖励
+- [ ] 其他：_____________
+
+**❗ 重要补充：红包相关 WSS 事件**
+
+除了 `balanceChange`，还需要以下红包专用事件：
+
+1. **redPacketClaimed** - 红包领取明细（实时账单）
+2. **redPacketStatusUpdate** - 红包状态更新（领完/过期）
+3. **myRedPacketResult** - 我的抢红包结果（立即显示）
+
+**前端需要的数据格式**：
+```javascript
+{
+  // 请列出必需字段
+}
+```
+
+#### 6. Socket 房间管理
+**前端调用方式**：
+```javascript
+// 加入群组
+joinGroup(groupId)
+
+// 离开群组
+leaveGroup(groupId)
+
+// 前端是否需要手动调用？ □ 是 □ 否
+```
+
+#### 7. 离线消息
+**前端期望的处理方式**：
+- [ ] 一次性推送所有离线消息
+- [ ] 分批推送
+- [ ] 主动拉取
+- [ ] 其他：_____________
+
+**前端需要的未读计数**：□ 是 □ 否
+
+---
+
+### 其他补充
+**前端特殊需求**：_____________  
+**前端预计完成时间**：_____________  
+**前端需要的支持**：_____________
+
+---
+
+**前端负责人签字**：_____________  
+**日期**：_____________
+
+---
+
+## 🔴 高优先级（影响开发进度）
+
+> ⚠️ **请前端团队在上方回复区填写答案**
+
+### 0. 红包 WSS 推送补充（❗ 重要遗漏）
+
+**问题**：红包数据的实时性比聊天更重要，当前缺少关键的 WSS 事件
+
+**需要确认的 Socket 事件**：
+
+#### 0.1 红包领取明细推送
+```javascript
+// 每当有人领取红包，实时推送给群内所有人
+socket.on('redPacketClaimed', (data) => {
+  // data 格式：
+  {
+    "redPacketId": "xxx",
+    "claimer": {
+      "_id": "user_123",
+      "username": "李四",
+      "avatar": "https://..."
+    },
+    "amount": 20,              // 领取金额
+    "remainCount": 5,          // 剩余个数
+    "remainAmount": 80,        // 剩余金额
+    "timestamp": "2026-04-08T10:30:00.000Z"
+  }
+})
+```
+
+**用途**：
+- 实时更新红包账单列表
+- 显示"李四 领取了 20 USDT"
+- 更新剩余数量和金额
+
+#### 0.2 红包状态更新
+```javascript
+// 红包领完或过期时推送
+socket.on('redPacketStatusUpdate', (data) => {
+  // data 格式：
+  {
+    "redPacketId": "xxx",
+    "status": "finished",      // active | finished | expired
+    "remainCount": 0,
+    "remainAmount": 0,
+    "totalClaims": 10,         // 总领取人数
+    "timestamp": "2026-04-08T10:30:00.000Z"
+  }
+})
+```
+
+**用途**：
+- 红包卡片显示"已领完"
+- 禁用点击打开按钮
+
+#### 0.3 我的抢红包结果
+```javascript
+// 当我领取红包后，立即推送结果（替代 HTTP 轮询）
+socket.on('myRedPacketResult', (data) => {
+  // data 格式：
+  {
+    "redPacketId": "xxx",
+    "amount": 20,
+    "message": "恭喜发财",
+    "from": "张三",
+    "balance": 480             // 领取后余额
+  }
+})
+```
+
+**用途**：
+- 立即显示抢红包结果弹窗
+- 更新钱包余额
+- 无需等待 HTTP 响应
+
+---
+
+### 1. 群聊消息存储模型 ❓
+**问题**：当前使用 `GroupMessage` 模型还是 `Message` 模型存储群聊消息？
+
+**影响**：
+- 决定 `GET /api/chats/messages/:chatId` 的查询逻辑
+- 决定 `POST /api/chats/messages` 的保存逻辑
+- 影响数据库索引设计
+
+**需要确认**：
+```javascript
+// 方案A：统一使用 Message 模型
+{
+  _id: ObjectId,
+  type: 'group' | 'private',  // 消息类型
+  groupId: ObjectId,           // 群聊时必填
+  receiverId: ObjectId,        // 私聊时必填
+  content: String,
+  sender: ObjectId,
+  createdAt: Date
+}
+
+// 方案B：分离 GroupMessage 和 PrivateMessage
+GroupMessage {
+  _id: ObjectId,
+  groupId: ObjectId,
+  content: String,
+  sender: ObjectId,
+  createdAt: Date
+}
+
+PrivateMessage {
+  _id: ObjectId,
+  senderId: ObjectId,
+  receiverId: ObjectId,
+  content: String,
+  createdAt: Date
+}
+```
+
+**建议**：采用方案A（统一模型），便于维护和扩展
+
+---
+
+### 2. POST /api/chats/messages 接口细节 ❓
+
+**需要确认的参数**：
+```javascript
+POST /api/chats/messages
+
+Request Body:
+{
+  "groupId": "xxx",        // 群聊必填
+  "receiverId": "xxx",     // 私聊必填（二选一）
+  "content": "Hello",
+  "type": "text",          // text | image | redPacket
+  "clientMsgId": "123"     // 客户端消息ID（去重用）
+}
+```
+
+**需要确认的返回格式**：
+```javascript
+Response:
+{
+  "success": true,
+  "data": {
+    "_id": "msg_123",
+    "content": "Hello",
+    "sender": {
+      "_id": "user_456",
+      "username": "张三",
+      "avatar": "https://..."  // ❓ 是否包含头像？
+    },
+    "groupId": "xxx",
+    "createdAt": "2026-04-07T10:30:00.000Z",
+    "type": "text",
+    "clientMsgId": "123"  // ❓ 是否返回 clientMsgId？
+  }
+}
+```
+
+**需要确认的逻辑**：
+1. ❓ 是否需要验证用户是否在群组中？
+2. ❓ 是否需要验证用户余额（发红包时）？
+3. ❓ Socket 广播时机：保存前还是保存后？
+4. ❓ 如果 Socket 广播失败，是否回滚数据库？
+
+---
+
+### 3. GET /api/chats/messages/:chatId 修复细节 ❓
+
+**当前问题**：群聊返回空数组
+
+**需要确认**：
+```javascript
+GET /api/chats/messages/:chatId?page=1&limit=50
+
+// ❓ chatId 是什么格式？
+// - 群聊: groupId?
+// - 私聊: userId?
+// - 还是需要区分 /api/groups/:id/messages 和 /api/users/:id/messages？
+
+Response:
+{
+  "success": true,
+  "data": {
+    "messages": [
+      {
+        "_id": "msg_123",
+        "content": "Hello",
+        "sender": {
+          "_id": "user_456",
+          "username": "张三"
+          // ❓ 是否需要 avatar、nickname 等字段？
+        },
+        "groupId": "xxx",
+        "createdAt": "2026-04-07T10:30:00.000Z",
+        "type": "text"
+        // ❓ 是否需要 updatedAt、deletedAt 等字段？
+      }
+    ],
+    // ❓ 是否支持分页？
+    "total": 100,
+    "page": 1,
+    "limit": 50,
+    "hasMore": true
+  }
+}
+```
+
+**排序规则**：
+- ❓ 按 `createdAt` 升序还是降序？
+- ❓ 默认返回最新的 50 条还是最旧的 50 条？
+
+---
+
+### 4. clientMsgId 唯一索引 ❓
+
+**需要确认**：
+```javascript
+// MongoDB Schema
+clientMsgId: {
+  type: String,
+  unique: true,
+  sparse: true  // ❓ 是否设置为 sparse（允许为空）？
+}
+```
+
+**问题**：
+1. ❓ 如果 clientMsgId 重复，后端如何处理？
+   - 返回错误？
+   - 返回已存在的消息？
+   - 静默忽略？
+
+2. ❓ 是否需要添加复合索引？
+   ```javascript
+   // 例如：groupId + clientMsgId 唯一
+   { groupId: 1, clientMsgId: 1 }, { unique: true }
+   ```
+
+---
+
+## 🟡 中优先级（影响用户体验）
+
+> ⚠️ **请前端团队在上方回复区填写答案**
+
+### 5. 余额变动推送细节 ❓
+
+**触发场景**：
+- ✅ 红包领取
+- ✅ 充值成功
+- ✅ 提现成功
+- ❓ 发红包扣款（立即扣还是领取后扣？）
+- ❓ 邀请奖励
+- ❓ 接龙群收益
+
+**数据格式**：
+```javascript
+socket.emit('balanceChange', {
+  userId: 'user_456',
+  amount: 20,              // ❓ 正数增加，负数减少？
+  balance: 480,            // ❓ 变动后余额
+  reason: '领取红包',       // ❓ 枚举值有哪些？
+  type: 'redPacket:open',  // ❓ 是否需要 type 字段？
+  timestamp: '2026-04-07T10:30:00.000Z',
+  relatedId: 'redpacket_789'  // ❓ 关联的业务ID
+})
+```
+
+**需要确认**：
+1. ❓ `reason` 的枚举值有哪些？
+   - `redPacket:send` - 发送红包
+   - `redPacket:open` - 领取红包
+   - `recharge` - 充值
+   - `withdraw` - 提现
+   - `invite_reward` - 邀请奖励
+   - `chain_income` - 接龙收益
+   - 其他？
+
+2. ❓ 是否需要推送给多个用户？
+   - 例如：A 发红包，A 和 B 都收到余额变动通知
+
+---
+
+### 6. Socket 房间管理 ❓
+
+**当前实现**：
+```javascript
+// 前端调用
+joinGroup(groupId)
+
+// 后端需要实现
+socket.on('joinGroup', (groupId) => {
+  socket.join(groupId)
+})
+```
+
+**需要确认**：
+1. ❓ 用户加入群组时，是否自动加入 Socket 房间？
+2. ❓ 用户离开群组时，是否自动离开 Socket 房间？
+3. ❓ 用户断开重连后，是否需要重新加入房间？
+4. ❓ 如何避免向未加入的用户推送消息？
+
+---
+
+### 7. 离线消息处理 ❓
+
+**场景**：用户离线期间收到的消息
+
+**需要确认**：
+1. ❓ 是否存储离线消息？
+2. ❓ 用户上线后如何推送离线消息？
+   - 一次性推送所有离线消息？
+   - 分批推送？
+   - 让用户主动拉取？
+
+3. ❓ 离线消息保留多久？
+   - 7天？
+   - 30天？
+   - 永久？
+
+4. ❓ 是否需要未读消息计数？
+   ```javascript
+   GET /api/chats/unread-count
+   Response: {
+     "groups": {
+       "group_123": 5,
+       "group_456": 10
+     },
+     "privates": {
+       "user_789": 3
+     }
+   }
+   ```
+
+---
+
+## 🟢 低优先级（后续优化）
+
+### 8. 富媒体消息支持 ❓
+
+**当前只支持文本消息**，未来可能需要：
+
+**图片消息**：
+```javascript
+{
+  "type": "image",
+  "content": "https://example.com/image.jpg",
+  "thumbnail": "https://example.com/thumb.jpg",
+  "width": 800,
+  "height": 600
+}
+```
+
+**文件消息**：
+```javascript
+{
+  "type": "file",
+  "content": "https://example.com/file.pdf",
+  "filename": "document.pdf",
+  "size": 1024000
+}
+```
+
+**需要确认**：
+1. ❓ 近期是否需要支持图片/文件？
+2. ❓ 文件大小限制？
+3. ❓ 是否需要预览功能？
+
+---
+
+### 9. 消息撤回/删除 ❓
+
+**需要确认**：
+1. ❓ 是否支持消息撤回？
+2. ❓ 撤回时限（2分钟？24小时？）
+3. ❓ 撤回后其他人看到的是"已撤回"还是直接删除？
+
+---
+
+### 10. 消息搜索 ❓
+
+**需要确认**：
+1. ❓ 是否需要搜索历史消息？
+2. ❓ 搜索范围：
+   - 仅文本内容？
+   - 包括发送者？
+   - 包括时间范围？
+
+3. ❓ 是否需要全文检索（Elasticsearch）？
+
+---
+
+## 📋 沟通清单总结
+
+### 立即需要确认（今天）
+- [ ] **群聊消息存储模型**（Message vs GroupMessage）
+- [ ] **POST /api/chats/messages 接口细节**（参数、返回格式、验证逻辑）
+- [ ] **GET /api/chats/messages/:chatId 修复方案**（分页、排序、返回字段）
+- [ ] **clientMsgId 唯一索引策略**（sparse、重复处理）
+
+### 本周内确认
+- [ ] **余额变动推送细节**（触发场景、数据格式、reason 枚举）
+- [ ] **Socket 房间管理策略**（加入/离开/重连）
+- [ ] **离线消息处理方案**（存储、推送、保留时长）
+
+### 后续规划
+- [ ] 富媒体消息支持（图片、文件）
+- [ ] 消息撤回/删除功能
+- [ ] 消息搜索功能
+- [ ] 未读消息计数
+
+---
+
+## 💡 建议的沟通方式
+
+**方式1：会议讨论（推荐）**
+- 时间：30分钟
+- 参与：前端负责人 + 后端负责人
+- 议程：逐项确认上述问题
+- 产出：更新 API 文档
+
+**方式2：文档协作**
+- 在此文档中直接回复每个问题
+- 标注确认人和确认时间
+- 更新到正式 API 文档
+
+**方式3：代码审查**
+- 后端先实现 Phase 1 核心接口
+- 前端 review 代码并提出问题
+- 迭代优化
+
+---
+
+## 🎯 下一步行动
+
+1. **今天**：确认高优先级的 4 个问题
+2. **明天**：后端开始实现 Phase 1 接口
+3. **后天**：前端开始迁移接龙群组件
+4. **本周内**：完成 Phase 1 + Phase 2
+5. **下周**：测试 + 优化

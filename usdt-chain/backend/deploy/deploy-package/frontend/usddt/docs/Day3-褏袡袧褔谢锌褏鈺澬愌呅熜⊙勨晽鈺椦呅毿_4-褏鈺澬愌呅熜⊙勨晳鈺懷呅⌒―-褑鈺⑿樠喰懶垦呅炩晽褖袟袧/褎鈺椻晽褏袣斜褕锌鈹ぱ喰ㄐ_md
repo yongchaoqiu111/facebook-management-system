@@ -1,0 +1,114 @@
+# 开发人员 D - 消息去重逻辑
+
+**负责人**：开发人员 D（初级前端）  
+**预计工时**：1-2 小时  
+**难度**：⭐  
+**依赖**：开发人员 A 完成
+
+---
+
+## 📋 你的任务
+
+实现消息去重逻辑，防止 WSS 和 HTTP 重复显示同一条消息。
+
+---
+
+## 🔧 实施步骤
+
+### Step 1: 添加去重 Set（30 分钟）
+
+**文件**：`src/composables/useMessageCenter.js`
+
+在 `useMessageCenter` 函数中添加：
+
+```javascript
+export function useMessageCenter() {
+  // ... 现有代码
+  
+  // ✅ 添加消息去重 Set
+  const receivedMsgIds = new Set()
+  const MAX_STORED_IDS = 1000  // 最多存储 1000 个 ID
+  
+  /**
+   * 检查消息是否重复
+   */
+  const isDuplicateMessage = (message) => {
+    const msgId = message._id || message.clientMsgId
+    if (!msgId) return false
+    
+    if (receivedMsgIds.has(msgId)) {
+      console.log('⚠️ 检测到重复消息:', msgId)
+      return true
+    }
+    
+    receivedMsgIds.add(msgId)
+    
+    // 限制 Set 大小，避免内存泄漏
+    if (receivedMsgIds.size > MAX_STORED_IDS) {
+      const idsArray = Array.from(receivedMsgIds)
+      idsArray.slice(0, 500).forEach(id => receivedMsgIds.delete(id))
+      console.log('🗑️ 清理了 500 个旧消息 ID')
+    }
+    
+    return false
+  }
+  
+  // ... 其他代码
+  
+  return {
+    // ... 现有返回值
+    isDuplicateMessage,
+    receivedMsgIds
+  }
+}
+```
+
+---
+
+### Step 2: 修改 addMessageToConversation（30 分钟）
+
+```javascript
+const addMessageToConversation = (conversationId, message) => {
+  // ✅ 检查是否重复
+  if (isDuplicateMessage(message)) {
+    return  // 重复消息，直接返回
+  }
+  
+  // 初始化对话数组
+  if (!conversations[conversationId]) {
+    conversations[conversationId] = []
+  }
+  
+  // 使用 splice 保持响应式
+  conversations[conversationId].splice(
+    conversations[conversationId].length,
+    0,
+    message
+  )
+}
+```
+
+---
+
+## ✅ 验收标准
+
+- [ ] 发送同一条消息两次，只显示一次
+- [ ] 快速刷新页面不重复
+- [ ] Set 大小限制生效（无内存泄漏）
+- [ ] 无 ESLint 错误
+
+---
+
+## 🧪 测试方法
+
+```javascript
+// 在浏览器控制台测试
+const { receivedMsgIds } = useMessageCenter()
+console.log('当前存储的消息ID数量:', receivedMsgIds.size)
+```
+
+---
+
+## 📞 需要帮助？
+
+联系 AI 助手或开发人员 A 进行代码审查。

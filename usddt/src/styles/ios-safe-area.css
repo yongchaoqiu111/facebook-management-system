@@ -1,0 +1,98 @@
+/**
+ * iOS 安全区适配全局样式
+ * 解决刘海屏、底部 Home 条、键盘遮挡问题
+ */
+
+/* ✅ 全局 body 配置 */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ✅ 所有页面容器基础适配 */
+.app-container,
+.page-container,
+.view-container,
+.home-container,
+.contacts-container,
+.wallet-container,
+.profile-container,
+.market-container {
+  min-height: 100%;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 60px); /* 60px = 底部导航高度 */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* ✅ 固定底部元素适配（导航栏、输入框等） */
+.bottom-nav,
+.footer,
+.fixed-bottom,
+.nav-wrapper {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  background: #fff;
+  padding-bottom: env(safe-area-inset-bottom);
+  box-sizing: border-box;
+  z-index: 1000;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+}
+
+/* ✅ 固定顶部元素适配（标题栏、状态栏） */
+.top-bar,
+.header,
+.fixed-top {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding-top: calc(env(safe-area-inset-top) + 16px);
+  background: white;
+  z-index: 1000;
+}
+
+/* ✅ 聊天消息列表适配 */
+.chat-messages,
+.message-list {
+  padding-bottom: calc(16px + 180px + env(safe-area-inset-bottom));
+}
+
+/* ✅ 全屏背景适配 */
+.fullscreen-bg {
+  height: 100%;
+}
+
+/* ✅ 模态框/弹窗底部适配 */
+.modal-bottom,
+.sheet-content {
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+}
+
+/* ✅ iOS 特定优化 */
+@supports (-webkit-touch-callout: none) {
+  /* 仅 iOS Safari */
+  .scroll-container {
+    -webkit-overflow-scrolling: touch; /* 平滑滚动 */
+  }
+  
+  input, textarea, select {
+    font-size: 16px; /* 防止 iOS 自动缩放 */
+  }
+  
+  button, a {
+    -webkit-tap-highlight-color: transparent; /* 移除点击高亮 */
+  }
+}
+
+/* ✅ 防止 iOS 缩放 */
+@media screen and (max-width: 768px) {
+  input, textarea {
+    font-size: 16px;
+  }
+}

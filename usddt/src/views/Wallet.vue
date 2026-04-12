@@ -23,11 +23,11 @@
       <div class="action-buttons">
         <button class="action-btn recharge-btn" @click="openRechargeModal">
           <div class="btn-icon">💰</div>
-          <div class="btn-text">充值</div>
+          <div class="btn-text">转入</div>
         </button>
         <button class="action-btn withdraw-btn" @click="showWithdrawModal = true">
           <div class="btn-icon">📤</div>
-          <div class="btn-text">提现</div>
+          <div class="btn-text">转出</div>
         </button>
       </div>
 
@@ -67,43 +67,23 @@
       </div>
     </main>
 
-    <!-- 底部导航 -->
-    <footer class="bottom-nav">
-      <div class="nav-item" @click="navigate('/home')">
-        <div class="nav-icon">💬</div>
-        <div class="nav-label">消息</div>
-      </div>
-      <div class="nav-item" @click="navigate('/contacts')">
-        <div class="nav-icon">👥</div>
-        <div class="nav-label">联系人</div>
-      </div>
-      <div class="nav-item active" @click="navigate('/wallet')">
-        <div class="nav-icon">💰</div>
-        <div class="nav-label">钱包</div>
-      </div>
-      <div class="nav-item" @click="navigate('/profile')">
-        <div class="nav-icon">👤</div>
-        <div class="nav-label">我的</div>
-      </div>
-    </footer>
-
-    <!-- 充值弹窗 -->
+    <!-- 转入弹窗 -->
     <div v-if="showRechargeModal" class="modal-overlay" @click="showRechargeModal = false">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h3>充值 USDT</h3>
+          <h3>转入 USDT</h3>
           <button class="close-btn" @click="showRechargeModal = false">×</button>
         </div>
         <div class="recharge-content">
           <!-- 二维码显示 -->
           <div class="qrcode-section" v-if="qrCodeDataUrl">
-            <img :src="qrCodeDataUrl" alt="充值地址二维码" class="qrcode-image" />
-            <div class="qrcode-label">扫码充值</div>
+            <img :src="qrCodeDataUrl" alt="转入地址二维码" class="qrcode-image" />
+            <div class="qrcode-label">扫码转入</div>
           </div>
           
           <!-- 地址显示 -->
           <div class="address-section">
-            <div class="address-label">充值地址</div>
+            <div class="address-label">复制地址</div>
             <div class="address-box" @click="copyAddress">
               {{ walletInfo.depositAddress }}
               <span class="copy-icon">📋</span>
@@ -112,29 +92,25 @@
               {{ walletInfo.note }}
             </div>
           </div>
-          
-          <div class="platform-info">
-            <div class="platform-name">{{ walletInfo.platformName }}</div>
-          </div>
         </div>
       </div>
     </div>
 
-    <!-- 提现弹窗 -->
+    <!-- 转出弹窗 -->
     <div v-if="showWithdrawModal" class="modal-overlay" @click="showWithdrawModal = false">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h3>提现 USDT</h3>
+          <h3>转出 USDT</h3>
           <button class="close-btn" @click="showWithdrawModal = false">×</button>
         </div>
         <div class="withdraw-content">
           <div class="form-group">
-            <label for="withdrawAmount">提现金额</label>
+            <label for="withdrawAmount">转出数量</label>
             <input 
               type="number" 
               id="withdrawAmount" 
               v-model.number="withdrawAmount"
-              placeholder="请输入提现金额"
+              placeholder="请输入转出数量"
               min="10"
               max="10000"
               @input="updateFeeEstimate"
@@ -181,7 +157,7 @@
             :disabled="!canWithdraw"
             @click="handleWithdraw"
           >
-            确认提现
+            确认转出
           </button>
         </div>
       </div>
@@ -382,8 +358,21 @@ const checkDepositStatus = async () => {
 // 加载钱包信息
 const loadWalletInfo = async () => {
   try {
+    // ✅ 优先从 localStorage 读取缓存
+    const cachedWallet = localStorage.getItem('walletInfo')
+    if (cachedWallet) {
+      walletInfo.value = JSON.parse(cachedWallet)
+      console.log('✅ [Wallet] 从缓存加载钱包信息')
+      return
+    }
+    
+    // 缓存不存在，请求 API
     const walletData = await walletAPI.getWalletInfo()
     walletInfo.value = walletData
+    
+    // 保存到 localStorage
+    localStorage.setItem('walletInfo', JSON.stringify(walletData))
+    console.log('✅ [Wallet] 从 API 加载钱包信息并缓存')
   } catch (error) {
     console.error('获取钱包信息失败:', error)
   }
@@ -763,44 +752,6 @@ onMounted(async () => {
   text-align: center;
   color: #999;
   padding: 40px 20px;
-}
-
-/* 底部导航 */
-.bottom-nav {
-  background: white;
-  border-top: 1px solid #e0e0e0;
-  padding: 15px 10px;
-  padding-bottom: calc(15px + env(safe-area-inset-bottom));
-  display: flex;
-  justify-content: space-around;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 100;
-}
-
-.nav-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  cursor: pointer;
-  color: #666;
-  transition: color 0.3s ease;
-}
-
-.nav-item.active {
-  color: #667eea;
-}
-
-.nav-icon {
-  font-size: 1.3rem;
-}
-
-.nav-label {
-  font-size: 0.7rem;
 }
 
 /* 弹窗样式 */

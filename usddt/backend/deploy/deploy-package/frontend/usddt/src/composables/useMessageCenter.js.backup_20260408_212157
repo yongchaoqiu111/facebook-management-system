@@ -1,0 +1,408 @@
+import { ref, reactive, computed } from 'vue'
+import { initSocket, getSocket, onGroupMessage, onGroupRedPacket, sendGroupMessage } from '@/socket'
+import { chainGroupAPI, redPacketAPI } from '@/api'
+import { loadChatHistory as loadFromStorage, saveChatHistory as saveToStorage } from '@/utils/storage'
+
+/**
+ * 统一消息中心
+ * 所有 Socket 消息统一在这里处理，转换成标准数组格式
+ * 各聊天组件只负责订阅和展示
+ */
+export function useMessageCenter() {
+  // 消息存储：按 conversationId 分类
+  // {
+  //   'group_123': [{ id, type, content, time, ... }],
+  //   'user_456': [{ id, type, content, time, ... }]
+  // }
+  const conversations = reactive({})
+  
+  // 金额变动记录（独立存储）
+  const balanceChanges = ref([])
+  
+  // 用户余额
+  const userBalance = ref(0)
+  
+  // Socket 是否已初始化
+  let socketInitialized = false
+  
+  // 消息去重 Set（防止 WSS 和 HTTP 重复显示）
+  const receivedMsgIds = new Set()
+  const MAX_STORED_IDS = 1000  // 最多存储 1000 个 ID，避免内存泄漏
+
+  /**
+   * 初始化 Socket 监听（全局只调用一次）
+   */
+  const initSocketListeners = () => {
+    if (socketInitialized) {
+      console.log('⚠️ Socket 监听器已初始化，跳过')
+      return
+    }
+
+    console.log('🔌 初始化全局 Socket 监听器')
+    
+    // 初始化 Socket 连接
+    initSocket()
+    
+    // 监听群聊消息
+    onGroupMessage((data) => {
+      console.log('📨 [MessageCenter] 收到群消息:', data)
+      handleIncomingMessage('group', data)
+    })
+    
+    // 监听群红包
+    onGroupRedPacket((data) => {
+      console.log('🧧 [MessageCenter] 收到群红包:', data)
+      handleIncomingMessage('groupRedPacket', data)
+    })
+    
+    // TODO: 监听私聊消息
+    // socket.on('privateMessage', (data) => {
+    //   handleIncomingMessage('private', data)
+    // })
+    
+    // TODO: 监听余额变动
+    // socket.on('balanceChange', (data) => {
+    //   handleBalanceChange(data)
+    // })
+    
+    socketInitialized = true
+    console.log('✅ Socket 监听器初始化完成')
+  }
+
+  /**
+   * 处理 incoming 消息（统一入口）
+   * @param {string} messageType - 消息类型：'group', 'private', 'groupRedPacket' 等
+   * @param {object} rawData - Socket 原始数据
+   */
+  const handleIncomingMessage = (messageType, rawData) => {
+    // 1. 确定 conversationId
+    const conversationId = getConversationId(messageType, rawData)
+    if (!conversationId) {
+      console.warn('⚠️ 无法确定 conversationId，跳过消息:', rawData)
+      return
+    }
+
+    // 2. 格式化为标准消息对象
+    const message = formatMessage(messageType, rawData)
+    if (!message) {
+      console.warn('⚠️ 消息格式化失败，跳过:', rawData)
+      return
+    }
+
+    // 3. 添加到对话数组
+    addMessageToConversation(conversationId, message)
+
+    // 4. 如果是金额相关消息，记录余额变动
+    if (isBalanceRelatedMessage(messageType, message)) {
+      recordBalanceChange(messageType, message)
+    }
+
+    // 5. 持久化到 LocalStorage
+    saveToStorage(conversationId, conversations[conversationId])
+
+    console.log(`✅ 消息已处理: ${conversationId}`, message)
+  }
+
+  /**
+   * 获取 conversationId
+   */
+  const getConversationId = (messageType, data) => {
+    switch (messageType) {
+      case 'group':
+      case 'groupRedPacket':
+        return `group_${data.groupId}`
+      case 'private':
+        // 私聊：使用对方用户ID
+        const currentUserId = localStorage.getItem('userId')
+        return `user_${data.senderId === currentUserId ? data.receiverId : data.senderId}`
+      default:
+        return null
+    }
+  }
+
+  /**
+   * 格式化消息为标准格式
+   */
+  const formatMessage = (messageType, data) => {
+    const now = new Date()
+    const time = now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes()
+    const currentUserId = localStorage.getItem('userId')
+    
+    // 兼容不同的数据格式
+    const senderId = data.sender?._id || data.sender || data.senderId
+    
+    const baseMessage = {
+      id: data._id || `${messageType}_${Date.now()}`,
+      time,
+      senderId,
+      isSelf: senderId === currentUserId,
+      createdAt: data.createdAt || now.toISOString()
+    }
+
+    // 根据消息类型添加特定字段
+    switch (messageType) {
+      case 'group':
+        return {
+          ...baseMessage,
+          type: 'text',
+          content: data.content,
+          groupId: data.groupId,
+          clientMsgId: data.clientMsgId
+        }
+      
+      case 'groupRedPacket':
+        // 兼容 API 响应格式
+        const redPacketData = data.success && data.data ? data.data : data
+        const rpSenderId = redPacketData.sender?._id || redPacketData.sender || redPacketData.senderId
+        
+        return {
+          ...baseMessage,
+          type: 'redPacket',
+          redPacketType: redPacketData.type || 'normal',
+          amount: redPacketData.totalAmount || redPacketData.amount,
+          count: redPacketData.count || 1,
+          message: redPacketData.message || '恭喜发财，大吉大利',
+          opened: false,
+          redPacketId: redPacketData._id,
+          clientMsgId: `grp_${redPacketData._id}_${Date.now()}`,
+          groupId: redPacketData.groupId,
+          senderId: rpSenderId,
+          isSelf: rpSenderId === currentUserId,
+          isChainRedPacket: redPacketData.isChainRedPacket || false
+        }
+      
+      default:
+        console.warn('⚠️ 未知的消息类型:', messageType)
+        return null
+    }
+  }
+
+  /**
+   * 检查消息是否重复
+   * @param {object} message - 消息对象
+   * @returns {boolean} - 是否重复
+   */
+  const isDuplicateMessage = (message) => {
+    // 优先使用服务端 _id，其次使用 clientMsgId
+    const msgId = message._id || message.id || message.clientMsgId
+    if (!msgId) {
+      console.warn('⚠️ 消息缺少 ID，无法去重:', message)
+      return false
+    }
+    
+    if (receivedMsgIds.has(msgId)) {
+      console.log('⚠️ 检测到重复消息，已跳过:', msgId)
+      return true
+    }
+    
+    receivedMsgIds.add(msgId)
+    
+    // 限制 Set 大小，避免内存泄漏
+    if (receivedMsgIds.size > MAX_STORED_IDS) {
+      // 清理最早的 500 个 ID
+      const idsArray = Array.from(receivedMsgIds)
+      idsArray.slice(0, 500).forEach(id => receivedMsgIds.delete(id))
+      console.log('🗑️ 清理了 500 个旧消息 ID，当前大小:', receivedMsgIds.size)
+    }
+    
+    return false
+  }
+
+  /**
+   * 添加消息到对话数组（带去重检查）
+   */
+  const addMessageToConversation = (conversationId, message) => {
+    // ✅ 检查是否重复
+    if (isDuplicateMessage(message)) {
+      return  // 重复消息，直接返回
+    }
+    
+    // 初始化对话数组
+    if (!conversations[conversationId]) {
+      conversations[conversationId] = []
+    }
+    
+    // 使用 splice 保持响应式
+    conversations[conversationId].splice(
+      conversations[conversationId].length,
+      0,
+      message
+    )
+  }
+
+  /**
+   * 判断是否为金额相关消息
+   */
+  const isBalanceRelatedMessage = (messageType, message) => {
+    return messageType.includes('RedPacket') || messageType === 'transfer'
+  }
+
+  /**
+   * 记录余额变动
+   */
+  const recordBalanceChange = (messageType, message) => {
+    balanceChanges.value.push({
+      id: `balance_${Date.now()}`,
+      type: messageType,
+      amount: message.amount,
+      reason: getBalanceChangeReason(messageType, message),
+      timestamp: message.createdAt,
+      relatedId: message.id
+    })
+  }
+
+  /**
+   * 获取余额变动原因
+   */
+  const getBalanceChangeReason = (messageType, message) => {
+    switch (messageType) {
+      case 'groupRedPacket':
+        return message.isSelf ? '发送红包' : '领取红包'
+      case 'transfer':
+        return '转账'
+      default:
+        return '未知变动'
+    }
+  }
+
+  /**
+   * 获取指定对话的消息
+   */
+  const getMessages = (conversationId) => {
+    return conversations[conversationId] || []
+  }
+
+  /**
+   * 获取余额变动历史
+   */
+  const getBalanceHistory = () => {
+    return balanceChanges.value
+  }
+
+  /**
+   * 发送消息（统一入口）
+   * 策略：先 HTTP POST 确保可靠性，再 WSS 推送实时性
+   */
+  const sendMessage = async (conversationId, messageData) => {
+    console.log('📤 [MessageCenter] 发送消息:', conversationId, messageData)
+    
+    try {
+      // 1. 确定消息类型
+      const isGroup = conversationId.startsWith('group_')
+      const groupId = isGroup ? conversationId.replace('group_', '') : null
+      
+      // 2. HTTP POST 发送（确保可靠性）
+      let response
+      if (isGroup) {
+        response = await chainGroupAPI.sendMessage({
+          groupId,
+          content: messageData.content,
+          type: messageData.type || 'text'
+        })
+      } else {
+        // TODO: 私聊 API
+        console.warn('⚠️ 私聊发送暂未实现')
+        return
+      }
+      
+      // 3. WSS 推送（实时同步给其他人）
+      if (isGroup && response?.data?._id) {
+        sendGroupMessage({
+          groupId,
+          content: messageData.content,
+          type: messageData.type || 'text',
+          clientMsgId: messageData.clientMsgId || Date.now().toString()
+        })
+      }
+      
+      // 4. 乐观更新本地消息
+      const message = formatMessage(isGroup ? 'group' : 'private', {
+        ...messageData,
+        _id: response?.data?._id || `temp_${Date.now()}`,
+        groupId
+      })
+      
+      addMessageToConversation(conversationId, message)
+      saveToStorage(groupId || conversationId, conversations[conversationId])
+      
+      console.log('✅ 消息发送成功:', message)
+      return message
+      
+    } catch (error) {
+      console.error('❌ 消息发送失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 加载历史消息
+   * 策略：优先 LocalStorage → HTTP GET 后端 → WSS 增量更新
+   */
+  const loadHistory = async (conversationId) => {
+    console.log('📚 [MessageCenter] 加载历史消息:', conversationId)
+    
+    // 1. 从 LocalStorage 加载（最快）
+    const rawId = conversationId.replace('group_', '').replace('user_', '')
+    const localMessages = loadFromStorage(rawId)
+    if (localMessages && localMessages.length > 0) {
+      conversations[conversationId] = []
+      localMessages.forEach(msg => {
+        conversations[conversationId].push(msg)
+      })
+      console.log(`✅ 从本地加载 ${localMessages.length} 条消息`)
+      return localMessages
+    }
+    
+    // 2. HTTP GET 从后端加载（可靠）
+    try {
+      let response
+      if (conversationId.startsWith('group_')) {
+        const groupId = conversationId.replace('group_', '')
+        response = await chainGroupAPI.getMessages(groupId, { limit: 50 })
+      } else {
+        // TODO: 私聊 API
+        console.warn('⚠️ 私聊历史消息暂未实现')
+        return []
+      }
+      
+      if (response?.data?.data?.messages) {
+        const messages = response.data.data.messages.map(msg => formatMessage('group', msg))
+        conversations[conversationId] = messages
+        saveToStorage(rawId, messages)
+        console.log(`✅ 从后端加载 ${messages.length} 条消息`)
+        return messages
+      }
+    } catch (error) {
+      console.error('❌ 从后端加载消息失败:', error)
+    }
+    
+    // 3. 返回空数组
+    conversations[conversationId] = []
+    return []
+  }
+
+  /**
+   * 清理对话数据
+   */
+  const clearConversation = (conversationId) => {
+    if (conversations[conversationId]) {
+      conversations[conversationId] = []
+      console.log('🗑️ 已清理对话:', conversationId)
+    }
+  }
+
+  return {
+    conversations,
+    balanceChanges,
+    userBalance,
+    receivedMsgIds,  // ✅ 暴露出去（用于调试）
+    initSocketListeners,
+    handleIncomingMessage,
+    getMessages,
+    getBalanceHistory,
+    sendMessage,
+    loadHistory,
+    clearConversation,
+    isDuplicateMessage  // ✅ 暴露出去（用于调试）
+  }
+}

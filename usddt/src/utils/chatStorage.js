@@ -5,10 +5,11 @@
 import { openDB } from 'idb'
 
 const DB_NAME = 'ChatMessagesDB'
-const DB_VERSION = 4  // ✅ 升级到 v4，添加账单存储
+const DB_VERSION = 5  // 🆕 升级到 v5，添加交易记录存储
 const STORE_NAME = 'messages'
 const REDPACKET_STORE_NAME = 'redPackets'  // ✅ 红包明细存储
 const BALANCE_STORE_NAME = 'balanceChanges'  // ✅ 账单变动存储
+const TRADE_STORE_NAME = 'tradeRecords'  // 🆕 交易记录存储
 
 // 初始化数据库
 let dbPromise = null
@@ -73,6 +74,19 @@ export const getDB = async () => {
           
           console.log('✅ 创建 balanceChanges 存储')
         }
+        
+        // 🆕 创建交易记录存储对象（按币种数字ID索引）
+        if (!db.objectStoreNames.contains(TRADE_STORE_NAME)) {
+          const tradeStore = db.createObjectStore(TRADE_STORE_NAME, { keyPath: 'id' })
+          
+          // 创建索引：币种数字ID作为第一索引（1=BTC, 2=ETH, 3=BNB, 4=SOL, 5=XRP）
+          tradeStore.createIndex('coinId', 'coinId', { unique: false })  // 1, 2, 3, 4, 5
+          tradeStore.createIndex('type', 'type', { unique: false })      // buy, sell
+          tradeStore.createIndex('timestamp', 'timestamp', { unique: false })
+          tradeStore.createIndex('coinId_timestamp', ['coinId', 'timestamp'], { unique: false })
+          
+          console.log('✅ 创建 tradeRecords 存储（按币种数字ID索引）')
+        }
       }
     })
   }
@@ -135,14 +149,29 @@ export const parseMessage = (data, currentUserId) => {
   console.log('  - isSelf:', isSelf)
   console.log('  - direction:', direction, direction === 0 ? '(0=自己右侧)' : '(1=别人左侧)')
   
+  // 🆕 根据 ID 位数判断类型：7位=群，8位=好友
+  const getIdType = (id) => {
+    const idStr = String(id)
+    if (idStr.length === 7) return 'group'
+    if (idStr.length === 8) return 'friend'
+    return 'unknown'
+  }
+  
   // 判断消息类型
   if (data.type === 'redPacket' || data.redPacket || data.redPacketId) {
     // 红包消息
-    const chatId = data.groupId || data.receiverId || data.senderId  // 群聊用groupId，私调用对方ID
+    // 🆕 计算聊天ID：根据 ID 位数自动判断
+    let chatId = data.groupId
+    if (!chatId && data.receiverId) {
+      // 私聊红包：确定对方ID
+      const otherUserId = senderId === currentUserId ? data.receiverId : senderId
+      chatId = `friend_${otherUserId}`  // 🆕 统一使用 friend_ 前缀
+    }
+    
     return {
       id: data._id || data.redPacketId || `rp_${Date.now()}`,
       type: 'redPacket',
-      chatId: chatId,  // 聊天会话ID
+      chatId: chatId,  // 🆕 私聊红包也用 friend_ 前缀
       direction: direction,  // ✅ 0=自己，1=别人
       redPacketType: data.type || data.redPacket?.type || 'liuhe',
       amount: data.amount || data.totalAmount || data.redPacket?.amount || 0,
@@ -174,14 +203,14 @@ export const parseMessage = (data, currentUserId) => {
     }
   } else if (data.chatType === 'private' || data.receiverId) {
     // 私聊消息
-    // 计算对方ID：如果发送者是自己，对方是receiver；如果接收者是自己，对方是sender
+    // 🆕 计算对方ID：如果发送者是自己，对方是receiver；如果接收者是自己，对方是sender
     const otherUserId = senderId === currentUserId ? data.receiverId : senderId
-    const chatId = `private_${otherUserId}`
+    const chatId = `friend_${otherUserId}`  // 🆕 改为 friend_ 前缀，与好友ID对应
     
     return {
       id: data._id || `msg_${Date.now()}`,
       type: 'text',
-      chatId: chatId,  // 私聊会话ID：private_对方ID
+      chatId: chatId,  // 🆕 私聊会话ID：friend_好友ID
       direction: direction,  // ✅ 0=自己，1=别人
       content: data.content,
       time: time,
@@ -194,10 +223,13 @@ export const parseMessage = (data, currentUserId) => {
     }
   } else {
     // 群聊消息
+    // 🆕 群ID也是用 friend_ 前缀，通过 ID 位数区分
+    const chatId = data.groupId ? `friend_${data.groupId}` : null
+    
     return {
       id: data._id || `msg_${Date.now()}`,
       type: 'text',
-      chatId: data.groupId,  // 群聊会话ID = groupId
+      chatId: chatId,  // 🆕 群聊也用 friend_ 前缀
       direction: direction,  // ✅ 0=自己，1=别人
       content: data.content,
       time: time,
@@ -319,6 +351,12 @@ export const getMessagesByChatId = async (chatId, limit = 500) => {
     console.error('❌ 获取聊天消息失败:', error)
     return []
   }
+}
+
+// 🆕 获取与指定好友的所有私聊消息
+export const getMessagesByFriendId = async (friendId, limit = 500) => {
+  const chatId = `friend_${friendId}`  // 🆕 使用 friend_ 前缀
+  return await getMessagesByChatId(chatId, limit)
 }
 
 /**
@@ -590,6 +628,271 @@ export const clearAllBalanceChanges = async () => {
     console.log('✅ 已清空 IndexedDB 中的所有余额变动记录')
   } catch (error) {
     console.error('❌ 清空余额变动数据失败:', error)
+  }
+}
+
+// ==================== 🆕 按好友ID查询 API ====================
+
+/**
+ * 🆕 获取与指定好友的所有私聊消息和红包
+ * @param {string} friendId - 好友ID
+ * @param {number} limit - 限制数量（默认500）
+ * @returns {Object} { messages: [], redPackets: [] }
+ */
+export const getFriendChatData = async (friendId, limit = 500) => {
+  try {
+    const chatId = `friend_${friendId}`  // 🆕 使用 friend_ 前缀
+    
+    // 获取消息（包含文本消息和红包消息）
+    const messages = await getMessagesByChatId(chatId, limit)
+    
+    // 获取红包详情列表
+    const redPackets = await getRedPacketsByChatId(chatId, limit)
+    
+    console.log(`📦 [getFriendChatData] 好友 ${friendId}: ${messages.length} 条消息, ${redPackets.length} 个红包`)
+    
+    return {
+      messages,
+      redPackets
+    }
+  } catch (error) {
+    console.error('❌ 获取好友聊天数据失败:', error)
+    return { messages: [], redPackets: [] }
+  }
+}
+
+/**
+ * 🆕 获取指定聊天会话的红包列表
+ * @param {string} chatId - 聊天会话ID
+ * @param {number} limit - 限制数量
+ * @returns {Array} 红包数组
+ */
+export const getRedPacketsByChatId = async (chatId, limit = 500) => {
+  try {
+    const db = await getDB()
+    const index = db.transaction(REDPACKET_STORE_NAME, 'readonly').objectStore(REDPACKET_STORE_NAME).index('chatId')
+    const all = await index.getAll(chatId)
+    
+    // 按时间戳排序（最新的在前）
+    all.sort((a, b) => new Date(b.createdAt || b.timestamp) - new Date(a.createdAt || a.timestamp))
+    
+    return all.slice(0, limit)
+  } catch (error) {
+    console.error('❌ 获取红包列表失败:', error)
+    return []
+  }
+}
+
+/**
+ * 🆕 通过红包ID查询红包详情（三级索引）
+ * @param {string} redPacketId - 红包ID
+ * @returns {Object|null} 红包详情对象
+ */
+export const getRedPacketById = async (redPacketId) => {
+  try {
+    const db = await getDB()
+    const redPacket = await db.get(REDPACKET_STORE_NAME, redPacketId)
+    
+    if (redPacket) {
+      console.log(`🧧 [getRedPacketById] 找到红包: ${redPacketId}`)
+    } else {
+      console.warn(`⚠️ [getRedPacketById] 未找到红包: ${redPacketId}`)
+    }
+    
+    return redPacket || null
+  } catch (error) {
+    console.error('❌ 查询红包详情失败:', error)
+    return null
+  }
+}
+
+// ==================== 🆕 ID 类型判断工具 ====================
+
+/**
+ * 🆕 根据 ID 判断类型
+ * @param {string|number} id - ID
+ * @returns {string} 'group' | 'friend' | 'redPacket' | 'unknown'
+ */
+export const getIdType = (id) => {
+  if (!id) return 'unknown'
+  const idStr = String(id).replace(/^friend_/, '')  // 去掉 friend_ 前缀
+  
+  if (idStr.length === 7) return 'group'       // 7位 = 群
+  if (idStr.length === 8) return 'friend'      // 8位 = 好友
+  if (idStr.length === 11 || idStr.startsWith('rp_')) return 'redPacket'  // 11位 = 红包
+  return 'unknown'
+}
+
+/**
+ * 🆕 从 chatId 提取原始 ID
+ * @param {string} chatId - 聊天ID（如 friend_10000003）
+ * @returns {string} 原始 ID
+ */
+export const extractIdFromChatId = (chatId) => {
+  if (!chatId) return null
+  return chatId.replace(/^friend_/, '')
+}
+
+// ==================== 🆕 币种映射与交易记录 API ====================
+
+/**
+ * 🆕 币种数字ID映射
+ */
+export const COIN_MAP = {
+  1: 'BTC',
+  2: 'ETH',
+  3: 'BNB',
+  4: 'SOL',
+  5: 'XRP'
+}
+
+/**
+ * 🆕 根据币种名称获取数字ID
+ * @param {string} symbol - 币种名称（BTC, ETH, etc.）
+ * @returns {number} 数字ID
+ */
+export const getCoinIdBySymbol = (symbol) => {
+  const entry = Object.entries(COIN_MAP).find(([_, name]) => name === symbol.toUpperCase())
+  return entry ? parseInt(entry[0]) : null
+}
+
+/**
+ * 🆕 根据数字ID获取币种名称
+ * @param {number} coinId - 数字ID（1-5）
+ * @returns {string} 币种名称
+ */
+export const getSymbolByCoinId = (coinId) => {
+  return COIN_MAP[coinId] || 'UNKNOWN'
+}
+
+/**
+ * 🆕 保存交易记录
+ * @param {Object} trade - 交易记录对象
+ */
+export const saveTradeRecord = async (trade) => {
+  try {
+    const db = await getDB()
+    await db.put(TRADE_STORE_NAME, trade)
+    console.log('✅ 已保存交易记录:', trade.id)
+  } catch (error) {
+    console.error('❌ 保存交易记录失败:', error)
+  }
+}
+
+/**
+ * ✅ 添加交易记录（兼容命名）
+ * @param {Object} trade - 交易记录对象
+ */
+export const addTradeRecord = saveTradeRecord
+
+/**
+ * ✅ 获取交易记录（按 userId 筛选）
+ * @param {string} userId - 用户 ID
+ * @param {number} limit - 限制数量
+ * @returns {Array} 交易记录数组
+ */
+export const getTradeRecords = async (userId, limit = 50) => {
+  try {
+    const all = await getAllTrades(1000)
+    // 筛选当前用户的交易记录
+    const userTrades = all.filter(t => t.userId === userId)
+    return userTrades.slice(0, limit)
+  } catch (error) {
+    console.error('❌ 获取交易记录失败:', error)
+    return []
+  }
+}
+
+/**
+ * ✅ 清空所有 IndexedDB 数据
+ */
+export const clearAllData = async () => {
+  try {
+    const db = await getDB()
+    
+    // 清空消息
+    await db.clear(STORE_NAME)
+    console.log('✅ 已清空 messages')
+    
+    // 清空红包
+    await db.clear(REDPACKET_STORE_NAME)
+    console.log('✅ 已清空 redPackets')
+    
+    // 清空余额变动
+    await db.clear(BALANCE_STORE_NAME)
+    console.log('✅ 已清空 balanceChanges')
+    
+    // 清空交易记录
+    await db.clear(TRADE_STORE_NAME)
+    console.log('✅ 已清空 tradeRecords')
+    
+    console.log('✅ IndexedDB 所有数据已清空')
+  } catch (error) {
+    console.error('❌ 清空数据失败:', error)
+  }
+}
+
+/**
+ * 🆕 批量保存交易记录
+ * @param {Array} trades - 交易记录数组
+ */
+export const saveTradeRecords = async (trades) => {
+  try {
+    const db = await getDB()
+    const tx = db.transaction(TRADE_STORE_NAME, 'readwrite')
+    
+    for (const trade of trades) {
+      tx.store.put(trade)
+    }
+    
+    await tx.done
+    console.log(`✅ 已保存 ${trades.length} 条交易记录`)
+  } catch (error) {
+    console.error('❌ 批量保存交易记录失败:', error)
+  }
+}
+
+/**
+ * 🆕 获取指定币种的交易记录
+ * @param {number} coinId - 币种数字ID（1-5）
+ * @param {number} limit - 限制数量
+ * @returns {Array} 交易记录数组
+ */
+export const getTradesByCoinId = async (coinId, limit = 500) => {
+  try {
+    const db = await getDB()
+    const index = db.transaction(TRADE_STORE_NAME, 'readonly').objectStore(TRADE_STORE_NAME).index('coinId_timestamp')
+    
+    // 查询指定币种的所有交易，按时间排序
+    const all = await index.getAll(IDBKeyRange.bound([coinId, 0], [coinId, Number.MAX_SAFE_INTEGER]))
+    
+    // 按时间戳排序（最新的在前）
+    all.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+    
+    return all.slice(0, limit)
+  } catch (error) {
+    console.error('❌ 获取交易记录失败:', error)
+    return []
+  }
+}
+
+/**
+ * 🆕 获取所有交易记录
+ * @param {number} limit - 限制数量
+ * @returns {Array} 交易记录数组
+ */
+export const getAllTrades = async (limit = 1000) => {
+  try {
+    const db = await getDB()
+    const all = await db.getAllFromIndex(TRADE_STORE_NAME, 'timestamp')
+    
+    // 按时间戳排序（最新的在前）
+    all.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+    
+    return all.slice(0, limit)
+  } catch (error) {
+    console.error('❌ 获取所有交易记录失败:', error)
+    return []
   }
 }
 

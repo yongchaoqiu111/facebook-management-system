@@ -1,0 +1,102 @@
+发送私聊红包: {receiverId: '10000001', amount: 10, message: '恭喜发财，大吉大利'}
+socket.js:48 📤 Socket emit: chat:sendPrivateRedPacket [{…}]
+socket.js:54 👂 [Socket Debug] 收到事件: balanceUpdated
+socket.js:55 👂 [Socket Debug] 时间: 16:07:22
+socket.js:56 👂 [Socket Debug] 数据: [
+  {
+    "type": 6,
+    "amount": -10,
+    "newBalance": 91200,
+    "receiverId": "10000001",
+    "timestamp": 1775808442955
+  }
+]
+useMessageCenter.js?t=1775808042097:355 💰 [MessageCenter] 余额变动: {type: 6, amount: -10, newBalance: 91200, receiverId: '10000001', timestamp: 1775808442955}
+useMessageCenter.js?t=1775808042097:653 💰 [handleBalanceChange] 收到余额变动: {type: 6, amount: -10, newBalance: 91200, receiverId: '10000001', timestamp: 1775808442955}
+useMessageCenter.js?t=1775808042097:658 ✅ 更新余额: 91200
+useMessageCenter.js:355 💰 [MessageCenter] 余额变动: {type: 6, amount: -10, newBalance: 91200, receiverId: '10000001', timestamp: 1775808442955}
+useMessageCenter.js:652 💰 [handleBalanceChange] 收到余额变动: {type: 6, amount: -10, newBalance: 91200, receiverId: '10000001', timestamp: 1775808442955}
+useMessageCenter.js:657 ✅ 更新余额: 91200
+socket.js:54 👂 [Socket Debug] 收到事件: redPacketSent
+socket.js:55 👂 [Socket Debug] 时间: 16:07:22
+socket.js:56 👂 [Socket Debug] 数据: [
+  {
+    "success": true,
+    "redPacketId": "10000000095",
+    "amount": 10,
+    "receiverId": "10000001",
+    "message": "恭喜发财，大吉大利",
+    "timestamp": 1775808442955
+  }
+]
+socket.js:60 🚨 [重要] 这是红包或消息事件！
+App.vue:432 🌐 [全局监听] 私聊红包发送成功
+App.vue:433 📦 WSS 原始数据: {
+  "success": true,
+  "redPacketId": "10000000095",
+  "amount": 10,
+  "receiverId": "10000001",
+  "message": "恭喜发财，大吉大利",
+  "timestamp": 1775808442955
+}
+App.vue:436 👤 currentUserId: 10000002
+useMessageCenter.js:393 💾 [调试] 准备保存消息: {id: 'privateRedPacket_1775808442958', time: '16:07', senderId: '10000002', isSelf: true, createdAt: '2026-04-10T08:07:22.955Z', …}
+chatStorage.js:491 ✅ 已保存余额变动: balance_1775808442956
+useMessageCenter.js?t=1775808042097:691 ✅ 已记录余额变动: 私聊红包转出 -10
+chatStorage.js:276 💾 批量保存 1 条消息到 IndexedDB
+useMessageCenter.js:395 💾 [MessageCenter] 已保存到 IndexedDB: 10000001
+useMessageCenter.js:400 ✅ 消息已处理: 10000001 {id: 'privateRedPacket_1775808442958', time: '16:07', senderId: '10000002', isSelf: true, createdAt: '2026-04-10T08:07:22.955Z', …}
+chatStorage.js:491 ✅ 已保存余额变动: balance_1775808442957
+useMessageCenter.js:690 ✅ 已记录余额变动: 私聊红包转出 这个是发包的
+
+
+
+
+============================
+[Socket Debug] 收到事件: receiveRedPacket
+socket.js:55 👂 [Socket Debug] 时间: 16:08:25
+socket.js:56 👂 [Socket Debug] 数据: [
+  {
+    "redPacketId": 10000000096,
+    "amount": 10,
+    "message": "恭喜发财，大吉大利",
+    "sender": {
+      "userId": "10000002",
+      "username": "12345678",
+      "avatar": ""
+    },
+    "receiver": {
+      "userId": "10000001"
+    },
+    "createdAt": "2026-04-10T08:08:25.656Z"
+  }
+]
+socket.js:60 🚨 [重要] 这是红包或消息事件！
+App.vue:398 🌐 [全局监听] 收到私聊红包
+App.vue:399 📦 WSS 原始数据: {
+  "redPacketId": 10000000096,
+  "amount": 10,
+  "message": "恭喜发财，大吉大利",
+  "sender": {
+    "userId": "10000002",
+    "username": "12345678",
+    "avatar": ""
+  },
+  "receiver": {
+    "userId": "10000001"
+  },
+  "createdAt": "2026-04-10T08:08:25.656Z"
+}
+App.vue:402 👤 currentUserId: 10000001
+App.vue:413 🔍 [调试] msgData.redPacketId: 10000000096
+App.vue:414 🔍 [调试] msgData._id: undefined
+App.vue:415 🔍 [调试] msgData.id: undefined
+App.vue:416 🔍 [调试] msgData.sender: {userId: '10000002', username: '12345678', avatar: ''}
+App.vue:417 🔍 [调试] msgData.receiver: {userId: '10000001'}
+useMessageCenter.js:393 💾 [调试] 准备保存消息: {id: 'privateRedPacket_1775808505659', time: '16:08', senderId: '10000002', isSelf: false, createdAt: '2026-04-10T08:08:25.659Z', …}
+chatStorage.js:276 💾 批量保存 1 条消息到 IndexedDB
+useMessageCenter.js:395 💾 [MessageCenter] 已保存到 IndexedDB: 10000002
+useMessageCenter.js:400 ✅ 消息已处理: 10000002 {id: 'privateRedPacket_1775808505659', time: '16:08', senderId: '10000002', isSelf: false, createdAt: '2026-04-10T08:08:25.659Z', …}
+
+
+这是收的

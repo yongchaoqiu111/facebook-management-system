@@ -5,71 +5,58 @@ let socket = null
 
 // 初始化Socket连接
 export const initSocket = () => {
-  if (!socket) {
-    const token = localStorage.getItem('token')
-    
-    // ✅ 调试：检查 token 是否存在
-    if (!token) {
-      console.error('❌ [Socket] Token 不存在，无法建立连接')
-      console.log('🔍 localStorage keys:', Object.keys(localStorage))
-      return null
-    }
-    
-    console.log('🔑 [Socket] 使用 token 连接:', token.substring(0, 20) + '...')
-    
-    // ✅ 使用环境变量配置 WebSocket 地址
-    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3000'
-    console.log('🔌 [Socket] 连接地址:', wsUrl)
-    
-    socket = io(wsUrl, {
-      transports: ['websocket'],
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      auth: {
-        token: token  // 直接使用 token，后端会处理
-      }
-    })
-
-    // 连接事件
-    socket.on('connect', () => {
-      console.log('🔌 Socket connected:', socket.id)
-    })
-
-    // 断开连接事件
-    socket.on('disconnect', () => {
-      console.log('❌ Socket disconnected')
-    })
-
-    // 重连事件
-    socket.on('reconnect', (attemptNumber) => {
-      console.log('🔄 Socket reconnected, attempt:', attemptNumber)
-    })
-
-    // 🔍 调试：监听所有事件
-    const originalEmit = socket.emit
-    socket.emit = function(...args) {
-      console.log('📤 Socket emit:', args[0], args.slice(1))
-      return originalEmit.apply(this, args)
-    }
-    
-    // 🔍 调试：监听所有事件（查看后端实际发送的事件名）
-    socket.onAny((eventName, ...args) => {
-      console.log(`👂 [Socket Debug] 收到事件: ${eventName}`)
-      console.log('👂 [Socket Debug] 时间:', new Date().toLocaleTimeString())
-      console.log('👂 [Socket Debug] 数据:', JSON.stringify(args, null, 2))
-      
-      // 特别标记红包相关事件
-      if (eventName.includes('redPacket') || eventName.includes('RedPacket') || eventName.includes('message')) {
-        console.log('🚨 [重要] 这是红包或消息事件！')
-      }
-    })
-
-    // 连接错误事件
-    socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error)
-    })
+  const token = localStorage.getItem('token')
+  
+  if (!token) {
+    console.error('❌ [Socket] Token 不存在，无法建立连接')
+    return null
   }
+  
+  // ✅ 如果已有连接，先销毁旧连接（防止重复监听）
+  if (socket) {
+    console.log('🔄 [Socket] 检测到旧连接，先断开...')
+    socket.off()
+    socket.disconnect()
+    socket = null
+  }
+  
+  console.log('🔑 [Socket] 使用 token 连接:', token.substring(0, 20) + '...')
+  
+  // ✅ 使用环境变量配置 WebSocket 地址
+  const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3000'
+  console.log('🔌 [Socket] 连接地址:', wsUrl)
+  
+  // 创建新连接
+  socket = io(wsUrl, {
+    transports: ['websocket'],
+    reconnection: true,
+    reconnectionAttempts: 5,
+    reconnectionDelay: 1000,
+    auth: {
+      token: token
+    }
+  })
+
+  // 连接事件
+  socket.on('connect', () => {
+    console.log('🔌 Socket connected:', socket.id)
+  })
+
+  // 断开连接事件
+  socket.on('disconnect', () => {
+    console.log('❌ Socket disconnected')
+  })
+
+  // 重连事件
+  socket.on('reconnect', (attemptNumber) => {
+    console.log('🔄 Socket reconnected, attempt:', attemptNumber)
+  })
+
+  // 连接错误事件
+  socket.on('connect_error', (error) => {
+    console.error('Socket connection error:', error)
+  })
+  
   return socket
 }
 
@@ -349,6 +336,27 @@ export const joinChainGroupViaSocket = (groupId, testMode = false, onError = nul
 export const onChainGroupJoined = (callback) => {
   if (socket) {
     socket.on('chainGroupJoined', callback)
+  }
+}
+
+// 🆕 监听好友添加
+export const onFriendAdded = (callback) => {
+  if (socket) {
+    socket.on('friendAdded', callback)
+  }
+}
+
+// 🆕 监听好友移除
+export const onFriendRemoved = (callback) => {
+  if (socket) {
+    socket.on('friendRemoved', callback)
+  }
+}
+
+// 🆕 监听好友列表更新（批量）
+export const onFriendListUpdated = (callback) => {
+  if (socket) {
+    socket.on('friendListUpdated', callback)
   }
 }
 
